@@ -325,65 +325,81 @@ export function AuthProvider({ children }) {
       legalGuardianRequired,
     });
 
-    await setDoc(doc(db, "users", credential.user.uid), userProfileData, { merge: true });
+    try {
+      await setDoc(doc(db, "users", credential.user.uid), userProfileData, { merge: true });
+    } catch (error) {
+      throw createRegistrationStepError(
+        "volunteer/users-write-failed",
+        "Le compte a été créé, mais l'enregistrement du profil bénévole dans Firestore a échoué.",
+        error,
+      );
+    }
 
-    await addDoc(collection(db, "volunteerApplications"), {
-      uid: credential.user.uid,
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      email: formData.email,
-      phone: formData.phone,
-      gender: formData.gender,
-      birthDate: formData.birthDate,
-      age,
-      languages: Array.isArray(formData.languages)
-        ? [
-            ...formData.languages,
-            ...(formData.otherLanguage ? [formData.otherLanguage.trim()] : []),
-          ].filter(Boolean)
-        : String(formData.languages || "")
-            .split(",")
-            .map((item) => item.trim())
-            .filter(Boolean),
-      tshirtSize: formData.tshirtSize,
-      ageBracket: getAgeBracket(age),
-      lunexStudent: formData.lunexStudent,
-      lunexProgram: formData.lunexProgram,
-      occupation: formData.occupation,
-      cmcmExperience: formData.cmcmExperience,
-      volunteerExperience: formData.volunteerExperience,
-      healthSafetyInfo: formData.healthSafetyInfo,
-      certificateNeeded: formData.certificateNeeded,
-      retainForNextYear: formData.retainForNextYear,
-      imageConsent: formData.imageConsent,
-      availability: [
-        ...(formData.meetingDayConfirmed
-          ? ["Meeting - dimanche 17/01/2027 9h30-19h00 (obligatoire)"]
-          : []),
-        ...(Array.isArray(formData.availability)
-          ? formData.availability
-          : String(formData.availability || "")
+    try {
+      await addDoc(collection(db, "volunteerApplications"), {
+        uid: credential.user.uid,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        gender: formData.gender,
+        birthDate: formData.birthDate,
+        age,
+        languages: Array.isArray(formData.languages)
+          ? [
+              ...formData.languages,
+              ...(formData.otherLanguage ? [formData.otherLanguage.trim()] : []),
+            ].filter(Boolean)
+          : String(formData.languages || "")
               .split(",")
               .map((item) => item.trim())
-              .filter(Boolean)),
-      ],
-      missionPreferences: formData.missionPreferences
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean),
-      legalGuardianRequired,
-      legalGuardian: legalGuardianRequired
-        ? {
-            firstName: formData.guardianFirstName,
-            lastName: formData.guardianLastName,
-            email: formData.guardianEmail,
-            phone: formData.guardianPhone,
-            status: "pending",
-          }
-        : null,
-      status: applicationStatus,
-      submittedAt: serverTimestamp(),
-    });
+              .filter(Boolean),
+        tshirtSize: formData.tshirtSize,
+        ageBracket: getAgeBracket(age),
+        lunexStudent: formData.lunexStudent,
+        lunexProgram: formData.lunexProgram,
+        occupation: formData.occupation,
+        cmcmExperience: formData.cmcmExperience,
+        volunteerExperience: formData.volunteerExperience,
+        healthSafetyInfo: formData.healthSafetyInfo,
+        certificateNeeded: formData.certificateNeeded,
+        retainForNextYear: formData.retainForNextYear,
+        imageConsent: formData.imageConsent,
+        availability: [
+          ...(formData.meetingDayConfirmed
+            ? ["Meeting - dimanche 17/01/2027 9h30-19h00 (obligatoire)"]
+            : []),
+          ...(Array.isArray(formData.availability)
+            ? formData.availability
+            : String(formData.availability || "")
+                .split(",")
+                .map((item) => item.trim())
+                .filter(Boolean)),
+        ],
+        missionPreferences: formData.missionPreferences
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean),
+        legalGuardianRequired,
+        legalGuardian: legalGuardianRequired
+          ? {
+              firstName: formData.guardianFirstName,
+              lastName: formData.guardianLastName,
+              email: formData.guardianEmail,
+              phone: formData.guardianPhone,
+              status: "pending",
+            }
+          : null,
+        status: applicationStatus,
+        submittedAt: serverTimestamp(),
+      });
+    } catch (error) {
+      throw createRegistrationStepError(
+        "volunteer/application-write-failed",
+        "Le compte a été créé, mais l'enregistrement de la candidature bénévole dans Firestore a échoué.",
+        error,
+      );
+    }
 
     try {
       await enqueueTransactionalMail(

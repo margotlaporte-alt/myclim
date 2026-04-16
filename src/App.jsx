@@ -3144,6 +3144,11 @@ function VolunteerAccessPage() {
         setApplicationError("L'adresse email indiquée n'est pas valide.");
       } else if (submissionError?.code === "auth/weak-password") {
         setApplicationError("Le mot de passe doit contenir au moins 6 caractères.");
+      } else if (
+        submissionError?.code === "volunteer/users-write-failed" ||
+        submissionError?.code === "volunteer/application-write-failed"
+      ) {
+        setApplicationError(submissionError.message);
       } else {
         setApplicationError(
           "La candidature n'a pas pu être enregistrée. Vérifiez les champs obligatoires ou utilisez un autre email si un compte existe déjà.",
