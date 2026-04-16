@@ -385,12 +385,16 @@ export function AuthProvider({ children }) {
       submittedAt: serverTimestamp(),
     });
 
-    await enqueueTransactionalMail(
-      buildVolunteerAccountCreatedMail({
-        firstName: formData.firstName,
-        email: formData.email,
-      }),
-    );
+    try {
+      await enqueueTransactionalMail(
+        buildVolunteerAccountCreatedMail({
+          firstName: formData.firstName,
+          email: formData.email,
+        }),
+      );
+    } catch (mailError) {
+      console.error("Volunteer account email could not be sent", mailError);
+    }
 
     return credential;
   }
@@ -484,13 +488,17 @@ export function AuthProvider({ children }) {
       }
     }
 
-    await enqueueTransactionalMail(
-      buildPreProgramAccountCreatedMail({
-        parentFirstName: formData.parentFirstName,
-        parentEmail: formData.parentEmail,
-        children,
-      }),
-    );
+    try {
+      await enqueueTransactionalMail(
+        buildPreProgramAccountCreatedMail({
+          parentFirstName: formData.parentFirstName,
+          parentEmail: formData.parentEmail,
+          children,
+        }),
+      );
+    } catch (mailError) {
+      console.error("Pre-program account email could not be sent", mailError);
+    }
 
     return credential;
   }

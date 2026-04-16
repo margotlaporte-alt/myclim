@@ -3138,9 +3138,17 @@ function VolunteerAccessPage() {
       await createVolunteerApplication(formData);
       navigate("/app");
     } catch (submissionError) {
-      setApplicationError(
-        "La candidature n'a pas pu être enregistrée. Vérifiez les champs obligatoires ou utilisez un autre email si un compte existe déjà.",
-      );
+      if (submissionError?.code === "auth/email-already-in-use") {
+        setApplicationError("Un compte existe déjà avec cette adresse email.");
+      } else if (submissionError?.code === "auth/invalid-email") {
+        setApplicationError("L'adresse email indiquée n'est pas valide.");
+      } else if (submissionError?.code === "auth/weak-password") {
+        setApplicationError("Le mot de passe doit contenir au moins 6 caractères.");
+      } else {
+        setApplicationError(
+          "La candidature n'a pas pu être enregistrée. Vérifiez les champs obligatoires ou utilisez un autre email si un compte existe déjà.",
+        );
+      }
     } finally {
       setIsApplicationSubmitting(false);
     }
@@ -5795,6 +5803,10 @@ function VolunteersPage() {
     (volunteer) => volunteer.workflowStatus === "Candidature reçue" && getVolunteerAssignedRoles(volunteer).length === 0,
   );
 
+  const assignedVolunteerCount = volunteers.filter(
+    (volunteer) => getVolunteerAssignedRoles(volunteer).length > 0,
+  ).length;
+
   const assignedVolunteers = filteredVolunteers.filter(
     (volunteer) => volunteer.workflowStatus !== "Candidature reçue" || getVolunteerAssignedRoles(volunteer).length > 0,
   );
@@ -6013,7 +6025,7 @@ function VolunteersPage() {
         <article className="metric-card metric-card--accent">
           <span>Affectés à un poste</span>
           <strong>
-            {volunteers.filter((volunteer) => volunteer.workflowStatus === "Affecté").length}
+            {assignedVolunteerCount}
           </strong>
         </article>
         <article className="metric-card metric-card--danger">
@@ -6874,6 +6886,43 @@ function TeamsPage() {
     [availableVolunteers, selectedRoleMembers],
   );
 
+  async function syncVolunteerApplicationFromTeamAssignments(volunteerId, assignmentsSnapshot) {
+    const matchedVolunteer = availableVolunteers.find(
+      (volunteer) => getVolunteerStableId(volunteer) === volunteerId,
+    );
+    if (!matchedVolunteer?.id) return;
+
+    const volunteerAssignments = assignmentsSnapshot.filter((assignment) => assignment.id === volunteerId);
+    const assignedRoles = normalizeSubRoles(
+      volunteerAssignments.map((assignment) => assignment.assignedRole).filter(Boolean),
+    );
+    const primaryAssignedRole = assignedRoles[0] || "";
+    const teamRoleAssignments = assignedRoles.reduce((accumulator, assignedRole, index) => {
+      const matchingAssignment = volunteerAssignments.find((assignment) => assignment.assignedRole === assignedRole);
+      accumulator[assignedRole] = String(
+        matchingAssignment?.teamRole || (index === 0 ? matchedVolunteer.teamRole : "") || "Bénévole",
+      );
+      return accumulator;
+    }, {});
+    const nextWorkflowStatus =
+      matchedVolunteer.workflowStatus === "Annulé"
+        ? "Annulé"
+        : primaryAssignedRole
+          ? "Affecté"
+          : "Candidature reçue";
+    const patch = {
+      assignedRole: primaryAssignedRole,
+      assignedRoles,
+      workflowStatus: nextWorkflowStatus,
+      teamRole: primaryAssignedRole ? teamRoleAssignments[primaryAssignedRole] || "Bénévole" : "Bénévole",
+      teamRoleAssignments,
+      updatedAt: serverTimestamp(),
+    };
+
+    await updateDoc(doc(db, "volunteerApplications", matchedVolunteer.id), patch);
+    await syncVolunteerAssignmentToUserProfile({ ...matchedVolunteer, ...patch });
+  }
+
   function updateRole(field, value) {
     setRoles((current) =>
       current.map((role) =>
@@ -6908,11 +6957,25 @@ function TeamsPage() {
   }
 
   function updateMemberRole(assignmentEntryId, teamRole) {
-    setTeamAssignments((current) =>
-      current.map((member) =>
-        member.assignmentEntryId === assignmentEntryId ? { ...member, teamRole } : member,
-      ),
-    );
+    let nextAssignmentsSnapshot = null;
+    let volunteerIdToSync = "";
+
+    setTeamAssignments((current) => {
+      nextAssignmentsSnapshot = current.map((member) => {
+        if (member.assignmentEntryId !== assignmentEntryId) return member;
+        volunteerIdToSync = member.id;
+        return { ...member, teamRole };
+      });
+
+      return nextAssignmentsSnapshot;
+    });
+
+    if (!volunteerIdToSync || !nextAssignmentsSnapshot) return;
+
+    syncVolunteerApplicationFromTeamAssignments(volunteerIdToSync, nextAssignmentsSnapshot).catch((error) => {
+      console.error("Impossible de synchroniser le rôle d'équipe du bénévole.", error);
+      setTeamsStatus("Le rôle d'équipe a été modifié, mais la candidature bénévole n'a pas pu être resynchronisée.");
+    });
   }
 
   function addSubRole() {
@@ -6976,16 +7039,19 @@ function TeamsPage() {
     const volunteerId = getVolunteerStableId(volunteer);
     if (!volunteerId) return;
 
+    let nextAssignmentsSnapshot = null;
+
     setTeamAssignments((current) => {
       const existingMember = current.find(
         (member) => member.id === volunteerId && member.assignedRoleId === selectedRole.id,
       );
 
       if (existingMember) {
+        nextAssignmentsSnapshot = current;
         return current;
       }
 
-      return [
+      nextAssignmentsSnapshot = [
         ...current,
         {
           assignmentEntryId: `${volunteerId}::${selectedRole.id}`,
@@ -7001,14 +7067,36 @@ function TeamsPage() {
           teamRole: "Bénévole",
         },
       ];
+
+      return nextAssignmentsSnapshot;
     });
     setMemberSearch("");
+
+    if (!nextAssignmentsSnapshot) return;
+
+    syncVolunteerApplicationFromTeamAssignments(volunteerId, nextAssignmentsSnapshot).catch((error) => {
+      console.error("Impossible de synchroniser la candidature bénévole après affectation.", error);
+      setTeamsStatus("L'équipe a été mise à jour, mais la candidature bénévole n'a pas pu être resynchronisée.");
+    });
   }
 
   function removeMemberFromSelectedRole(assignmentEntryId) {
-    setTeamAssignments((current) =>
-      current.filter((member) => member.assignmentEntryId !== assignmentEntryId),
-    );
+    let nextAssignmentsSnapshot = null;
+    let volunteerIdToSync = "";
+
+    setTeamAssignments((current) => {
+      const memberToRemove = current.find((member) => member.assignmentEntryId === assignmentEntryId);
+      volunteerIdToSync = memberToRemove?.id || "";
+      nextAssignmentsSnapshot = current.filter((member) => member.assignmentEntryId !== assignmentEntryId);
+      return nextAssignmentsSnapshot;
+    });
+
+    if (!volunteerIdToSync || !nextAssignmentsSnapshot) return;
+
+    syncVolunteerApplicationFromTeamAssignments(volunteerIdToSync, nextAssignmentsSnapshot).catch((error) => {
+      console.error("Impossible de synchroniser la candidature bénévole après retrait d'équipe.", error);
+      setTeamsStatus("L'équipe a été mise à jour, mais la candidature bénévole n'a pas pu être resynchronisée.");
+    });
   }
 
   function addSupportTask() {
