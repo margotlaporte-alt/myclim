@@ -24,13 +24,14 @@ const ALL_ATHLETE_FIELDS = [
   { key: "sb",            label: "SB (Excel raw)",     group: "excel" },
 
   // World Athletics — source of truth
-  { key: "waid",          label: "WAID",               group: "wa" },
-  { key: "waUrl",         label: "WA Profile URL",     group: "wa" },
-  { key: "waPbIndoor",    label: "WA PB Indoor",       group: "wa" },
-  { key: "waPbOutdoor",   label: "WA PB Outdoor",      group: "wa" },
-  { key: "waIndoorSb",    label: "WA SB Indoor",       group: "wa" },
-  { key: "waOutdoorSb",   label: "WA SB Outdoor",      group: "wa" },
-  { key: "waFetchedAt",   label: "WA last sync",       group: "wa" },
+  { key: "waid",              label: "WAID",                    group: "wa" },
+  { key: "waUrl",             label: "WA Profile URL",          group: "wa" },
+  { key: "waPbIndoor",        label: "WA PB Indoor",            group: "wa" },
+  { key: "waPbOutdoor",       label: "WA PB Outdoor",           group: "wa" },
+  { key: "waIndoorSb",        label: "WA SB Indoor (prev yr)",  group: "wa" },
+  { key: "waIndoorSbCurrent", label: "WA SB Indoor (curr yr)",  group: "wa" },
+  { key: "waOutdoorSb",       label: "WA SB Outdoor",           group: "wa" },
+  { key: "waFetchedAt",       label: "WA last sync",            group: "wa" },
 
   // Heat/lane (from lanes file)
   { key: "heat",          label: "Heat",               group: "lanes" },
@@ -51,14 +52,18 @@ const FIELD_GROUPS = [
 ];
 
 // Default settings — admin can override everything via the settings page.
-// Season rule: meeting year N → indoor N, outdoor N-1.
+// Season rule for early-January meetings (meeting year N):
+//   indoor     = N-1  (previous indoor season, completed — most athletes have results here)
+//   indoorCurrent = N (current indoor season, just started — few results)
+//   outdoor    = N-1  (previous outdoor season, completed)
+// Example: CMCM 2026 → indoor 2025, indoorCurrent 2026, outdoor 2025
 const DEFAULT_PORTAL_SETTINGS = {
   accessRoles: ["admin", "meeting_director"],
   importerRoles: ["admin", "meeting_director"],
   // WA service base URL (the Node.js backend we built)
   waServiceUrl: "http://localhost:3001",
-  // Which seasons to display as "current" SBs
-  seasons: { indoor: 2026, outdoor: 2025 },
+  // Which seasons to display as SBs
+  seasons: { indoor: 2025, indoorCurrent: 2026, outdoor: 2025 },
   fieldVisibility: {
     admin:            ALL_ATHLETE_FIELDS.map((f) => f.key),
     meeting_director: ALL_ATHLETE_FIELDS.map((f) => f.key),
@@ -82,7 +87,13 @@ function useAthletePortalSettings() {
           setSettings({
             ...DEFAULT_PORTAL_SETTINGS,
             ...data,
-            seasons: { ...DEFAULT_PORTAL_SETTINGS.seasons, ...(data.seasons ?? {}) },
+            seasons: {
+              ...DEFAULT_PORTAL_SETTINGS.seasons,
+              ...(data.seasons ?? {}),
+              // indoorCurrent defaults to indoor+1 if not explicitly saved
+              indoorCurrent: data.seasons?.indoorCurrent
+                ?? (data.seasons?.indoor ? data.seasons.indoor + 1 : DEFAULT_PORTAL_SETTINGS.seasons.indoorCurrent),
+            },
           });
         } else {
           setSettings(DEFAULT_PORTAL_SETTINGS);
@@ -150,19 +161,25 @@ async function fetchAthleteFromWaService(waid, settings) {
   const waPbIndoor  = bestMark(pbs.filter((r) => isIndoorDiscipline(r.discipline)));
   const waPbOutdoor = bestMark(pbs.filter((r) => !isIndoorDiscipline(r.discipline)));
 
-  // Season bests filtered by configured seasons
-  const waIndoorSb  = bestMarkForYear(sbs, seasons.indoor,  true);
-  const waOutdoorSb = bestMarkForYear(sbs, seasons.outdoor, false);
+  // Season bests:
+  //   indoor     = previous indoor season (N-1, completed, most athletes have results)
+  //   indoorCurrent = current indoor season (N, just started, few results)
+  //   outdoor    = previous outdoor season (N-1)
+  const waIndoorSb        = bestMarkForYear(sbs, seasons.indoor,        true);
+  const waIndoorSbCurrent = bestMarkForYear(sbs, seasons.indoorCurrent, true);
+  const waOutdoorSb       = bestMarkForYear(sbs, seasons.outdoor,       false);
+
+  function fmtPb(r)  { return r ? `${r.mark}${r.date ? ` (${r.date.slice(0,4)})` : ""}` : null; }
+  function fmtSb(r)  { return r ? `${r.mark}${r.date ? ` @ ${(r.venue ?? "").trim()}`.trimEnd() : ""}` : null; }
 
   return {
-    waPbIndoor:  waPbIndoor  ? `${waPbIndoor.mark}${waPbIndoor.date  ? ` (${waPbIndoor.date.slice(0,4)})`  : ""}` : null,
-    waPbOutdoor: waPbOutdoor ? `${waPbOutdoor.mark}${waPbOutdoor.date ? ` (${waPbOutdoor.date.slice(0,4)})` : ""}` : null,
-    waIndoorSb:  waIndoorSb  ? `${waIndoorSb.mark}${waIndoorSb.date   ? ` @ ${waIndoorSb.venue ?? ""}`.trim()      : ""}` : null,
-    waOutdoorSb: waOutdoorSb ? `${waOutdoorSb.mark}${waOutdoorSb.date ? ` @ ${waOutdoorSb.venue ?? ""}`.trim()     : ""}` : null,
+    waPbIndoor:        fmtPb(waPbIndoor),
+    waPbOutdoor:       fmtPb(waPbOutdoor),
+    waIndoorSb:        fmtSb(waIndoorSb),
+    waIndoorSbCurrent: fmtSb(waIndoorSbCurrent),
+    waOutdoorSb:       fmtSb(waOutdoorSb),
     waFetchedAt: new Date().toISOString(),
-    waUrl: data.firstName
-      ? `https://worldathletics.org/athletes/_/${waid}`
-      : null,
+    waUrl: data.firstName ? `https://worldathletics.org/athletes/_/${waid}` : null,
   };
 }
 

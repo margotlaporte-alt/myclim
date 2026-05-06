@@ -30,15 +30,63 @@ const PLATFORM_ROLES = [
   { key: "parent_u14",       label: "U14 Parent" },
 ];
 
-// ─── File type detection & parsing (same as before) ──────────────────────────
+// ─── File type detection & parsing ───────────────────────────────────────────
 
-function detectFileType(headerRow) {
-  const h = headerRow.map((c) => String(c || "").trim().toLowerCase());
-  if (h[4] === "manager" || (h[5] || "").startsWith("anreise")) return "TRAVEL";
-  if (h[7] === "status" || h[8] === "wr") return "START_LIST";
-  if (h[7] === "pb" || h[7] === "pb ") return "FINAL_LANES";
-  if (h[2] === "event") return "START_LIST";
-  return "UNKNOWN";
+// Column-name patterns for the new "all-in-one" combined file format.
+const COMBINED_COL_PATTERNS = {
+  event:        [/^event$/,          /^épreuve$/,    /^discipline$/],
+  lastName:     [/^last\s?name$/,    /^nom$/,        /^name$/,       /^surname$/],
+  firstName:    [/^first\s?name$/,   /^prénom$/,     /^prenom$/,     /^vorname$/],
+  nationality:  [/^nat(ionality)?$/, /^pays$/,       /^land$/],
+  birthYear:    [/^birth\s?year$/,   /^year$/,       /^jahrg\.?$/,   /^année$/],
+  status:       [/^status$/],
+  worldRanking: [/^wr$/,             /^world\s?ranking$/, /^ranking$/],
+  pb:           [/^pb$/],
+  pbIndoor:     [/^pb\s?indoor$/],
+  pbOutdoor:    [/^pb\s?outdoor$/],
+  sb:           [/^sb\d*$/],
+  waUrl:        [/^wa\s?(url|profile)?$/, /^world\s?athletics$/],
+  heat:         [/^heat$/,           /^série$/,      /^serie$/],
+  lane:         [/^lane$/,           /^couloir$/],
+  manager:      [/^manager$/,        /^gestionnaire$/],
+  arrival:      [/^arrival$/,        /^anreise$/,    /^arrivée$/,    /^arrivee$/],
+  departure:    [/^departure$/,      /^abreise$/,    /^départ$/,     /^depart$/],
+};
+
+function buildColMap(row) {
+  const h = row.map((c) => String(c || "").trim().toLowerCase());
+  const map = {};
+  for (const [field, pats] of Object.entries(COMBINED_COL_PATTERNS)) {
+    const idx = h.findIndex((cell) => pats.some((p) => p.test(cell)));
+    if (idx !== -1) map[field] = idx;
+  }
+  return map;
+}
+
+function detectFileType(rows) {
+  // Try rows 0-2 to find the best header (most recognized columns).
+  let bestMap = {};
+  let bestHeaderIdx = 0;
+  for (let i = 0; i < Math.min(rows.length, 3); i++) {
+    const m = buildColMap(rows[i]);
+    if (Object.keys(m).length > Object.keys(bestMap).length) {
+      bestMap = m; bestHeaderIdx = i;
+    }
+  }
+  const hasPerfCols   = "status" in bestMap || "worldRanking" in bestMap || "pb" in bestMap || "pbIndoor" in bestMap;
+  const hasTravelCols = "manager" in bestMap || "arrival" in bestMap;
+  const hasIdent      = "lastName" in bestMap && "firstName" in bestMap;
+  if (hasIdent && hasPerfCols && hasTravelCols) {
+    return { type: "COMBINED", colMap: bestMap, dataStartIdx: bestHeaderIdx + 1 };
+  }
+
+  // Position-based fallback for the legacy CMCM Excel formats.
+  const h = rows[0].map((c) => String(c || "").trim().toLowerCase());
+  if (h[4] === "manager" || (h[5] || "").startsWith("anreise")) return { type: "TRAVEL",     colMap: null, dataStartIdx: 1 };
+  if (h[7] === "status"  || h[8] === "wr")                      return { type: "START_LIST", colMap: null, dataStartIdx: 2 };
+  if (h[7] === "pb"      || h[7] === "pb ")                     return { type: "FINAL_LANES",colMap: null, dataStartIdx: 2 };
+  if (h[2] === "event")                                          return { type: "START_LIST", colMap: null, dataStartIdx: 2 };
+  return { type: "UNKNOWN", colMap: null, dataStartIdx: 1 };
 }
 
 function norm(v) { return String(v || "").trim(); }
@@ -115,10 +163,44 @@ function parseTravelRow(row) {
   };
 }
 
-function parseRows(rows, fileType) {
-  if (fileType === "START_LIST") return rows.slice(2).map(parseStartListRow).filter(Boolean);
-  if (fileType === "FINAL_LANES") return parseFinaLanesRows(rows.slice(2));
-  if (fileType === "TRAVEL") return rows.slice(1).map(parseTravelRow).filter(Boolean);
+function parseCombinedRow(row, colMap) {
+  const g = (field) => colMap[field] !== undefined ? norm(row[colMap[field]]) : "";
+  const lastName  = g("lastName");
+  const firstName = g("firstName");
+  if (!lastName && !firstName) return null;
+
+  const rawPb   = g("pb");
+  const rawWaUrl = g("waUrl");
+  const { indoor: parsedPbIn, outdoor: parsedPbOut } = parsePb(rawPb);
+  const rawLane = g("lane");
+
+  return {
+    event:        g("event")        || null,
+    lastName,     firstName,
+    nationality:  g("nationality")  || null,
+    birthYear:    normalizeBirthYear(colMap.birthYear !== undefined ? row[colMap.birthYear] : null),
+    status:       g("status").toLowerCase() || null,
+    worldRanking: (() => { const v = g("worldRanking"); return v !== "" && !isNaN(Number(v)) ? Number(v) : null; })(),
+    pb:           rawPb || null,
+    pbIndoor:     g("pbIndoor")  || parsedPbIn  || null,
+    pbOutdoor:    g("pbOutdoor") || parsedPbOut || null,
+    sb:           g("sb")        || null,
+    waUrl:        rawWaUrl.startsWith("http") ? rawWaUrl : null,
+    waid:         extractWaid(rawWaUrl),
+    heat:         g("heat") || null,
+    lane:         rawLane !== "" && !isNaN(Number(rawLane)) ? Number(rawLane) : null,
+    manager:      g("manager")   || null,
+    arrival:      g("arrival")   || null,
+    departure:    g("departure") || null,
+  };
+}
+
+function parseRows(rows, detected) {
+  const { type, colMap, dataStartIdx } = detected;
+  if (type === "START_LIST")  return rows.slice(dataStartIdx).map(parseStartListRow).filter(Boolean);
+  if (type === "FINAL_LANES") return parseFinaLanesRows(rows.slice(dataStartIdx));
+  if (type === "TRAVEL")      return rows.slice(dataStartIdx).map(parseTravelRow).filter(Boolean);
+  if (type === "COMBINED")    return rows.slice(dataStartIdx).map((r) => parseCombinedRow(r, colMap)).filter(Boolean);
   return [];
 }
 
@@ -136,7 +218,23 @@ function mergeAthletes(existing, incoming, fileType) {
     if (!ex) { byKey.set(key, record); added++; continue; }
 
     const merged = { ...ex };
-    if (fileType === "TRAVEL") {
+    if (fileType === "COMBINED") {
+      // Full update — every field in the file wins, except WA-sourced data (never overwritten by import)
+      if (record.event)              merged.event        = record.event;
+      if (record.status !== null)    merged.status       = record.status;
+      if (record.worldRanking != null) merged.worldRanking = record.worldRanking;
+      if (record.pb)                 merged.pb           = record.pb;
+      if (record.pbIndoor)           merged.pbIndoor     = record.pbIndoor;
+      if (record.pbOutdoor)          merged.pbOutdoor    = record.pbOutdoor;
+      if (record.sb)                 merged.sb           = record.sb;
+      if (record.waUrl && !merged.waUrl) merged.waUrl   = record.waUrl;
+      if (record.waid  && !merged.waid)  merged.waid    = record.waid;
+      if (record.heat !== null)      merged.heat         = record.heat;
+      if (record.lane !== null)      merged.lane         = record.lane;
+      if (record.manager)            merged.manager      = record.manager;
+      if (record.arrival)            merged.arrival      = record.arrival;
+      if (record.departure)          merged.departure    = record.departure;
+    } else if (fileType === "TRAVEL") {
       if (record.manager)   merged.manager   = record.manager;
       if (record.arrival)   merged.arrival   = record.arrival;
       if (record.departure) merged.departure = record.departure;
@@ -150,12 +248,12 @@ function mergeAthletes(existing, incoming, fileType) {
     } else {
       if (record.status !== null)       merged.status       = record.status;
       if (record.worldRanking !== null) merged.worldRanking = record.worldRanking;
-      if (record.pb)       merged.pb       = record.pb;
-      if (record.pbIndoor) merged.pbIndoor = record.pbIndoor;
+      if (record.pb)        merged.pb        = record.pb;
+      if (record.pbIndoor)  merged.pbIndoor  = record.pbIndoor;
       if (record.pbOutdoor) merged.pbOutdoor = record.pbOutdoor;
-      if (record.sb)       merged.sb       = record.sb;
-      if (record.waUrl)    merged.waUrl    = record.waUrl;
-      if (record.waid)     merged.waid     = record.waid;
+      if (record.sb)        merged.sb        = record.sb;
+      if (record.waUrl)     merged.waUrl     = record.waUrl;
+      if (record.waid)      merged.waid      = record.waid;
     }
 
     byKey.set(key, merged);
@@ -181,10 +279,11 @@ function WaBadge({ value }) {
 
 function FileTypeBadge({ type }) {
   const map = {
-    START_LIST:  ["Start list",   "status-pill status-pill--accent"],
-    FINAL_LANES: ["Heats & Lanes","status-pill"],
-    TRAVEL:      ["Travel",       "status-pill"],
-    UNKNOWN:     ["Unknown",      "status-pill status-pill--warn"],
+    COMBINED:    ["Combined (all data)", "status-pill status-pill--accent"],
+    START_LIST:  ["Start list",          "status-pill status-pill--accent"],
+    FINAL_LANES: ["Heats & Lanes",       "status-pill"],
+    TRAVEL:      ["Travel",              "status-pill"],
+    UNKNOWN:     ["Unknown",             "status-pill status-pill--warn"],
   };
   const [label, cls] = map[type] ?? map.UNKNOWN;
   return <span className={cls}>{label}</span>;
@@ -310,7 +409,11 @@ function AthletePortalOverview({ Panel }) {
           <p className="eyebrow">Athlete Portal</p>
           <h1>Overview</h1>
           <p>
-            Active seasons: <strong>Indoor {seasons.indoor}</strong> · <strong>Outdoor {seasons.outdoor}</strong>
+            Seasons: <strong>Indoor {seasons.indoor}</strong>
+            {seasons.indoorCurrent && seasons.indoorCurrent !== seasons.indoor && (
+              <> · <strong>Indoor {seasons.indoorCurrent}</strong> <span style={{ fontWeight: "normal", color: "#888" }}>(current, few results)</span></>
+            )}
+            {" · "}<strong>Outdoor {seasons.outdoor}</strong>
           </p>
         </div>
       </section>
@@ -448,7 +551,11 @@ function AthletesListPage({ Panel }) {
           <h1>Athletes</h1>
           <p>
             {filtered.length} of {athletes.length} athletes ·&nbsp;
-            <strong>Indoor {seasons.indoor}</strong> · <strong>Outdoor {seasons.outdoor}</strong>
+            <strong>Indoor {seasons.indoor}</strong>
+            {seasons.indoorCurrent && seasons.indoorCurrent !== seasons.indoor && (
+              <> / <strong>{seasons.indoorCurrent}</strong></>
+            )}
+            {" · "}<strong>Outdoor {seasons.outdoor}</strong>
           </p>
         </div>
         {canEdit && (
@@ -587,10 +694,10 @@ function AthleteImportPage({ Panel }) {
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows = utils.sheet_to_json(ws, { header: 1, defval: "" });
       if (rows.length < 2) { setStatus("File appears empty."); return; }
-      const fileType = detectFileType(rows[0]);
-      const records = parseRows(rows, fileType);
-      setParsed({ fileType, records, fileName: file.name });
-      setStatus(`Detected: ${fileType} — ${records.length} records.`);
+      const detected = detectFileType(rows);
+      const records = parseRows(rows, detected);
+      setParsed({ fileType: detected.type, records, fileName: file.name });
+      setStatus(`Detected: ${detected.type} — ${records.length} records.`);
     } catch (err) { setStatus(`Error: ${err.message}`); }
   }
 
@@ -636,9 +743,10 @@ function AthleteImportPage({ Panel }) {
       <section className="panel-grid panel-grid--2">
         <Panel title="Accepted formats">
           <ul className="compact-list">
-            <li><strong>Start list</strong> — Event, Name, Vorname, Nat., Jahrg., Status, WR, PB, SB25, WA Profile</li>
-            <li><strong>Heats &amp; Lanes</strong> — same columns + Heat rows and Lane; only updates lane/heat assignments</li>
-            <li><strong>Travel</strong> — Event, Name, Vorname, Nat., Manager, Anreise, Abreise; only adds logistics</li>
+            <li><strong>Combined (recommended)</strong> — one file with all columns: Event, Last name, First name, Nat., Birth year, Status, WR, PB, SB, WA URL, Heat, Lane, Manager, Arrival, Departure. Updates everything; can be re-uploaded as many times as needed.</li>
+            <li><strong>Start list</strong> (legacy) — Event, Name, Vorname, Nat., Jahrg., Status, WR, PB, SB, WA Profile</li>
+            <li><strong>Heats &amp; Lanes</strong> (legacy) — same + Heat rows and Lane; only updates heat/lane</li>
+            <li><strong>Travel</strong> (legacy) — Event, Name, Vorname, Nat., Manager, Anreise, Abreise; only updates logistics</li>
           </ul>
           <p className="panel-note">WA data (WAID, PBs from WA) is never overwritten by an import — only by a manual WA sync.</p>
         </Panel>
@@ -669,7 +777,8 @@ function AthleteImportPage({ Panel }) {
                   <li>Updated: <strong>{mergePreview.updated}</strong></li>
                   <li>Total after import: <strong>{mergePreview.merged.length}</strong></li>
                 </ul>
-                {parsed.fileType === "TRAVEL" && <p className="panel-note">Only updates manager/arrival/departure.</p>}
+                {parsed.fileType === "COMBINED"    && <p className="panel-note">Updates all fields. Safe to re-upload as many times as needed.</p>}
+                {parsed.fileType === "TRAVEL"      && <p className="panel-note">Only updates manager/arrival/departure.</p>}
                 {parsed.fileType === "FINAL_LANES" && <p className="panel-note">Only updates heat/lane; fills missing PBs.</p>}
               </Panel>
             )}
@@ -682,22 +791,22 @@ function AthleteImportPage({ Panel }) {
                   <thead>
                     <tr>
                       <th>Event</th><th>Last name</th><th>First name</th><th>Nat.</th>
-                      {parsed.fileType === "START_LIST" && <><th>Status</th><th>WR</th><th>PB Indoor</th><th>PB Outdoor</th><th>SB</th><th>WAID</th></>}
-                      {parsed.fileType === "FINAL_LANES" && <><th>Heat</th><th>Lane</th><th>PB Indoor</th><th>SB</th></>}
-                      {parsed.fileType === "TRAVEL" && <><th>Manager</th><th>Arrival</th><th>Departure</th></>}
+                      {(parsed.fileType === "START_LIST" || parsed.fileType === "COMBINED") && <><th>Status</th><th>WR</th><th>PB Indoor</th><th>PB Outdoor</th><th>SB</th><th>WAID</th></>}
+                      {(parsed.fileType === "FINAL_LANES" || parsed.fileType === "COMBINED") && <><th>Heat</th><th>Lane</th></>}
+                      {(parsed.fileType === "TRAVEL"      || parsed.fileType === "COMBINED") && <><th>Manager</th><th>Arrival</th><th>Departure</th></>}
                     </tr>
                   </thead>
                   <tbody>
                     {parsed.records.slice(0, 10).map((r, i) => (
                       <tr key={i}>
                         <td>{r.event}</td><td>{r.lastName}</td><td>{r.firstName}</td><td>{r.nationality}</td>
-                        {parsed.fileType === "START_LIST" && (
+                        {(parsed.fileType === "START_LIST" || parsed.fileType === "COMBINED") && (
                           <><td>{r.status ? <StatusBadge status={r.status} /> : "—"}</td><td>{r.worldRanking ?? "—"}</td><td>{r.pbIndoor ?? "—"}</td><td>{r.pbOutdoor ?? "—"}</td><td>{r.sb ?? "—"}</td><td>{r.waid ?? "—"}</td></>
                         )}
-                        {parsed.fileType === "FINAL_LANES" && (
-                          <><td>{r.heat ?? "—"}</td><td>{r.lane ?? "—"}</td><td>{r.pbIndoor ?? "—"}</td><td>{r.sb ?? "—"}</td></>
+                        {(parsed.fileType === "FINAL_LANES" || parsed.fileType === "COMBINED") && (
+                          <><td>{r.heat ?? "—"}</td><td>{r.lane ?? "—"}</td></>
                         )}
-                        {parsed.fileType === "TRAVEL" && (
+                        {(parsed.fileType === "TRAVEL" || parsed.fileType === "COMBINED") && (
                           <><td>{r.manager ?? "—"}</td><td>{r.arrival ?? "—"}</td><td>{r.departure ?? "—"}</td></>
                         )}
                       </tr>
@@ -737,8 +846,9 @@ function AthletePortalSettingsPage({ Panel }) {
   const [accessRoles,    setAccessRoles]    = useState([]);
   const [importerRoles,  setImporterRoles]  = useState([]);
   const [fieldVisibility,setFieldVisibility]= useState({});
-  const [indoorSeason,   setIndoorSeason]   = useState(DEFAULT_PORTAL_SETTINGS.seasons.indoor);
-  const [outdoorSeason,  setOutdoorSeason]  = useState(DEFAULT_PORTAL_SETTINGS.seasons.outdoor);
+  const [indoorSeason,        setIndoorSeason]        = useState(DEFAULT_PORTAL_SETTINGS.seasons.indoor);
+  const [indoorCurrentSeason, setIndoorCurrentSeason] = useState(DEFAULT_PORTAL_SETTINGS.seasons.indoorCurrent);
+  const [outdoorSeason,       setOutdoorSeason]       = useState(DEFAULT_PORTAL_SETTINGS.seasons.outdoor);
   const [waServiceUrl,   setWaServiceUrl]   = useState(DEFAULT_PORTAL_SETTINGS.waServiceUrl);
   const [saveStatus,     setSaveStatus]     = useState("");
   const [saving,         setSaving]         = useState(false);
@@ -749,6 +859,7 @@ function AthletePortalSettingsPage({ Panel }) {
     setImporterRoles(settings.importerRoles ?? DEFAULT_PORTAL_SETTINGS.importerRoles);
     setFieldVisibility(settings.fieldVisibility ?? DEFAULT_PORTAL_SETTINGS.fieldVisibility);
     setIndoorSeason(settings.seasons?.indoor ?? DEFAULT_PORTAL_SETTINGS.seasons.indoor);
+    setIndoorCurrentSeason(settings.seasons?.indoorCurrent ?? DEFAULT_PORTAL_SETTINGS.seasons.indoorCurrent);
     setOutdoorSeason(settings.seasons?.outdoor ?? DEFAULT_PORTAL_SETTINGS.seasons.outdoor);
     setWaServiceUrl(settings.waServiceUrl ?? DEFAULT_PORTAL_SETTINGS.waServiceUrl);
     setInitialized(true);
@@ -802,7 +913,7 @@ function AthletePortalSettingsPage({ Panel }) {
         doc(db, ...ATHLETE_PORTAL_SETTINGS_PATH),
         {
           accessRoles, importerRoles, fieldVisibility,
-          seasons: { indoor: Number(indoorSeason), outdoor: Number(outdoorSeason) },
+          seasons: { indoor: Number(indoorSeason), indoorCurrent: Number(indoorCurrentSeason), outdoor: Number(outdoorSeason) },
           waServiceUrl: waServiceUrl.trim(),
           updatedAt: serverTimestamp(),
         },
@@ -828,19 +939,23 @@ function AthletePortalSettingsPage({ Panel }) {
       <form onSubmit={handleSave}>
         {/* Seasons & WA service */}
         <section className="panel-grid panel-grid--2">
-          <Panel title="Active seasons" subtitle="Meeting year N → Indoor N · Outdoor N−1">
+          <Panel title="Active seasons" subtitle="CMCM is in early January — most athletes have the previous year's indoor SB">
             <div className="field-grid">
               <label className="field">
-                <span>Indoor season year</span>
+                <span>Indoor season (previous year)</span>
                 <input type="number" min="2020" max="2040" value={indoorSeason} onChange={(e) => setIndoorSeason(e.target.value)} />
               </label>
               <label className="field">
-                <span>Outdoor season year</span>
+                <span>Indoor season (current year)</span>
+                <input type="number" min="2020" max="2040" value={indoorCurrentSeason} onChange={(e) => setIndoorCurrentSeason(e.target.value)} />
+              </label>
+              <label className="field">
+                <span>Outdoor season</span>
                 <input type="number" min="2020" max="2040" value={outdoorSeason} onChange={(e) => setOutdoorSeason(e.target.value)} />
               </label>
             </div>
             <p className="panel-note">
-              WA SBs are filtered by these years. For CMCM {indoorSeason}: indoor {indoorSeason}, outdoor {outdoorSeason}.
+              For CMCM {indoorCurrentSeason}: Indoor {indoorSeason} (main) · Indoor {indoorCurrentSeason} (current, few results) · Outdoor {outdoorSeason}.
             </p>
           </Panel>
           <Panel title="World Athletics service" subtitle="URL of the wa-service backend.">
