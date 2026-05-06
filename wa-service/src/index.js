@@ -19,6 +19,7 @@ import { syncOne, syncAll, startCron } from "./sync.js";
 
 const PORT = Number(process.env.PORT || 3001);
 const API_KEY = process.env.API_KEY || "";
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "http://localhost:5173,http://localhost:5174").split(",");
 
 // ─── Bootstrap ───────────────────────────────────────────────────────────────
 
@@ -28,6 +29,18 @@ startCron();
 const app = express();
 app.use(express.json());
 app.disable("x-powered-by");
+
+// CORS — allow the MyCLIM dev server and any configured origins
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (!origin || ALLOWED_ORIGINS.includes(origin) || ALLOWED_ORIGINS.includes("*")) {
+    res.setHeader("Access-Control-Allow-Origin", origin || "*");
+  }
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-api-key");
+  if (req.method === "OPTIONS") return res.sendStatus(204);
+  next();
+});
 
 // ─── Auth middleware (optional) ───────────────────────────────────────────────
 

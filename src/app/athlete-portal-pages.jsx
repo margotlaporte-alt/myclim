@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { NavLink } from "react-router-dom";
-import { doc, serverTimestamp, setDoc, writeBatch } from "firebase/firestore";
+import { doc, serverTimestamp, setDoc, updateDoc, writeBatch } from "firebase/firestore";
 import { useAuth } from "../context/auth-context";
 import { getActiveRoles } from "./navigation";
 import {
@@ -11,6 +11,7 @@ import {
   athleteMergeKey,
   canImportAthletes,
   extractWaid,
+  fetchAthleteFromWaService,
   getVisibleFields,
   normalizeBirthYear,
   parsePb,
@@ -21,45 +22,28 @@ import {
 import { db } from "../services/firebase";
 
 const PLATFORM_ROLES = [
-  { key: "admin",           label: "Administrator" },
-  { key: "meeting_director",label: "Meeting Director" },
-  { key: "gestionnaire",    label: "Manager (Gestionnaire)" },
-  { key: "chef_equipe",     label: "Team Leader (Chef d'équipe)" },
-  { key: "benevole",        label: "Volunteer (Bénévole)" },
-  { key: "parent_u14",      label: "U14 Parent" },
+  { key: "admin",            label: "Administrator" },
+  { key: "meeting_director", label: "Meeting Director" },
+  { key: "gestionnaire",     label: "Manager (Gestionnaire)" },
+  { key: "chef_equipe",      label: "Team Leader (Chef d'équipe)" },
+  { key: "benevole",         label: "Volunteer (Bénévole)" },
+  { key: "parent_u14",       label: "U14 Parent" },
 ];
 
-// ─── File-type detection & parsing ───────────────────────────────────────────
+// ─── File type detection & parsing (same as before) ──────────────────────────
 
-/**
- * Detect which CMCM Excel file type we're dealing with.
- *
- * START_LIST  : col[7] = "Status"   (has WR + Status columns)
- * FINAL_LANES : col[7] = "PB"       (has Heat/Lane structure, no Status/WR)
- * TRAVEL      : col[0] = "Event", col[4] = "Manager"
- */
 function detectFileType(headerRow) {
   const h = headerRow.map((c) => String(c || "").trim().toLowerCase());
-  if (h[4] === "manager" || h[5]?.startsWith("anreise") || h[6]?.startsWith("abreise")) {
-    return "TRAVEL";
-  }
-  if (h[7] === "status" || h[8] === "wr" || h[8] === "welt") return "START_LIST";
+  if (h[4] === "manager" || (h[5] || "").startsWith("anreise")) return "TRAVEL";
+  if (h[7] === "status" || h[8] === "wr") return "START_LIST";
   if (h[7] === "pb" || h[7] === "pb ") return "FINAL_LANES";
-  // Fallback: if col[2] is "event" it's one of the start-list variants
   if (h[2] === "event") return "START_LIST";
   return "UNKNOWN";
 }
 
-function norm(v) {
-  return String(v || "").trim();
-}
+function norm(v) { return String(v || "").trim(); }
 
-/**
- * Parse a raw Excel row array into a unified athlete object.
- * Returns null for header/empty rows.
- */
 function parseStartListRow(row) {
-  // col: [empty, #, event, lastName, firstName, nat, birthYear, status, WR, PB, SB25, waUrl, ...]
   const event = norm(row[2]);
   const lastName = norm(row[3]);
   const firstName = norm(row[4]);
@@ -68,28 +52,18 @@ function parseStartListRow(row) {
   const rawPb = norm(row[9]);
   const { indoor: pbIndoor, outdoor: pbOutdoor } = parsePb(rawPb);
   const waRaw = norm(row[11]);
-  const waid = extractWaid(waRaw);
 
   return {
-    event,
-    lastName,
-    firstName,
+    event, lastName, firstName,
     nationality: norm(row[5]),
     birthYear: normalizeBirthYear(row[6]),
     status: norm(row[7]).toLowerCase() || null,
     worldRanking: row[8] !== "" && !isNaN(Number(row[8])) ? Number(row[8]) : null,
-    pb: rawPb || null,
-    pbIndoor,
-    pbOutdoor,
+    pb: rawPb || null, pbIndoor, pbOutdoor,
     sb: norm(row[10]) || null,
     waUrl: waRaw.startsWith("http") ? waRaw : null,
-    waid,
-    // lanes/travel fields empty until another file fills them
-    heat: null,
-    lane: null,
-    manager: null,
-    arrival: null,
-    departure: null,
+    waid: extractWaid(waRaw),
+    heat: null, lane: null, manager: null, arrival: null, departure: null,
   };
 }
 
@@ -100,140 +74,80 @@ function parseFinaLanesRows(rows) {
   for (const row of rows) {
     const col0 = norm(row[0]);
     const event = norm(row[2]);
-
-    // Heat header row
-    if (col0.toLowerCase().startsWith("heat")) {
-      currentHeat = col0;
-      continue;
-    }
-
+    if (col0.toLowerCase().startsWith("heat")) { currentHeat = col0; continue; }
     const lastName = norm(row[3]);
-    const firstName = norm(row[4]);
     if (!event || !lastName || event.toLowerCase() === "event") continue;
 
     const rawPb = norm(row[7]);
     const { indoor: pbIndoor, outdoor: pbOutdoor } = parsePb(rawPb);
     const waRaw = norm(row[9]);
-    const waid = extractWaid(waRaw);
 
     athletes.push({
-      event,
-      lastName,
-      firstName,
+      event, lastName, firstName: norm(row[4]),
       nationality: norm(row[5]),
       birthYear: normalizeBirthYear(row[6]),
-      status: null,
-      worldRanking: null,
-      pb: rawPb || null,
-      pbIndoor,
-      pbOutdoor,
+      status: null, worldRanking: null,
+      pb: rawPb || null, pbIndoor, pbOutdoor,
       sb: norm(row[8]) || null,
       waUrl: waRaw.startsWith("http") ? waRaw : null,
-      waid,
+      waid: extractWaid(waRaw),
       heat: currentHeat,
       lane: col0 !== "" && !isNaN(Number(col0)) ? Number(col0) : null,
-      manager: null,
-      arrival: null,
-      departure: null,
+      manager: null, arrival: null, departure: null,
     });
   }
-
   return athletes;
 }
 
 function parseTravelRow(row) {
-  // col: [event, lastName, firstName, nat, manager, arrival, departure]
-  const event = norm(row[0]);
   const lastName = norm(row[1]);
   const firstName = norm(row[2]);
   if (!lastName || !firstName) return null;
-
   return {
-    event,
-    lastName,
-    firstName,
+    event: norm(row[0]), lastName, firstName,
     nationality: norm(row[3]),
-    birthYear: null,
-    status: null,
-    worldRanking: null,
-    pb: null,
-    pbIndoor: null,
-    pbOutdoor: null,
-    sb: null,
-    waUrl: null,
-    waid: null,
-    heat: null,
-    lane: null,
+    birthYear: null, status: null, worldRanking: null,
+    pb: null, pbIndoor: null, pbOutdoor: null, sb: null,
+    waUrl: null, waid: null, heat: null, lane: null,
     manager: norm(row[4]) || null,
     arrival: norm(row[5]) || null,
     departure: norm(row[6]) || null,
   };
 }
 
-/**
- * Parse raw rows into athlete records based on detected file type.
- */
 function parseRows(rows, fileType) {
-  if (fileType === "START_LIST") {
-    return rows.slice(2).map(parseStartListRow).filter(Boolean);
-  }
-  if (fileType === "FINAL_LANES") {
-    return parseFinaLanesRows(rows.slice(2));
-  }
-  if (fileType === "TRAVEL") {
-    return rows.slice(1).map(parseTravelRow).filter(Boolean);
-  }
+  if (fileType === "START_LIST") return rows.slice(2).map(parseStartListRow).filter(Boolean);
+  if (fileType === "FINAL_LANES") return parseFinaLanesRows(rows.slice(2));
+  if (fileType === "TRAVEL") return rows.slice(1).map(parseTravelRow).filter(Boolean);
   return [];
 }
 
-/**
- * Merge a batch of new records into existing athletes.
- * Matching key: lastName + firstName + nationality (normalized).
- *
- * For TRAVEL: only updates travel fields (manager, arrival, departure).
- * For FINAL_LANES: updates heat/lane, updates PB/SB if not already set.
- * For START_LIST: sets all performance fields; overwrites status/WR.
- *
- * Returns the merged array (new athletes appended, existing ones updated).
- */
 function mergeAthletes(existing, incoming, fileType) {
-  const byKey = new Map();
-  existing.forEach((a) => {
-    const key = athleteMergeKey(a.lastName, a.firstName, a.nationality);
-    byKey.set(key, { ...a });
-  });
-
-  const added = [];
-  const updated = [];
+  const byKey = new Map(
+    existing.map((a) => [athleteMergeKey(a.lastName, a.firstName, a.nationality), { ...a }]),
+  );
+  let added = 0;
+  let updated = 0;
 
   for (const record of incoming) {
     const key = athleteMergeKey(record.lastName, record.firstName, record.nationality);
-    const existing = byKey.get(key);
+    const ex = byKey.get(key);
 
-    if (!existing) {
-      byKey.set(key, record);
-      added.push(record);
-      continue;
-    }
+    if (!ex) { byKey.set(key, record); added++; continue; }
 
-    const merged = { ...existing };
-
+    const merged = { ...ex };
     if (fileType === "TRAVEL") {
-      // Only travel fields
       if (record.manager)   merged.manager   = record.manager;
       if (record.arrival)   merged.arrival   = record.arrival;
       if (record.departure) merged.departure = record.departure;
     } else if (fileType === "FINAL_LANES") {
-      // Heat/lane always overwrite (they're new in this file type)
       if (record.heat !== null) merged.heat = record.heat;
       if (record.lane !== null) merged.lane = record.lane;
-      // PB/SB only if not already present
-      if (!merged.pb && record.pb)         merged.pb       = record.pb;
+      if (!merged.pb && record.pb)           merged.pb       = record.pb;
       if (!merged.pbIndoor && record.pbIndoor) merged.pbIndoor = record.pbIndoor;
       if (!merged.pbOutdoor && record.pbOutdoor) merged.pbOutdoor = record.pbOutdoor;
-      if (!merged.sb && record.sb)         merged.sb       = record.sb;
+      if (!merged.sb && record.sb)           merged.sb       = record.sb;
     } else {
-      // START_LIST: overwrite all performance fields
       if (record.status !== null)       merged.status       = record.status;
       if (record.worldRanking !== null) merged.worldRanking = record.worldRanking;
       if (record.pb)       merged.pb       = record.pb;
@@ -245,26 +159,119 @@ function mergeAthletes(existing, incoming, fileType) {
     }
 
     byKey.set(key, merged);
-    updated.push(merged);
+    updated++;
   }
 
-  return { merged: [...byKey.values()], added: added.length, updated: updated.length };
+  return { merged: [...byKey.values()], added, updated };
 }
 
-// ─── File type badge ──────────────────────────────────────────────────────────
+// ─── Small shared components ─────────────────────────────────────────────────
+
+function StatusBadge({ status }) {
+  if (!status) return "—";
+  if (status === "ok")  return <span className="status-pill status-pill--ok">OK</span>;
+  if (status === "out") return <span className="status-pill status-pill--warn">Out</span>;
+  return <span className="status-pill">{status}</span>;
+}
+
+function WaBadge({ value }) {
+  if (!value) return <span style={{ color: "#aaa" }}>—</span>;
+  return <span className="status-pill status-pill--accent" title="Source: World Athletics">{value}</span>;
+}
 
 function FileTypeBadge({ type }) {
-  const config = {
-    START_LIST:  { label: "Start list",     className: "status-pill status-pill--accent" },
-    FINAL_LANES: { label: "Heats & Lanes",  className: "status-pill" },
-    TRAVEL:      { label: "Travel",         className: "status-pill" },
-    UNKNOWN:     { label: "Unknown format", className: "status-pill status-pill--warn" },
+  const map = {
+    START_LIST:  ["Start list",   "status-pill status-pill--accent"],
+    FINAL_LANES: ["Heats & Lanes","status-pill"],
+    TRAVEL:      ["Travel",       "status-pill"],
+    UNKNOWN:     ["Unknown",      "status-pill status-pill--warn"],
   };
-  const { label, className } = config[type] || config.UNKNOWN;
-  return <span className={className}>{label}</span>;
+  const [label, cls] = map[type] ?? map.UNKNOWN;
+  return <span className={cls}>{label}</span>;
 }
 
-// ─── Pages ────────────────────────────────────────────────────────────────────
+// ─── Inline WAID editor ───────────────────────────────────────────────────────
+
+function WaidCell({ athlete, onSave }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(athlete.waid ?? "");
+  const [saving, setSaving] = useState(false);
+
+  async function handleSave() {
+    const trimmed = value.trim();
+    if (trimmed === (athlete.waid ?? "")) { setEditing(false); return; }
+    setSaving(true);
+    try {
+      await onSave(athlete.id, trimmed || null);
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (editing) {
+    return (
+      <span style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+        <input
+          autoFocus
+          style={{ width: 100, fontSize: "0.85rem", padding: "2px 4px" }}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") handleSave(); if (e.key === "Escape") setEditing(false); }}
+          placeholder="WAID"
+          disabled={saving}
+        />
+        <button className="button button--ghost button--small" type="button" onClick={handleSave} disabled={saving}>✓</button>
+        <button className="button button--ghost button--small" type="button" onClick={() => setEditing(false)}>✕</button>
+      </span>
+    );
+  }
+
+  return (
+    <span
+      style={{ cursor: "pointer", borderBottom: "1px dashed #999", paddingBottom: 1 }}
+      title="Click to edit WAID"
+      onClick={() => { setValue(athlete.waid ?? ""); setEditing(true); }}
+    >
+      {athlete.waid ?? <span style={{ color: "#aaa", fontStyle: "italic" }}>— add</span>}
+    </span>
+  );
+}
+
+// ─── WA sync button ───────────────────────────────────────────────────────────
+
+function WaSyncButton({ athlete, settings, onDone }) {
+  const [status, setStatus] = useState(null); // null | "syncing" | "ok" | "error"
+  const [error, setError] = useState("");
+
+  if (!athlete.waid) return <span style={{ color: "#ccc", fontSize: "0.8rem" }}>no WAID</span>;
+
+  async function handleSync() {
+    setStatus("syncing");
+    setError("");
+    try {
+      const waData = await fetchAthleteFromWaService(athlete.waid, settings);
+      await updateDoc(doc(db, ATHLETES_COLLECTION, athlete.id), waData);
+      setStatus("ok");
+      onDone?.();
+    } catch (err) {
+      setStatus("error");
+      setError(err.message);
+    }
+  }
+
+  if (status === "syncing") return <span style={{ color: "#888", fontSize: "0.8rem" }}>syncing…</span>;
+  if (status === "ok") return <span className="status-pill status-pill--ok" style={{ fontSize: "0.75rem" }}>synced ✓</span>;
+  if (status === "error") return <span title={error} className="status-pill status-pill--warn" style={{ cursor: "help", fontSize: "0.75rem" }}>error ✕</span>;
+
+  return (
+    <button className="button button--ghost button--small" type="button" onClick={handleSync}>
+      ↻ WA
+    </button>
+  );
+}
+
+// ─── Overview page ────────────────────────────────────────────────────────────
 
 function AthletePortalOverview({ Panel }) {
   const { userProfile } = useAuth();
@@ -272,6 +279,20 @@ function AthletePortalOverview({ Panel }) {
   const { settings, loading: settingsLoading } = useAthletePortalSettings();
   const canImport = canImportAthletes(roles, settings);
   const { athletes, loading: athletesLoading } = useAthletes(!settingsLoading);
+  const isAdmin = roles.includes("admin") || roles.includes("meeting_director");
+
+  const seasons = settings?.seasons ?? DEFAULT_PORTAL_SETTINGS.seasons;
+
+  const stats = useMemo(() => {
+    const nations = new Set(athletes.map((a) => a.nationality).filter(Boolean));
+    const withWaid = athletes.filter((a) => a.waid).length;
+    const waSynced = athletes.filter((a) => a.waFetchedAt).length;
+    const ok = athletes.filter((a) => a.status === "ok").length;
+    const out = athletes.filter((a) => a.status === "out").length;
+    const withLane = athletes.filter((a) => a.lane).length;
+    const withTravel = athletes.filter((a) => a.arrival || a.departure).length;
+    return { nations: nations.size, withWaid, waSynced, ok, out, withLane, withTravel };
+  }, [athletes]);
 
   const eventCounts = useMemo(() => {
     const counts = {};
@@ -282,57 +303,42 @@ function AthletePortalOverview({ Panel }) {
     return Object.entries(counts).sort((a, b) => a[0].localeCompare(b[0]));
   }, [athletes]);
 
-  const stats = useMemo(() => {
-    const nations = new Set(athletes.map((a) => a.nationality).filter(Boolean));
-    const withLane = athletes.filter((a) => a.lane).length;
-    const withTravel = athletes.filter((a) => a.arrival || a.departure).length;
-    const withStatus = athletes.filter((a) => a.status === "ok").length;
-    const out = athletes.filter((a) => a.status === "out").length;
-    return { nations: nations.size, withLane, withTravel, withStatus, out };
-  }, [athletes]);
-
   return (
     <div className="page">
       <section className="page-header">
         <div>
           <p className="eyebrow">Athlete Portal</p>
           <h1>Overview</h1>
-          <p>Manage and consult athlete information for this meeting.</p>
+          <p>
+            Active seasons: <strong>Indoor {seasons.indoor}</strong> · <strong>Outdoor {seasons.outdoor}</strong>
+          </p>
         </div>
       </section>
 
       <section className="panel-grid panel-grid--2">
-        <Panel title="Athlete roster" subtitle="Current database summary.">
-          {athletesLoading ? (
-            <p className="panel-note">Loading…</p>
-          ) : (
+        <Panel title="Roster">
+          {athletesLoading ? <p className="panel-note">Loading…</p> : (
             <ul className="compact-list">
-              <li><strong>{athletes.length}</strong> athletes in database</li>
-              <li><strong>{stats.nations}</strong> nations represented</li>
-              <li><strong>{eventCounts.length}</strong> events</li>
-              <li><strong>{stats.withStatus}</strong> confirmed (ok) · <strong>{stats.out}</strong> withdrawn (out)</li>
-              <li><strong>{stats.withLane}</strong> with heat/lane assignment</li>
-              <li><strong>{stats.withTravel}</strong> with travel info</li>
+              <li><strong>{athletes.length}</strong> athletes · <strong>{stats.nations}</strong> nations · <strong>{eventCounts.length}</strong> events</li>
+              <li>Status: <strong>{stats.ok}</strong> confirmed · <strong>{stats.out}</strong> withdrawn</li>
+              <li>Lanes assigned: <strong>{stats.withLane}</strong></li>
+              <li>Travel info: <strong>{stats.withTravel}</strong></li>
+              <li>WAID known: <strong>{stats.withWaid}</strong> · WA synced: <strong>{stats.waSynced}</strong></li>
             </ul>
           )}
         </Panel>
         <Panel title="Quick access">
           <div className="dashboard-action-grid">
-            <NavLink className="button button--secondary button-link" to="/app/athlete-portal/athletes">
-              View athletes
-            </NavLink>
-            {canImport ? (
-              <NavLink className="button button--secondary button-link" to="/app/athlete-portal/import">
-                Import file
-              </NavLink>
-            ) : null}
+            <NavLink className="button button--secondary button-link" to="/app/athlete-portal/athletes">View athletes</NavLink>
+            {canImport && <NavLink className="button button--secondary button-link" to="/app/athlete-portal/import">Import file</NavLink>}
+            {isAdmin && <NavLink className="button button--secondary button-link" to="/app/athlete-portal/settings">Portal settings</NavLink>}
           </div>
         </Panel>
       </section>
 
-      {eventCounts.length > 0 ? (
+      {eventCounts.length > 0 && (
         <section className="panel-grid panel-grid--1">
-          <Panel title="Events" subtitle="Athletes per event.">
+          <Panel title="Events">
             <div className="table-wrap">
               <table className="data-table">
                 <thead><tr><th>Event</th><th>Athletes</th></tr></thead>
@@ -345,10 +351,12 @@ function AthletePortalOverview({ Panel }) {
             </div>
           </Panel>
         </section>
-      ) : null}
+      )}
     </div>
   );
 }
+
+// ─── Athletes list page ───────────────────────────────────────────────────────
 
 function AthletesListPage({ Panel }) {
   const { userProfile } = useAuth();
@@ -356,10 +364,14 @@ function AthletesListPage({ Panel }) {
   const { settings, loading: settingsLoading } = useAthletePortalSettings();
   const { athletes, loading: athletesLoading } = useAthletes(!settingsLoading);
   const visibleFields = useMemo(() => getVisibleFields(roles, settings), [roles, settings]);
+  const canEdit = roles.includes("admin") || roles.includes("meeting_director");
+  const seasons = settings?.seasons ?? DEFAULT_PORTAL_SETTINGS.seasons;
 
   const [search, setSearch] = useState("");
   const [filterEvent, setFilterEvent] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+  const [syncingAll, setSyncingAll] = useState(false);
+  const [syncAllStatus, setSyncAllStatus] = useState("");
 
   const events = useMemo(() => {
     const s = new Set();
@@ -381,6 +393,33 @@ function AthletesListPage({ Panel }) {
     });
   }, [athletes, search, filterEvent, filterStatus]);
 
+  async function handleSaveWaid(athleteId, waid) {
+    await updateDoc(doc(db, ATHLETES_COLLECTION, athleteId), { waid });
+  }
+
+  async function handleSyncAll() {
+    const withWaid = athletes.filter((a) => a.waid);
+    if (!withWaid.length) { setSyncAllStatus("No athletes with a WAID to sync."); return; }
+    setSyncingAll(true);
+    setSyncAllStatus(`Syncing ${withWaid.length} athletes with World Athletics…`);
+
+    let ok = 0;
+    let failed = 0;
+    for (const athlete of withWaid) {
+      try {
+        const waData = await fetchAthleteFromWaService(athlete.waid, settings);
+        await updateDoc(doc(db, ATHLETES_COLLECTION, athlete.id), waData);
+        ok++;
+      } catch {
+        failed++;
+      }
+      await new Promise((r) => setTimeout(r, 400)); // polite delay
+    }
+
+    setSyncAllStatus(`Sync complete: ${ok} updated, ${failed} failed.`);
+    setSyncingAll(false);
+  }
+
   if (settingsLoading || athletesLoading) {
     return <div className="page"><section className="page-header"><div><h1>Athletes</h1></div></section><p className="panel-note">Loading…</p></div>;
   }
@@ -397,14 +436,34 @@ function AthletesListPage({ Panel }) {
     );
   }
 
+  // Determine which column groups are visible
+  const showWa     = visibleFields.some((f) => f.group === "wa");
+  const showExcel  = visibleFields.some((f) => f.group === "excel");
+
   return (
     <div className="page">
       <section className="page-header">
         <div>
           <p className="eyebrow">Athlete Portal</p>
           <h1>Athletes</h1>
-          <p>{filtered.length} of {athletes.length} athletes</p>
+          <p>
+            {filtered.length} of {athletes.length} athletes ·&nbsp;
+            <strong>Indoor {seasons.indoor}</strong> · <strong>Outdoor {seasons.outdoor}</strong>
+          </p>
         </div>
+        {canEdit && (
+          <div>
+            <button
+              className="button button--secondary"
+              type="button"
+              onClick={handleSyncAll}
+              disabled={syncingAll}
+            >
+              {syncingAll ? "Syncing…" : "↻ Sync all with WA"}
+            </button>
+            {syncAllStatus && <p className="panel-note" style={{ marginTop: 4 }}>{syncAllStatus}</p>}
+          </div>
+        )}
       </section>
 
       <section className="panel-grid panel-grid--1">
@@ -425,8 +484,8 @@ function AthletesListPage({ Panel }) {
               <span>Status</span>
               <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
                 <option value="">All</option>
-                <option value="ok">OK (confirmed)</option>
-                <option value="out">Out (withdrawn)</option>
+                <option value="ok">OK</option>
+                <option value="out">Out</option>
               </select>
             </label>
           </div>
@@ -436,7 +495,7 @@ function AthletesListPage({ Panel }) {
       {athletes.length === 0 ? (
         <div className="notice-card">
           <strong>No athletes yet</strong>
-          <p>No data has been imported yet. A Meeting Director can upload a start list.</p>
+          <p>No data imported yet. A Meeting Director can upload a start list.</p>
         </div>
       ) : (
         <section className="panel-grid panel-grid--1">
@@ -446,6 +505,9 @@ function AthletesListPage({ Panel }) {
                 <thead>
                   <tr>
                     {visibleFields.map((f) => <th key={f.key}>{f.label}</th>)}
+                    {/* WAID and WA sync are always shown to admin/meeting_director */}
+                    {canEdit && !visibleFields.find((f) => f.key === "waid") && <th>WAID</th>}
+                    {canEdit && <th>WA sync</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -453,30 +515,38 @@ function AthletesListPage({ Panel }) {
                     <tr key={a.id} className={a.status === "out" ? "row--muted" : ""}>
                       {visibleFields.map((f) => (
                         <td key={f.key}>
-                          {f.key === "status"
-                            ? <StatusBadge status={a.status} />
-                            : f.key === "waUrl" && a.waUrl
-                              ? <a href={a.waUrl} target="_blank" rel="noopener noreferrer">WA ↗</a>
-                              : a[f.key] ?? "—"}
+                          {f.key === "waid" && canEdit
+                            ? <WaidCell athlete={a} onSave={handleSaveWaid} />
+                            : f.key === "status"
+                              ? <StatusBadge status={a.status} />
+                              : f.key === "waUrl" && a.waUrl
+                                ? <a href={a.waUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.8rem" }}>WA ↗</a>
+                                : (f.group === "wa" && f.key !== "waid" && f.key !== "waUrl" && f.key !== "waFetchedAt")
+                                  ? <WaBadge value={a[f.key]} />
+                                  : a[f.key] ?? "—"}
                         </td>
                       ))}
+                      {canEdit && !visibleFields.find((f) => f.key === "waid") && (
+                        <td><WaidCell athlete={a} onSave={handleSaveWaid} /></td>
+                      )}
+                      {canEdit && (
+                        <td><WaSyncButton athlete={a} settings={settings} /></td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+            {showWa && (
+              <p className="panel-note" style={{ marginTop: "0.5rem" }}>
+                <span className="status-pill status-pill--accent">value</span> = sourced from World Athletics · overrides Excel data
+              </p>
+            )}
           </Panel>
         </section>
       )}
     </div>
   );
-}
-
-function StatusBadge({ status }) {
-  if (!status) return "—";
-  if (status === "ok") return <span className="status-pill status-pill--ok">OK</span>;
-  if (status === "out") return <span className="status-pill status-pill--warn">Out</span>;
-  return <span className="status-pill">{status}</span>;
 }
 
 // ─── Import page ──────────────────────────────────────────────────────────────
@@ -488,7 +558,7 @@ function AthleteImportPage({ Panel }) {
   const canImport = canImportAthletes(roles, settings);
   const { athletes } = useAthletes(true);
 
-  const [parsed, setParsed] = useState(null); // { fileType, records, fileName }
+  const [parsed, setParsed] = useState(null);
   const [status, setStatus] = useState("");
   const [saving, setSaving] = useState(false);
   const fileRef = useRef(null);
@@ -507,49 +577,30 @@ function AthleteImportPage({ Panel }) {
     );
   }
 
-  async function handleFile(event) {
-    const file = event.target.files?.[0];
+  async function handleFile(e) {
+    const file = e.target.files?.[0];
     if (!file) return;
-
-    setStatus("Reading file…");
-    setParsed(null);
-
+    setStatus("Reading file…"); setParsed(null);
     try {
       const { read, utils } = await import("xlsx");
-      const buffer = await file.arrayBuffer();
-      const wb = read(buffer);
+      const wb = read(await file.arrayBuffer());
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows = utils.sheet_to_json(ws, { header: 1, defval: "" });
-
       if (rows.length < 2) { setStatus("File appears empty."); return; }
-
       const fileType = detectFileType(rows[0]);
       const records = parseRows(rows, fileType);
-
       setParsed({ fileType, records, fileName: file.name });
-      setStatus(`Detected: ${fileType} — ${records.length} athlete records found.`);
-    } catch (err) {
-      setStatus(`Error: ${err.message}`);
-    }
+      setStatus(`Detected: ${fileType} — ${records.length} records.`);
+    } catch (err) { setStatus(`Error: ${err.message}`); }
   }
 
   async function handleImport() {
     if (!parsed) return;
-    setSaving(true);
-    setStatus("Merging and saving…");
-
+    setSaving(true); setStatus("Merging and saving…");
     try {
       const { merged, added, updated } = mergeAthletes(athletes, parsed.records, parsed.fileType);
-
-      // Write all merged athletes as a full replace (simpler than partial updates)
       const batch = writeBatch(db);
-
-      // Delete existing
-      athletes.forEach((a) => {
-        batch.delete(doc(db, ATHLETES_COLLECTION, a.id));
-      });
-
-      // Write merged
+      athletes.forEach((a) => batch.delete(doc(db, ATHLETES_COLLECTION, a.id)));
       merged.forEach((a, i) => {
         const id = a.id || `athlete_${Date.now()}_${i}`;
         const { id: _id, ...data } = a;
@@ -559,29 +610,18 @@ function AthleteImportPage({ Panel }) {
           importSource: parsed.fileType,
         });
       });
-
       await batch.commit();
-      setStatus(`Done. ${added} added · ${updated} updated · ${merged.length} total athletes.`);
+      setStatus(`Done. ${added} added · ${updated} updated · ${merged.length} total.`);
       setParsed(null);
       if (fileRef.current) fileRef.current.value = "";
-    } catch (err) {
-      setStatus(`Import failed: ${err.message}`);
-    } finally {
-      setSaving(false);
-    }
+    } catch (err) { setStatus(`Import failed: ${err.message}`); }
+    finally { setSaving(false); }
   }
 
-  function handleCancel() {
-    setParsed(null);
-    setStatus("");
-    if (fileRef.current) fileRef.current.value = "";
-  }
-
-  // Merge preview
-  const mergePreview = useMemo(() => {
-    if (!parsed) return null;
-    return mergeAthletes(athletes, parsed.records, parsed.fileType);
-  }, [parsed, athletes]);
+  const mergePreview = useMemo(
+    () => (parsed ? mergeAthletes(athletes, parsed.records, parsed.fileType) : null),
+    [parsed, athletes],
+  );
 
   return (
     <div className="page">
@@ -589,71 +629,59 @@ function AthleteImportPage({ Panel }) {
         <div>
           <p className="eyebrow">Athlete Portal</p>
           <h1>Import file</h1>
-          <p>Upload a CMCM Excel start list, lanes file, or travel file. The format is detected automatically.</p>
+          <p>Format detected automatically. Existing WAID and WA data are always preserved.</p>
         </div>
       </section>
 
       <section className="panel-grid panel-grid--2">
-        <Panel title="Expected formats" subtitle="The three file types accepted by this import.">
+        <Panel title="Accepted formats">
           <ul className="compact-list">
-            <li><strong>Start list</strong> — columns: Event, Name, Vorname, Nat., Jahrg., Status, WR, PB, SB25, WA Profile</li>
-            <li><strong>Heats &amp; Lanes</strong> — same + Heat rows and Lane column; updates heat/lane assignments</li>
-            <li><strong>Travel</strong> — columns: Event, Name, Vorname, Nat., Manager, Anreise, Abreise; adds logistics info without overwriting performances</li>
+            <li><strong>Start list</strong> — Event, Name, Vorname, Nat., Jahrg., Status, WR, PB, SB25, WA Profile</li>
+            <li><strong>Heats &amp; Lanes</strong> — same columns + Heat rows and Lane; only updates lane/heat assignments</li>
+            <li><strong>Travel</strong> — Event, Name, Vorname, Nat., Manager, Anreise, Abreise; only adds logistics</li>
           </ul>
+          <p className="panel-note">WA data (WAID, PBs from WA) is never overwritten by an import — only by a manual WA sync.</p>
         </Panel>
-        <Panel title="Upload file">
+        <Panel title="Upload">
           <label className="field">
             <span>Excel file (.xlsx)</span>
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={handleFile}
-              disabled={saving}
-            />
+            <input ref={fileRef} type="file" accept=".xlsx,.xls" onChange={handleFile} disabled={saving} />
           </label>
-          {status ? <p className="panel-note">{status}</p> : null}
+          {status && <p className="panel-note">{status}</p>}
         </Panel>
       </section>
 
-      {parsed ? (
+      {parsed && (
         <>
           <section className="panel-grid panel-grid--2">
             <Panel title="Detection result">
               <ul className="compact-list">
                 <li>File: <strong>{parsed.fileName}</strong></li>
-                <li>Type detected: <FileTypeBadge type={parsed.fileType} /></li>
+                <li>Type: <FileTypeBadge type={parsed.fileType} /></li>
                 <li>Records in file: <strong>{parsed.records.length}</strong></li>
               </ul>
             </Panel>
-            {mergePreview ? (
-              <Panel title="Merge preview" subtitle="What will happen if you confirm.">
+            {mergePreview && (
+              <Panel title="Merge preview">
                 <ul className="compact-list">
-                  <li>Athletes currently in DB: <strong>{athletes.length}</strong></li>
-                  <li>New athletes to add: <strong>{mergePreview.added}</strong></li>
-                  <li>Existing athletes to update: <strong>{mergePreview.updated}</strong></li>
+                  <li>Currently in DB: <strong>{athletes.length}</strong></li>
+                  <li>New athletes: <strong>{mergePreview.added}</strong></li>
+                  <li>Updated: <strong>{mergePreview.updated}</strong></li>
                   <li>Total after import: <strong>{mergePreview.merged.length}</strong></li>
                 </ul>
-                {parsed.fileType === "TRAVEL" && (
-                  <p className="panel-note">Travel import only updates manager, arrival and departure fields — performances are untouched.</p>
-                )}
-                {parsed.fileType === "FINAL_LANES" && (
-                  <p className="panel-note">Lanes import updates heat/lane assignments and fills missing PB/SB — existing performances are preserved.</p>
-                )}
+                {parsed.fileType === "TRAVEL" && <p className="panel-note">Only updates manager/arrival/departure.</p>}
+                {parsed.fileType === "FINAL_LANES" && <p className="panel-note">Only updates heat/lane; fills missing PBs.</p>}
               </Panel>
-            ) : null}
+            )}
           </section>
 
           <section className="panel-grid panel-grid--1">
-            <Panel title="Preview — first 10 records" subtitle="Parsed data from the file.">
+            <Panel title="Preview — first 10 records">
               <div className="table-wrap">
                 <table className="data-table">
                   <thead>
                     <tr>
-                      <th>Event</th>
-                      <th>Last name</th>
-                      <th>First name</th>
-                      <th>Nat.</th>
+                      <th>Event</th><th>Last name</th><th>First name</th><th>Nat.</th>
                       {parsed.fileType === "START_LIST" && <><th>Status</th><th>WR</th><th>PB Indoor</th><th>PB Outdoor</th><th>SB</th><th>WAID</th></>}
                       {parsed.fileType === "FINAL_LANES" && <><th>Heat</th><th>Lane</th><th>PB Indoor</th><th>SB</th></>}
                       {parsed.fileType === "TRAVEL" && <><th>Manager</th><th>Arrival</th><th>Departure</th></>}
@@ -662,34 +690,15 @@ function AthleteImportPage({ Panel }) {
                   <tbody>
                     {parsed.records.slice(0, 10).map((r, i) => (
                       <tr key={i}>
-                        <td>{r.event}</td>
-                        <td>{r.lastName}</td>
-                        <td>{r.firstName}</td>
-                        <td>{r.nationality}</td>
+                        <td>{r.event}</td><td>{r.lastName}</td><td>{r.firstName}</td><td>{r.nationality}</td>
                         {parsed.fileType === "START_LIST" && (
-                          <>
-                            <td>{r.status ? <StatusBadge status={r.status} /> : "—"}</td>
-                            <td>{r.worldRanking ?? "—"}</td>
-                            <td>{r.pbIndoor ?? "—"}</td>
-                            <td>{r.pbOutdoor ?? "—"}</td>
-                            <td>{r.sb ?? "—"}</td>
-                            <td>{r.waid ?? "—"}</td>
-                          </>
+                          <><td>{r.status ? <StatusBadge status={r.status} /> : "—"}</td><td>{r.worldRanking ?? "—"}</td><td>{r.pbIndoor ?? "—"}</td><td>{r.pbOutdoor ?? "—"}</td><td>{r.sb ?? "—"}</td><td>{r.waid ?? "—"}</td></>
                         )}
                         {parsed.fileType === "FINAL_LANES" && (
-                          <>
-                            <td>{r.heat ?? "—"}</td>
-                            <td>{r.lane ?? "—"}</td>
-                            <td>{r.pbIndoor ?? "—"}</td>
-                            <td>{r.sb ?? "—"}</td>
-                          </>
+                          <><td>{r.heat ?? "—"}</td><td>{r.lane ?? "—"}</td><td>{r.pbIndoor ?? "—"}</td><td>{r.sb ?? "—"}</td></>
                         )}
                         {parsed.fileType === "TRAVEL" && (
-                          <>
-                            <td>{r.manager ?? "—"}</td>
-                            <td>{r.arrival ?? "—"}</td>
-                            <td>{r.departure ?? "—"}</td>
-                          </>
+                          <><td>{r.manager ?? "—"}</td><td>{r.arrival ?? "—"}</td><td>{r.departure ?? "—"}</td></>
                         )}
                       </tr>
                     ))}
@@ -697,27 +706,22 @@ function AthleteImportPage({ Panel }) {
                 </table>
               </div>
               <div className="dashboard-action-grid" style={{ marginTop: "1rem" }}>
-                <button
-                  className="button button--primary"
-                  type="button"
-                  onClick={handleImport}
-                  disabled={saving || parsed.fileType === "UNKNOWN"}
-                >
+                <button className="button button--primary" type="button" onClick={handleImport} disabled={saving || parsed.fileType === "UNKNOWN"}>
                   {saving ? "Importing…" : `Confirm import (${parsed.records.length} records)`}
                 </button>
-                <button className="button button--secondary" type="button" onClick={handleCancel} disabled={saving}>
+                <button className="button button--secondary" type="button" onClick={() => { setParsed(null); setStatus(""); if (fileRef.current) fileRef.current.value = ""; }} disabled={saving}>
                   Cancel
                 </button>
               </div>
               {parsed.fileType === "UNKNOWN" && (
                 <p className="panel-note" style={{ color: "var(--color-danger, #c0392b)" }}>
-                  Format not recognized. Please check that this is a CMCM start list, lanes, or travel file.
+                  Format not recognized. Please check this is a CMCM start list, lanes or travel file.
                 </p>
               )}
             </Panel>
           </section>
         </>
-      ) : null}
+      )}
     </div>
   );
 }
@@ -730,26 +734,23 @@ function AthletePortalSettingsPage({ Panel }) {
   const isAdmin = roles.includes("admin");
   const { settings, loading } = useAthletePortalSettings();
 
-  const [accessRoles, setAccessRoles] = useState([]);
-  const [importerRoles, setImporterRoles] = useState([]);
-  const [fieldVisibility, setFieldVisibility] = useState({});
-  const [saveStatus, setSaveStatus] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [accessRoles,    setAccessRoles]    = useState([]);
+  const [importerRoles,  setImporterRoles]  = useState([]);
+  const [fieldVisibility,setFieldVisibility]= useState({});
+  const [indoorSeason,   setIndoorSeason]   = useState(DEFAULT_PORTAL_SETTINGS.seasons.indoor);
+  const [outdoorSeason,  setOutdoorSeason]  = useState(DEFAULT_PORTAL_SETTINGS.seasons.outdoor);
+  const [waServiceUrl,   setWaServiceUrl]   = useState(DEFAULT_PORTAL_SETTINGS.waServiceUrl);
+  const [saveStatus,     setSaveStatus]     = useState("");
+  const [saving,         setSaving]         = useState(false);
+  const [initialized,    setInitialized]    = useState(false);
 
-  // Sync local state when settings load
-  useState(() => {
-    if (!settings) return;
-    setAccessRoles(settings.accessRoles ?? DEFAULT_PORTAL_SETTINGS.accessRoles);
-    setImporterRoles(settings.importerRoles ?? DEFAULT_PORTAL_SETTINGS.importerRoles);
-    setFieldVisibility(settings.fieldVisibility ?? DEFAULT_PORTAL_SETTINGS.fieldVisibility);
-  });
-
-  // Keep state in sync when settings change
-  const [initialized, setInitialized] = useState(false);
   if (!initialized && settings) {
     setAccessRoles(settings.accessRoles ?? DEFAULT_PORTAL_SETTINGS.accessRoles);
     setImporterRoles(settings.importerRoles ?? DEFAULT_PORTAL_SETTINGS.importerRoles);
     setFieldVisibility(settings.fieldVisibility ?? DEFAULT_PORTAL_SETTINGS.fieldVisibility);
+    setIndoorSeason(settings.seasons?.indoor ?? DEFAULT_PORTAL_SETTINGS.seasons.indoor);
+    setOutdoorSeason(settings.seasons?.outdoor ?? DEFAULT_PORTAL_SETTINGS.seasons.outdoor);
+    setWaServiceUrl(settings.waServiceUrl ?? DEFAULT_PORTAL_SETTINGS.waServiceUrl);
     setInitialized(true);
   }
 
@@ -765,52 +766,51 @@ function AthletePortalSettingsPage({ Panel }) {
     );
   }
 
-  if (loading) return <div className="page"><p className="panel-note">Loading settings…</p></div>;
+  if (loading) return <div className="page"><p className="panel-note">Loading…</p></div>;
 
   function toggleRole(list, setter, role) {
-    setter((prev) => prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]);
+    setter((p) => p.includes(role) ? p.filter((r) => r !== role) : [...p, role]);
   }
 
   function toggleField(role, key) {
-    setFieldVisibility((prev) => {
-      const cur = Array.isArray(prev[role]) ? prev[role] : [];
-      return {
-        ...prev,
-        [role]: cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key],
-      };
+    setFieldVisibility((p) => {
+      const cur = new Set(p[role] ?? []);
+      cur.has(key) ? cur.delete(key) : cur.add(key);
+      return { ...p, [role]: [...cur] };
     });
   }
 
-  function setGroupForRole(role, group, value) {
-    const groupKeys = ALL_ATHLETE_FIELDS.filter((f) => f.group === group).map((f) => f.key);
-    setFieldVisibility((prev) => {
-      const cur = new Set(Array.isArray(prev[role]) ? prev[role] : []);
-      groupKeys.forEach((k) => (value ? cur.add(k) : cur.delete(k)));
-      return { ...prev, [role]: [...cur] };
+  function setGroupForRole(role, group, on) {
+    const keys = ALL_ATHLETE_FIELDS.filter((f) => f.group === group).map((f) => f.key);
+    setFieldVisibility((p) => {
+      const cur = new Set(p[role] ?? []);
+      keys.forEach((k) => on ? cur.add(k) : cur.delete(k));
+      return { ...p, [role]: [...cur] };
     });
   }
 
-  function allGranted(role, group) {
+  function groupAllGranted(role, group) {
     const cur = fieldVisibility[role] ?? [];
     return ALL_ATHLETE_FIELDS.filter((f) => f.group === group).every((f) => cur.includes(f.key));
   }
 
   async function handleSave(e) {
     e.preventDefault();
-    setSaving(true);
-    setSaveStatus("Saving…");
+    setSaving(true); setSaveStatus("Saving…");
     try {
       await setDoc(
         doc(db, ...ATHLETE_PORTAL_SETTINGS_PATH),
-        { accessRoles, importerRoles, fieldVisibility, updatedAt: serverTimestamp() },
+        {
+          accessRoles, importerRoles, fieldVisibility,
+          seasons: { indoor: Number(indoorSeason), outdoor: Number(outdoorSeason) },
+          waServiceUrl: waServiceUrl.trim(),
+          updatedAt: serverTimestamp(),
+        },
         { merge: true },
       );
       setSaveStatus("Settings saved.");
-    } catch (err) {
-      setSaveStatus(`Save failed: ${err.message}`);
-    } finally {
-      setSaving(false);
-    }
+    } catch (err) { setSaveStatus(`Save failed: ${err.message}`); }
+    finally { setSaving(false); }
   }
 
   const activeRoles = PLATFORM_ROLES.filter((r) => accessRoles.includes(r.key));
@@ -821,113 +821,119 @@ function AthletePortalSettingsPage({ Panel }) {
         <div>
           <p className="eyebrow">Athlete Portal</p>
           <h1>Portal settings</h1>
-          <p>Control who can access the portal and which data fields each role can see.</p>
+          <p>Access control, season configuration and World Athletics integration.</p>
         </div>
       </section>
 
       <form onSubmit={handleSave}>
+        {/* Seasons & WA service */}
         <section className="panel-grid panel-grid--2">
-          <Panel title="Portal access" subtitle="Which roles can enter the Athlete Portal.">
+          <Panel title="Active seasons" subtitle="Meeting year N → Indoor N · Outdoor N−1">
+            <div className="field-grid">
+              <label className="field">
+                <span>Indoor season year</span>
+                <input type="number" min="2020" max="2040" value={indoorSeason} onChange={(e) => setIndoorSeason(e.target.value)} />
+              </label>
+              <label className="field">
+                <span>Outdoor season year</span>
+                <input type="number" min="2020" max="2040" value={outdoorSeason} onChange={(e) => setOutdoorSeason(e.target.value)} />
+              </label>
+            </div>
+            <p className="panel-note">
+              WA SBs are filtered by these years. For CMCM {indoorSeason}: indoor {indoorSeason}, outdoor {outdoorSeason}.
+            </p>
+          </Panel>
+          <Panel title="World Athletics service" subtitle="URL of the wa-service backend.">
+            <label className="field">
+              <span>WA service URL</span>
+              <input
+                type="url"
+                value={waServiceUrl}
+                onChange={(e) => setWaServiceUrl(e.target.value)}
+                placeholder="http://localhost:3001"
+              />
+            </label>
+            <p className="panel-note">
+              Run <code>npm start</code> in <code>wa-service/</code> for local development.
+              In production, deploy the service and enter its public URL here.
+            </p>
+          </Panel>
+        </section>
+
+        {/* Access & import rights */}
+        <section className="panel-grid panel-grid--2">
+          <Panel title="Portal access" subtitle="Who can enter the Athlete Portal.">
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
               {PLATFORM_ROLES.map((role) => (
-                <label key={role.key} style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={accessRoles.includes(role.key)}
-                    disabled={role.key === "admin"}
-                    onChange={() => toggleRole(accessRoles, setAccessRoles, role.key)}
-                  />
+                <label key={role.key} style={{ display: "flex", gap: "0.5rem", alignItems: "center", cursor: "pointer" }}>
+                  <input type="checkbox" checked={accessRoles.includes(role.key)} disabled={role.key === "admin"} onChange={() => toggleRole(accessRoles, setAccessRoles, role.key)} />
                   <span>{role.label}</span>
                   {role.key === "admin" && <span className="status-pill status-pill--accent">always</span>}
                 </label>
               ))}
             </div>
           </Panel>
-
-          <Panel title="Import rights" subtitle="Which roles can upload Excel files.">
+          <Panel title="Import rights" subtitle="Who can upload Excel files.">
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
               {activeRoles.map((role) => (
-                <label key={role.key} style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={importerRoles.includes(role.key)}
-                    onChange={() => toggleRole(importerRoles, setImporterRoles, role.key)}
-                  />
+                <label key={role.key} style={{ display: "flex", gap: "0.5rem", alignItems: "center", cursor: "pointer" }}>
+                  <input type="checkbox" checked={importerRoles.includes(role.key)} onChange={() => toggleRole(importerRoles, setImporterRoles, role.key)} />
                   <span>{role.label}</span>
                 </label>
               ))}
             </div>
-            <p className="panel-note">Only roles with portal access are listed.</p>
+            <p className="panel-note">Only roles with portal access are shown.</p>
           </Panel>
         </section>
 
+        {/* Field visibility */}
         <section className="panel-grid panel-grid--1">
-          <Panel
-            title="Field visibility per role"
-            subtitle="Which data each role can see. Columns grouped by data source."
-          >
+          <Panel title="Field visibility per role" subtitle="Which columns each role can see. WA data always overrides Excel for the same field.">
             <div style={{ overflowX: "auto" }}>
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th style={{ minWidth: 180 }}>Field</th>
-                    <th style={{ minWidth: 80 }}>Source</th>
-                    {activeRoles.map((role) => (
-                      <th key={role.key} style={{ minWidth: 130, textAlign: "center" }}>
-                        {role.label}
-                      </th>
-                    ))}
+                    <th style={{ minWidth: 160 }}>Field</th>
+                    <th style={{ minWidth: 110 }}>Source</th>
+                    {activeRoles.map((r) => <th key={r.key} style={{ minWidth: 130, textAlign: "center" }}>{r.label}</th>)}
                   </tr>
                 </thead>
                 <tbody>
                   {FIELD_GROUPS.map((group) => {
-                    const groupFields = ALL_ATHLETE_FIELDS.filter((f) => f.group === group.key);
-                    return groupFields.map((field, fi) => (
+                    const gFields = ALL_ATHLETE_FIELDS.filter((f) => f.group === group.key);
+                    return gFields.map((field, fi) => (
                       <tr key={field.key}>
                         <td>{field.label}</td>
                         {fi === 0 ? (
-                          <td rowSpan={groupFields.length} style={{ verticalAlign: "middle" }}>
-                            <span className="status-pill">{group.label}</span>
+                          <td rowSpan={gFields.length} style={{ verticalAlign: "middle" }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                              <span className="status-pill">{group.label}</span>
+                              {activeRoles.map((r) => (
+                                <button
+                                  key={r.key}
+                                  type="button"
+                                  className="button button--ghost button--small"
+                                  onClick={() => setGroupForRole(r.key, group.key, !groupAllGranted(r.key, group.key))}
+                                  style={{ fontSize: "0.68rem", padding: "1px 5px" }}
+                                >
+                                  {groupAllGranted(r.key, group.key) ? "−" : "+"} {r.label.split(" ")[0]}
+                                </button>
+                              ))}
+                            </div>
                           </td>
                         ) : null}
-                        {activeRoles.map((role) => {
-                          const visible = (fieldVisibility[role.key] ?? []).includes(field.key);
-                          return (
-                            <td key={role.key} style={{ textAlign: "center" }}>
-                              <input
-                                type="checkbox"
-                                checked={visible}
-                                onChange={() => toggleField(role.key, field.key)}
-                              />
-                            </td>
-                          );
-                        })}
+                        {activeRoles.map((r) => (
+                          <td key={r.key} style={{ textAlign: "center" }}>
+                            <input
+                              type="checkbox"
+                              checked={(fieldVisibility[r.key] ?? []).includes(field.key)}
+                              onChange={() => toggleField(r.key, field.key)}
+                            />
+                          </td>
+                        ))}
                       </tr>
                     ));
                   })}
-                  {/* Group toggle row */}
-                  <tr style={{ background: "rgba(0,0,0,0.03)" }}>
-                    <td colSpan={2} style={{ fontWeight: 600, fontSize: "0.8rem", color: "#666" }}>
-                      Toggle by group →
-                    </td>
-                    {activeRoles.map((role) => (
-                      <td key={role.key}>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                          {FIELD_GROUPS.map((g) => (
-                            <button
-                              key={g.key}
-                              type="button"
-                              className={`button button--ghost button--small${allGranted(role.key, g.key) ? "" : ""}`}
-                              onClick={() => setGroupForRole(role.key, g.key, !allGranted(role.key, g.key))}
-                              style={{ fontSize: "0.7rem", padding: "1px 6px" }}
-                            >
-                              {allGranted(role.key, g.key) ? "−" : "+"} {g.label}
-                            </button>
-                          ))}
-                        </div>
-                      </td>
-                    ))}
-                  </tr>
                 </tbody>
               </table>
             </div>
@@ -941,7 +947,7 @@ function AthletePortalSettingsPage({ Panel }) {
                 {saving ? "Saving…" : "Save settings"}
               </button>
             </div>
-            {saveStatus ? <p className="panel-note">{saveStatus}</p> : null}
+            {saveStatus && <p className="panel-note">{saveStatus}</p>}
           </Panel>
         </section>
       </form>

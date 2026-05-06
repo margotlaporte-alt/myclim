@@ -6,55 +6,64 @@ const ATHLETE_PORTAL_SETTINGS_PATH = ["appSettings", "athletePortalSettings"];
 const ATHLETES_COLLECTION = "athletes";
 
 // ─── Field definitions ────────────────────────────────────────────────────────
-// Based on real CMCM Excel file structure (3 file types).
 
 const ALL_ATHLETE_FIELDS = [
   // Core identity
-  { key: "event",         label: "Event",            group: "identity" },
-  { key: "lastName",      label: "Last name",         group: "identity" },
-  { key: "firstName",     label: "First name",        group: "identity" },
-  { key: "nationality",   label: "Nationality",       group: "identity" },
-  { key: "birthYear",     label: "Birth year",        group: "identity" },
+  { key: "event",         label: "Event",             group: "identity" },
+  { key: "lastName",      label: "Last name",          group: "identity" },
+  { key: "firstName",     label: "First name",         group: "identity" },
+  { key: "nationality",   label: "Nationality",        group: "identity" },
+  { key: "birthYear",     label: "Birth year",         group: "identity" },
 
-  // Performance (from START_LIST / FINAL_LANES)
-  { key: "pb",            label: "PB (raw)",          group: "performance" },
-  { key: "pbIndoor",      label: "PB Indoor",         group: "performance" },
-  { key: "pbOutdoor",     label: "PB Outdoor",        group: "performance" },
-  { key: "sb",            label: "SB (season)",       group: "performance" },
+  // Excel-imported performance (from start list / lanes file)
+  { key: "status",        label: "Status (ok/out)",    group: "excel" },
+  { key: "worldRanking",  label: "World Ranking",      group: "excel" },
+  { key: "pb",            label: "PB (Excel raw)",     group: "excel" },
+  { key: "pbIndoor",      label: "PB Indoor (Excel)",  group: "excel" },
+  { key: "pbOutdoor",     label: "PB Outdoor (Excel)", group: "excel" },
+  { key: "sb",            label: "SB (Excel raw)",     group: "excel" },
 
-  // START_LIST specific
-  { key: "status",        label: "Status (ok/out)",   group: "startlist" },
-  { key: "worldRanking",  label: "World Ranking",     group: "startlist" },
-  { key: "waUrl",         label: "WA Profile URL",    group: "startlist" },
-  { key: "waid",          label: "WAID",              group: "startlist" },
+  // World Athletics — source of truth
+  { key: "waid",          label: "WAID",               group: "wa" },
+  { key: "waUrl",         label: "WA Profile URL",     group: "wa" },
+  { key: "waPbIndoor",    label: "WA PB Indoor",       group: "wa" },
+  { key: "waPbOutdoor",   label: "WA PB Outdoor",      group: "wa" },
+  { key: "waIndoorSb",    label: "WA SB Indoor",       group: "wa" },
+  { key: "waOutdoorSb",   label: "WA SB Outdoor",      group: "wa" },
+  { key: "waFetchedAt",   label: "WA last sync",       group: "wa" },
 
-  // FINAL_LANES specific
-  { key: "heat",          label: "Heat",              group: "lanes" },
-  { key: "lane",          label: "Lane",              group: "lanes" },
+  // Heat/lane (from lanes file)
+  { key: "heat",          label: "Heat",               group: "lanes" },
+  { key: "lane",          label: "Lane",               group: "lanes" },
 
-  // TRAVEL specific
-  { key: "manager",       label: "Manager",           group: "travel" },
-  { key: "arrival",       label: "Arrival",           group: "travel" },
-  { key: "departure",     label: "Departure",         group: "travel" },
+  // Travel logistics (from travel file)
+  { key: "manager",       label: "Manager",            group: "travel" },
+  { key: "arrival",       label: "Arrival",            group: "travel" },
+  { key: "departure",     label: "Departure",          group: "travel" },
 ];
 
 const FIELD_GROUPS = [
-  { key: "identity",    label: "Identity" },
-  { key: "performance", label: "Performance" },
-  { key: "startlist",   label: "Start list" },
-  { key: "lanes",       label: "Heats & Lanes" },
-  { key: "travel",      label: "Travel logistics" },
+  { key: "identity", label: "Identity" },
+  { key: "excel",    label: "Excel import" },
+  { key: "wa",       label: "World Athletics" },
+  { key: "lanes",    label: "Heats & Lanes" },
+  { key: "travel",   label: "Travel" },
 ];
 
-// Default visibility per role — conservative: non-admin roles see basics only
+// Default settings — admin can override everything via the settings page.
+// Season rule: meeting year N → indoor N, outdoor N-1.
 const DEFAULT_PORTAL_SETTINGS = {
   accessRoles: ["admin", "meeting_director"],
   importerRoles: ["admin", "meeting_director"],
+  // WA service base URL (the Node.js backend we built)
+  waServiceUrl: "http://localhost:3001",
+  // Which seasons to display as "current" SBs
+  seasons: { indoor: 2026, outdoor: 2025 },
   fieldVisibility: {
-    admin: ALL_ATHLETE_FIELDS.map((f) => f.key),
+    admin:            ALL_ATHLETE_FIELDS.map((f) => f.key),
     meeting_director: ALL_ATHLETE_FIELDS.map((f) => f.key),
-    gestionnaire: ["event", "lastName", "firstName", "nationality", "status", "heat", "lane"],
-    chef_equipe: ["event", "lastName", "firstName", "nationality"],
+    gestionnaire:     ["event", "lastName", "firstName", "nationality", "status", "heat", "lane"],
+    chef_equipe:      ["event", "lastName", "firstName", "nationality"],
   },
 };
 
@@ -68,17 +77,19 @@ function useAthletePortalSettings() {
     const unsubscribe = onSnapshot(
       doc(db, ...ATHLETE_PORTAL_SETTINGS_PATH),
       (snapshot) => {
-        setSettings(
-          snapshot.exists()
-            ? { ...DEFAULT_PORTAL_SETTINGS, ...snapshot.data() }
-            : DEFAULT_PORTAL_SETTINGS,
-        );
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          setSettings({
+            ...DEFAULT_PORTAL_SETTINGS,
+            ...data,
+            seasons: { ...DEFAULT_PORTAL_SETTINGS.seasons, ...(data.seasons ?? {}) },
+          });
+        } else {
+          setSettings(DEFAULT_PORTAL_SETTINGS);
+        }
         setLoading(false);
       },
-      () => {
-        setSettings(DEFAULT_PORTAL_SETTINGS);
-        setLoading(false);
-      },
+      () => { setSettings(DEFAULT_PORTAL_SETTINGS); setLoading(false); },
     );
     return unsubscribe;
   }, []);
@@ -91,10 +102,7 @@ function useAthletes(enabled = true) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!enabled) {
-      setLoading(false);
-      return undefined;
-    }
+    if (!enabled) { setLoading(false); return undefined; }
 
     const unsubscribe = onSnapshot(
       collection(db, ATHLETES_COLLECTION),
@@ -110,80 +118,130 @@ function useAthletes(enabled = true) {
   return { athletes, loading };
 }
 
+// ─── WA service integration ───────────────────────────────────────────────────
+
+/**
+ * Fetch a single athlete's data from the wa-service and extract the
+ * season-relevant SBs.
+ *
+ * Returns an object with the fields to write back to Firestore:
+ *   waPbIndoor, waPbOutdoor, waIndoorSb, waOutdoorSb, waFetchedAt, waUrl
+ */
+async function fetchAthleteFromWaService(waid, settings) {
+  const baseUrl = String(settings?.waServiceUrl || DEFAULT_PORTAL_SETTINGS.waServiceUrl).replace(/\/$/, "");
+  const seasons = settings?.seasons ?? DEFAULT_PORTAL_SETTINGS.seasons;
+
+  const response = await fetch(`${baseUrl}/athlete/${waid}/performances`, {
+    headers: { "Content-Type": "application/json" },
+    signal: AbortSignal.timeout(15_000),
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(`WA service returned ${response.status}: ${text}`);
+  }
+
+  const data = await response.json();
+
+  const pbs = Array.isArray(data.personalBests) ? data.personalBests : [];
+  const sbs = Array.isArray(data.seasonBests) ? data.seasonBests : [];
+
+  // Best PB for each environment (indoor track is typically ≤ 200m)
+  const waPbIndoor  = bestMark(pbs.filter((r) => isIndoorDiscipline(r.discipline)));
+  const waPbOutdoor = bestMark(pbs.filter((r) => !isIndoorDiscipline(r.discipline)));
+
+  // Season bests filtered by configured seasons
+  const waIndoorSb  = bestMarkForYear(sbs, seasons.indoor,  true);
+  const waOutdoorSb = bestMarkForYear(sbs, seasons.outdoor, false);
+
+  return {
+    waPbIndoor:  waPbIndoor  ? `${waPbIndoor.mark}${waPbIndoor.date  ? ` (${waPbIndoor.date.slice(0,4)})`  : ""}` : null,
+    waPbOutdoor: waPbOutdoor ? `${waPbOutdoor.mark}${waPbOutdoor.date ? ` (${waPbOutdoor.date.slice(0,4)})` : ""}` : null,
+    waIndoorSb:  waIndoorSb  ? `${waIndoorSb.mark}${waIndoorSb.date   ? ` @ ${waIndoorSb.venue ?? ""}`.trim()      : ""}` : null,
+    waOutdoorSb: waOutdoorSb ? `${waOutdoorSb.mark}${waOutdoorSb.date ? ` @ ${waOutdoorSb.venue ?? ""}`.trim()     : ""}` : null,
+    waFetchedAt: new Date().toISOString(),
+    waUrl: data.firstName
+      ? `https://worldathletics.org/athletes/_/${waid}`
+      : null,
+  };
+}
+
+// Indoor disciplines: 60m, 60mH, 200m (indoor only), pole vault, etc.
+// Simple heuristic: distance ≤ 200 + standard track & field events at indoor meets.
+// WA doesn't always tag disciplines as indoor/outdoor explicitly.
+function isIndoorDiscipline(discipline) {
+  if (!discipline) return false;
+  const d = discipline.toLowerCase();
+  return d.startsWith("60") || d === "200m" || d.includes("indoor");
+}
+
+function bestMark(results) {
+  if (!results.length) return null;
+  // Sort by resultScore desc if available, otherwise just take first
+  return results.slice().sort((a, b) => (b.resultScore ?? 0) - (a.resultScore ?? 0))[0];
+}
+
+function bestMarkForYear(results, year, indoor) {
+  const yearStr = String(year);
+  const relevant = results.filter((r) => {
+    if (!r.date) return false;
+    if (!r.date.startsWith(yearStr)) return false;
+    if (indoor !== undefined) {
+      const isIn = isIndoorDiscipline(r.discipline);
+      if (indoor && !isIn) return false;
+      if (!indoor && isIn) return false;
+    }
+    return true;
+  });
+  return bestMark(relevant);
+}
+
 // ─── Permission helpers ───────────────────────────────────────────────────────
 
 function canAccessAthletePortal(roles, settings) {
-  if (!settings) return false;
-  const accessRoles = settings.accessRoles ?? DEFAULT_PORTAL_SETTINGS.accessRoles;
+  const accessRoles = settings?.accessRoles ?? DEFAULT_PORTAL_SETTINGS.accessRoles;
   return roles.some((r) => accessRoles.includes(r));
 }
 
 function canImportAthletes(roles, settings) {
-  if (!settings) return false;
-  const importerRoles = settings.importerRoles ?? DEFAULT_PORTAL_SETTINGS.importerRoles;
+  const importerRoles = settings?.importerRoles ?? DEFAULT_PORTAL_SETTINGS.importerRoles;
   return roles.some((r) => importerRoles.includes(r));
 }
 
 function getVisibleFields(roles, settings) {
-  if (!settings) return [];
-  const fieldVisibility = settings.fieldVisibility ?? {};
-
+  const fieldVisibility = settings?.fieldVisibility ?? {};
   const visibleKeys = new Set();
   roles.forEach((role) => {
-    const fields = fieldVisibility[role];
-    if (Array.isArray(fields)) fields.forEach((f) => visibleKeys.add(f));
+    (fieldVisibility[role] ?? []).forEach((k) => visibleKeys.add(k));
   });
-
   return ALL_ATHLETE_FIELDS.filter((f) => visibleKeys.has(f.key));
 }
 
-// ─── Parsing helpers (shared with import page) ────────────────────────────────
+// ─── Parsing helpers (used by import page) ────────────────────────────────────
 
-/**
- * Extract WAID from a World Athletics profile URL.
- * URL pattern: /athletes/{country}/{firstname-lastname-14621598}
- * Returns null if no WAID found.
- */
 function extractWaid(urlOrText) {
   if (!urlOrText) return null;
-  const str = String(urlOrText).trim();
-  // Match trailing 7-10 digit number (the WAID at end of WA URLs)
-  const m = str.match(/[/-](\d{7,10})(?:[#?].*)?$/);
+  const m = String(urlOrText).trim().match(/[/-](\d{7,10})(?:[#?].*)?$/);
   return m ? m[1] : null;
 }
 
-/**
- * Parse PB string like "7,06s(25)/11,00s(24)" or "7NR,06s(25)/11,00s(24)".
- * Returns { indoor, outdoor } where each is "7.06 (2025)" or null.
- */
 function parsePb(raw) {
   if (!raw) return { indoor: null, outdoor: null };
-  const str = String(raw).trim();
-
-  // Split on "/" — left = indoor, right = outdoor
-  const parts = str.split("/").map((p) => p.trim()).filter(Boolean);
+  const parts = String(raw).trim().split("/").map((p) => p.trim()).filter(Boolean);
 
   function parsePart(p) {
     if (!p) return null;
-    // Extract year from (YY) or (YYYY) FIRST before stripping chars
     const yearMatch = p.match(/\((\d{2,4})\)/);
     let year = yearMatch ? yearMatch[1] : null;
     if (year && year.length === 2) year = Number(year) < 50 ? `20${year}` : `19${year}`;
-    // Strip year, NR flag, letters, and punctuation — keep only digits and decimal separator
     const noYear = p.replace(/\(\d{2,4}\)/g, "").replace(/NR/gi, "");
     const val = noYear.replace(/[^0-9,]/g, "").replace(",", ".");
     return val ? `${val}${year ? ` (${year})` : ""}` : null;
   }
 
-  return {
-    indoor: parsePart(parts[0]),
-    outdoor: parsePart(parts[1]) ?? null,
-  };
+  return { indoor: parsePart(parts[0]), outdoor: parsePart(parts[1]) ?? null };
 }
 
-/**
- * Normalize birth year: 99 → 1999, 2001 → 2001.
- */
 function normalizeBirthYear(raw) {
   const n = Number(raw);
   if (!n) return null;
@@ -191,10 +249,6 @@ function normalizeBirthYear(raw) {
   return n < 50 ? 2000 + n : 1900 + n;
 }
 
-/**
- * Build a stable merge key for matching athletes across file types.
- * Key: normalized lastName + firstName + nationality.
- */
 function athleteMergeKey(lastName, firstName, nationality) {
   return [lastName, firstName, nationality]
     .map((s) => String(s || "").trim().toLowerCase().replace(/\s+/g, " "))
@@ -204,6 +258,7 @@ function athleteMergeKey(lastName, firstName, nationality) {
 export {
   useAthletePortalSettings,
   useAthletes,
+  fetchAthleteFromWaService,
   canAccessAthletePortal,
   canImportAthletes,
   getVisibleFields,
