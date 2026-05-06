@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   browserLocalPersistence,
   browserSessionPersistence,
@@ -13,19 +13,24 @@ import {
   addDoc,
   collection,
   doc,
+  getDoc,
   onSnapshot,
   serverTimestamp,
   setDoc,
 } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
+import { ACTIVE_EDITION_DOC_PATH, DEFAULT_ACTIVE_EDITION, normalizeEditionId } from "../app/edition";
+import { AuthContext } from "./auth-context";
 import { auth, db, functions } from "../services/firebase";
-import {
-  buildPreProgramAccountCreatedMail,
-  buildVolunteerAccountCreatedMail,
-  enqueueTransactionalMail,
-} from "../services/mailQueue";
+let mailQueueModulePromise;
 
-const AuthContext = createContext();
+async function loadMailQueueModule() {
+  if (!mailQueueModulePromise) {
+    mailQueueModulePromise = import("../services/mailQueue");
+  }
+
+  return mailQueueModulePromise;
+}
 
 function normalizeRole(role) {
   return String(role || "")
@@ -145,6 +150,16 @@ function createRegistrationStepError(code, message, cause) {
   error.code = code;
   error.cause = cause;
   return error;
+}
+
+async function resolveActiveEditionId() {
+  try {
+    const snapshot = await getDoc(doc(db, ...ACTIVE_EDITION_DOC_PATH));
+    return normalizeEditionId(snapshot.exists() ? snapshot.data()?.activeEdition : DEFAULT_ACTIVE_EDITION);
+  } catch (error) {
+    console.warn("Unable to resolve active edition, fallback applied", error);
+    return DEFAULT_ACTIVE_EDITION;
+  }
 }
 
 export function AuthProvider({ children }) {
@@ -299,7 +314,18 @@ export function AuthProvider({ children }) {
     }
   }
 
+  async function deletePlatformUser(userId, email = "") {
+    const callable = httpsCallable(functions, "deletePlatformUser");
+    const response = await callable({
+      userId: String(userId || "").trim(),
+      email: String(email || "").trim(),
+    });
+
+    return response?.data || null;
+  }
+
   async function createVolunteerApplication(formData) {
+    const activeEditionId = await resolveActiveEditionId();
     const age = calculateAgeFromBirthDate(formData.birthDate);
 
     if (age !== null && age < 14) {
@@ -337,6 +363,7 @@ export function AuthProvider({ children }) {
 
     try {
       await addDoc(collection(db, "volunteerApplications"), {
+        editionId: activeEditionId,
         uid: credential.user.uid,
         firstName: formData.firstName,
         lastName: formData.lastName,
@@ -402,6 +429,7 @@ export function AuthProvider({ children }) {
     }
 
     try {
+      const { buildVolunteerAccountCreatedMail, enqueueTransactionalMail } = await loadMailQueueModule();
       await enqueueTransactionalMail(
         buildVolunteerAccountCreatedMail({
           firstName: formData.firstName,
@@ -416,6 +444,7 @@ export function AuthProvider({ children }) {
   }
 
   async function createU14PreProgramRegistration(formData) {
+    const activeEditionId = await resolveActiveEditionId();
     const credential = await createUserWithEmailAndPassword(auth, formData.parentEmail, formData.password);
 
     const parentProfile = buildBaseProfile(credential.user, {
@@ -450,6 +479,7 @@ export function AuthProvider({ children }) {
 
       try {
         childRef = await addDoc(collection(db, "u14Children"), {
+          editionId: activeEditionId,
           parentUserId: credential.user.uid,
           firstName: child.firstName,
           lastName: child.lastName,
@@ -465,13 +495,14 @@ export function AuthProvider({ children }) {
       } catch (error) {
         throw createRegistrationStepError(
           "preprogram/child-write-failed",
-          `Le compte a été créé, mais l'enregistrement de la fiche enfant \"${child.firstName} ${child.lastName}\" a échoué.`,
+          `Le compte a été créé, mais l'enregistrement de la fiche enfant "${child.firstName} ${child.lastName}" a échoué.`,
           error,
         );
       }
 
       try {
         await addDoc(collection(db, "u14Requests"), {
+          editionId: activeEditionId,
           childId: childRef.id,
           parentUserId: credential.user.uid,
           parentFirstName: formData.parentFirstName,
@@ -498,13 +529,14 @@ export function AuthProvider({ children }) {
       } catch (error) {
         throw createRegistrationStepError(
           "preprogram/request-write-failed",
-          `Le compte a été créé, mais l'enregistrement de la demande pour \"${child.firstName} ${child.lastName}\" a échoué.`,
+          `Le compte a été créé, mais l'enregistrement de la demande pour "${child.firstName} ${child.lastName}" a échoué.`,
           error,
         );
       }
     }
 
     try {
+      const { buildPreProgramAccountCreatedMail, enqueueTransactionalMail } = await loadMailQueueModule();
       await enqueueTransactionalMail(
         buildPreProgramAccountCreatedMail({
           parentFirstName: formData.parentFirstName,
@@ -529,10 +561,12 @@ export function AuthProvider({ children }) {
       );
     }
 
+    const activeEditionId = await resolveActiveEditionId();
     let childRef;
 
     try {
       childRef = await addDoc(collection(db, "u14Children"), {
+        editionId: activeEditionId,
         parentUserId,
         firstName: formData.firstName,
         lastName: formData.lastName,
@@ -548,13 +582,14 @@ export function AuthProvider({ children }) {
     } catch (error) {
       throw createRegistrationStepError(
         "preprogram/child-write-failed",
-        `L'enregistrement de la fiche enfant \"${formData.firstName} ${formData.lastName}\" a échoué.`,
+        `L'enregistrement de la fiche enfant "${formData.firstName} ${formData.lastName}" a échoué.`,
         error,
       );
     }
 
     try {
       await addDoc(collection(db, "u14Requests"), {
+        editionId: activeEditionId,
         childId: childRef.id,
         parentUserId,
         parentFirstName: formData.parentFirstName,
@@ -581,7 +616,7 @@ export function AuthProvider({ children }) {
     } catch (error) {
       throw createRegistrationStepError(
         "preprogram/request-write-failed",
-        `L'enregistrement de la demande pour \"${formData.firstName} ${formData.lastName}\" a échoué.`,
+        `L'enregistrement de la demande pour "${formData.firstName} ${formData.lastName}" a échoué.`,
         error,
       );
     }
@@ -594,6 +629,7 @@ export function AuthProvider({ children }) {
         createU14PreProgramRegistration,
         createVolunteerApplication,
         currentUser,
+        deletePlatformUser,
         loading,
         login,
         logout,
@@ -605,8 +641,4 @@ export function AuthProvider({ children }) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  return useContext(AuthContext);
 }
