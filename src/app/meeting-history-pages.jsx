@@ -10,20 +10,33 @@ import {
   useMeetingRecords,
   useMeetingResultsForYear,
 } from "./meeting-history-hooks";
+import { useAthleteRegistry } from "./athlete-portal-hooks";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const FLAG_BASE = "https://flagcdn.com/20x15";
 const NOC_TO_ISO2 = {
-  ALG: "dz", ARG: "ar", AUS: "au", AUT: "at", BEL: "be", BGR: "bg",
-  BLR: "by", BRA: "br", BUL: "bg", CAN: "ca", CHN: "cn", CIV: "ci",
-  COL: "co", CRO: "hr", CZE: "cz", DEN: "dk", ESP: "es", ETH: "et",
-  FIN: "fi", FRA: "fr", GBR: "gb", GER: "de", GRE: "gr", HUN: "hu",
-  IRL: "ie", ISR: "il", ITA: "it", JAM: "jm", JPN: "jp", KEN: "ke",
-  KOR: "kr", LAT: "lv", LTU: "lt", LUX: "lu", MAR: "ma", MDA: "md",
-  NED: "nl", NOR: "no", POL: "pl", POR: "pt", PRT: "pt", QAT: "qa",
-  ROM: "ro", ROU: "ro", RSA: "za", RUS: "ru", SLO: "si", SRB: "rs",
-  SUI: "ch", SVK: "sk", SWE: "se", TUR: "tr", UKR: "ua", USA: "us",
+  ALG: "dz", AND: "ad", ARG: "ar", AUS: "au", AUT: "at",
+  BAH: "bs", BEL: "be", BGR: "bg", BLR: "by", BRA: "br", BUL: "bg",
+  CAN: "ca", CHI: "cl", CHN: "cn", CIV: "ci", COL: "co", CRO: "hr",
+  CYP: "cy", CZE: "cz",
+  DEN: "dk", DEU: "de",
+  ESP: "es", EST: "ee", ETH: "et",
+  FIN: "fi", FRA: "fr",
+  GBR: "gb", GER: "de", GHA: "gh", GRE: "gr",
+  HUN: "hu",
+  IRL: "ie", ISR: "il", ITA: "it",
+  JAM: "jm", JPN: "jp",
+  KEN: "ke", KOR: "kr",
+  LAT: "lv", LBR: "lr", LTU: "lt", LUX: "lu",
+  MAR: "ma", MDA: "md", MRI: "mu",
+  NED: "nl", NGR: "ng", NLD: "nl", NOR: "no", NZL: "nz",
+  POL: "pl", POR: "pt", PRT: "pt",
+  QAT: "qa",
+  ROM: "ro", ROU: "ro", RSA: "za", RUS: "ru",
+  SLO: "si", SRB: "rs", STP: "st", SUI: "ch", SVK: "sk", SWE: "se",
+  TUR: "tr",
+  UKR: "ua", USA: "us",
   ZAF: "za", ZIM: "zw",
 };
 
@@ -109,6 +122,54 @@ function SeedButton({ onSeed, seeding, seedLog }) {
 
 // ─── Meeting History page ─────────────────────────────────────────────────────
 
+// Build a lookup index from athlete registry: "lastname_yob" → registry entry
+function useRegistryIndex() {
+  const { userProfile } = useAuth();
+  const roles = getActiveRoles(userProfile);
+  const canAccess = roles.includes("admin") || roles.includes("meeting_director");
+  const { registry } = useAthleteRegistry(canAccess);
+  return useMemo(() => {
+    const idx = new Map();
+    for (const a of registry) {
+      const yob = a.birthYear ?? (a.birthDate ? Number(a.birthDate.slice(0, 4)) : null);
+      const key = `${String(a.lastName || "").toLowerCase()}_${yob ?? ""}`;
+      if (!idx.has(key)) idx.set(key, a);
+    }
+    return idx;
+  }, [registry]);
+}
+
+function AthleteNameCell({ lastName, firstName, yob, registryIdx, style }) {
+  const key = `${String(lastName || "").toLowerCase()}_${yob ?? ""}`;
+  const entry = registryIdx?.get(key);
+  const fullName = `${lastName || ""}${firstName ? " " + firstName : ""}`;
+
+  if (entry?.waUrl) {
+    return (
+      <a
+        href={entry.waUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ ...style, color: "#1d4ed8", textDecoration: "none", fontWeight: 600 }}
+        title={`World Athletics profile${entry.waid ? ` · WAID ${entry.waid}` : ""}`}
+      >
+        {fullName}
+        <span style={{ marginLeft: 4, fontSize: "0.68rem", opacity: 0.55 }}>↗</span>
+      </a>
+    );
+  }
+  if (entry) {
+    // In registry but no WA URL yet
+    return (
+      <span style={{ ...style, fontWeight: 600 }} title="In athlete database">
+        {fullName}
+        <span style={{ marginLeft: 4, fontSize: "0.65rem", color: "#6b7280" }}>●</span>
+      </span>
+    );
+  }
+  return <span style={{ ...style, fontWeight: 600 }}>{fullName}</span>;
+}
+
 function MeetingHistoryPage({ Panel }) {
   const { userProfile } = useAuth();
   const roles = getActiveRoles(userProfile);
@@ -120,6 +181,7 @@ function MeetingHistoryPage({ Panel }) {
   const [closeStatus, setCloseStatus] = useState(null);
   const [seeding, setSeeding] = useState(false);
   const [seedLog, setSeedLog] = useState([]);
+  const registryIdx = useRegistryIndex();
 
   // Pick the most recent non-closed edition by default once loaded
   const effectiveYear = selectedYear
@@ -142,18 +204,6 @@ function MeetingHistoryPage({ Panel }) {
       if (dc !== 0) return dc;
       return a.gender === "W" ? -1 : 1;
     });
-  }, [results]);
-
-  // Detect athletes who appear in more than 1 edition (for badges)
-  const recurringAthletes = useMemo(() => {
-    const counts = {};
-    for (const r of results) {
-      const k = `${String(r.lastName || "").toLowerCase()}_${r.yob || ""}`;
-      if (!counts[k]) counts[k] = new Set();
-      counts[k].add(r.year);
-    }
-    // We only have one year of results here; cross-year detection done from registry
-    return counts;
   }, [results]);
 
   async function handleSeed() {
@@ -327,9 +377,13 @@ function MeetingHistoryPage({ Panel }) {
                           <RankBadge rank={r.rank} />
                         </td>
                         <td style={{ fontSize: "0.78rem", color: "#888" }}>{r.discipline}</td>
-                        <td className="col-sticky col-sticky--last" style={{ fontWeight: 600 }}>
-                          {r.lastName}
-                          {r.firstName ? ` ${r.firstName}` : ""}
+                        <td className="col-sticky col-sticky--last">
+                          <AthleteNameCell
+                            lastName={r.lastName}
+                            firstName={r.firstName}
+                            yob={r.yob}
+                            registryIdx={registryIdx}
+                          />
                         </td>
                         <td>
                           <FlagImg noc={r.noc} />
@@ -483,6 +537,7 @@ function MeetingRecordsPage({ Panel }) {
 
 function MeetingWinnersPage({ Panel }) {
   const { winners, loading } = useAllWinners();
+  const registryIdx = useRegistryIndex();
   const [genderFilter, setGenderFilter] = useState("all");
   const [disciplineFilter, setDisciplineFilter] = useState("all");
   const [search, setSearch] = useState("");
@@ -544,7 +599,7 @@ function MeetingWinnersPage({ Panel }) {
         <div>
           <p className="eyebrow">Meeting History</p>
           <h1>Hall of Winners</h1>
-          <p>Historical winners for every event at the Luxembourg Indoor Meeting (2003–2025).</p>
+          <p>Historical winners for every event at the Luxembourg Indoor Meeting (2003–2026).</p>
         </div>
       </section>
 
@@ -653,8 +708,13 @@ function MeetingWinnersPage({ Panel }) {
                             {w.year}
                           </td>
                           <td style={{ fontSize: "0.75rem", color: "#888" }}>{w.discipline}</td>
-                          <td className="col-sticky col-sticky--last" style={{ fontWeight: 600 }}>
-                            {w.lastName} {w.firstName}
+                          <td className="col-sticky col-sticky--last">
+                            <AthleteNameCell
+                              lastName={w.lastName}
+                              firstName={w.firstName}
+                              yob={w.yob}
+                              registryIdx={registryIdx}
+                            />
                             {wins >= 3 && (
                               <span style={{
                                 marginLeft: 6, fontSize: "0.68rem", fontWeight: 700,
@@ -714,8 +774,13 @@ function MeetingWinnersPage({ Panel }) {
                         <td style={{ fontWeight: 700, color: "#1d4ed8" }}>{w.year}</td>
                         <td style={{ fontSize: "0.83rem" }}>{w.discipline}</td>
                         <td><GenderTag gender={w.gender} /></td>
-                        <td style={{ fontWeight: 600 }}>
-                          {w.lastName} {w.firstName}
+                        <td>
+                          <AthleteNameCell
+                            lastName={w.lastName}
+                            firstName={w.firstName}
+                            yob={w.yob}
+                            registryIdx={registryIdx}
+                          />
                           {wins >= 3 && (
                             <span style={{
                               marginLeft: 6, fontSize: "0.68rem", fontWeight: 700,
