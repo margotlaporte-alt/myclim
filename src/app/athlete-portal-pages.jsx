@@ -6,6 +6,7 @@ import { getActiveRoles } from "./navigation";
 import {
   ALL_ATHLETE_FIELDS,
   ATHLETES_COLLECTION,
+  ATHLETE_REGISTRY_COLLECTION,
   DEFAULT_PORTAL_SETTINGS,
   FIELD_GROUPS,
   athleteMergeKey,
@@ -15,7 +16,9 @@ import {
   getVisibleFields,
   normalizeBirthYear,
   parsePb,
+  upsertAthleteRegistry,
   useAthletePortalSettings,
+  useAthleteRegistry,
   useAthletes,
   ATHLETE_PORTAL_SETTINGS_PATH,
 } from "./athlete-portal-hooks";
@@ -448,7 +451,16 @@ function WaSyncButton({ athlete, settings, onDone }) {
     setError("");
     try {
       const waData = await fetchAthleteFromWaService(athlete.waid, settings, athlete.event);
-      await updateDoc(doc(db, ATHLETES_COLLECTION, athlete.id), waData);
+      const { _waIdentity, ...firestoreData } = waData;
+      await updateDoc(doc(db, ATHLETES_COLLECTION, athlete.id), firestoreData);
+      // Persist identity to the permanent registry (fire & forget)
+      if (_waIdentity) {
+        upsertAthleteRegistry({
+          ..._waIdentity,
+          nationality: athlete.nationality,
+          birthYear:   athlete.birthYear,
+        }).catch(() => {});
+      }
       setStatus("ok");
       onDone?.();
     } catch (err) {
@@ -547,6 +559,7 @@ function AthletePortalOverview({ Panel }) {
           <div className="dashboard-action-grid">
             <NavLink className="button button--secondary button-link" to="/app/athlete-portal/athletes">View athletes</NavLink>
             {canImport && <NavLink className="button button--secondary button-link" to="/app/athlete-portal/import">Import file</NavLink>}
+            {isAdmin && <NavLink className="button button--secondary button-link" to="/app/athlete-portal/registry">Athletes database</NavLink>}
             {isAdmin && <NavLink className="button button--secondary button-link" to="/app/athlete-portal/settings">Portal settings</NavLink>}
           </div>
         </Panel>
@@ -827,7 +840,16 @@ function AthletesListPage({ Panel }) {
     for (const athlete of withWaid) {
       try {
         const waData = await fetchAthleteFromWaService(athlete.waid, settings, athlete.event);
-        await updateDoc(doc(db, ATHLETES_COLLECTION, athlete.id), waData);
+        const { _waIdentity, ...firestoreData } = waData;
+        await updateDoc(doc(db, ATHLETES_COLLECTION, athlete.id), firestoreData);
+        // Persist identity to the permanent registry (fire & forget)
+        if (_waIdentity) {
+          upsertAthleteRegistry({
+            ..._waIdentity,
+            nationality: athlete.nationality,
+            birthYear:   athlete.birthYear,
+          }).catch(() => {});
+        }
         ok++;
       } catch (err) {
         failures.push({
@@ -1257,6 +1279,21 @@ function AthleteImportPage({ Panel }) {
         });
       });
       await batch.commit();
+
+      // Upsert identity into the permanent athlete registry (fire & forget)
+      merged
+        .filter((a) => a.lastName || a.firstName)
+        .forEach((a) => {
+          upsertAthleteRegistry({
+            lastName:    a.lastName,
+            firstName:   a.firstName,
+            nationality: a.nationality,
+            birthYear:   a.birthYear,
+            waid:        a.waid,
+            waUrl:       a.waUrl,
+          }).catch(() => {});
+        });
+
       const parts = [`${added} added`, `${updated} updated`];
       if (markedOut > 0) parts.push(`${markedOut} marked out (not in file)`);
       setStatus(`Done. ${parts.join(" · ")} · ${merged.length} total.`);
@@ -1661,4 +1698,122 @@ function AthletePortalSettingsPage({ Panel }) {
   );
 }
 
-export { AthletePortalOverview, AthletesListPage, AthleteImportPage, AthletePortalSettingsPage };
+// ─── Athlete Registry page ────────────────────────────────────────────────────
+
+function AthleteRegistryPage({ Panel }) {
+  const { userProfile } = useAuth();
+  const roles = getActiveRoles(userProfile);
+  const canAccess = roles.includes("admin") || roles.includes("meeting_director");
+
+  const { registry, loading } = useAthleteRegistry(canAccess);
+  const [search, setSearch] = useState("");
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    if (!q) return registry;
+    return registry.filter((a) => {
+      const hay = [a.lastName, a.firstName, a.nationality, a.waid, a.birthDate]
+        .filter(Boolean).join(" ").toLowerCase();
+      return hay.includes(q);
+    });
+  }, [registry, search]);
+
+  if (!canAccess) {
+    return (
+      <div className="page">
+        <section className="page-header"><div><h1>Athletes Database</h1></div></section>
+        <div className="notice-card notice-card--warn">
+          <strong>Access restricted</strong>
+          <p>Admin and Meeting Director only.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="page">
+      <section className="page-header">
+        <div>
+          <p className="eyebrow">Athlete Portal</p>
+          <h1>Athletes Database</h1>
+          <p>
+            {loading ? "Loading…" : `${registry.length} athletes across all editions`}
+            {" · "}Grows automatically when athletes are imported or WA-synced.
+          </p>
+        </div>
+      </section>
+
+      <section className="panel-grid panel-grid--1">
+        <Panel title="Search" subtitle={`${filtered.length} result${filtered.length !== 1 ? "s" : ""}`}>
+          <div style={{ marginBottom: "0.75rem" }}>
+            <input
+              className="input"
+              placeholder="Name, nationality, WAID…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ maxWidth: 340 }}
+            />
+          </div>
+
+          {loading ? (
+            <p className="panel-note">Loading registry…</p>
+          ) : registry.length === 0 ? (
+            <div className="notice-card">
+              <strong>Registry is empty</strong>
+              <p>Import athletes or run a WA sync to populate the database.</p>
+            </div>
+          ) : (
+            <div className="table-wrap table-wrap--athletes">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th data-sticky-col="1" className="col-sticky col-sticky--last">Last name</th>
+                    <th>First name</th>
+                    <th>Nat.</th>
+                    <th>Birth date</th>
+                    <th>WAID</th>
+                    <th>WA Profile</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((a) => (
+                    <tr key={a._docId}>
+                      <td className="col-sticky col-sticky--last" style={{ fontWeight: 600 }}>
+                        {a.lastName || "—"}
+                      </td>
+                      <td>{a.firstName || "—"}</td>
+                      <td>{a.nationality || "—"}</td>
+                      <td style={{ color: "#555", fontSize: "0.85rem" }}>
+                        {a.birthDate
+                          ? a.birthDate.slice(0, 10)          // ISO → YYYY-MM-DD
+                          : a.birthYear
+                            ? String(a.birthYear)
+                            : "—"}
+                      </td>
+                      <td style={{ fontFamily: "monospace", fontSize: "0.85rem" }}>
+                        {a.waid || "—"}
+                      </td>
+                      <td>
+                        {a.waUrl
+                          ? <a href={a.waUrl} target="_blank" rel="noopener noreferrer"
+                               style={{ fontSize: "0.82rem" }}>WA ↗</a>
+                          : <span style={{ color: "#bbb" }}>—</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <p className="panel-note" style={{ marginTop: "0.5rem" }}>
+            Records are permanent — an athlete is never removed from this database,
+            even if they no longer appear in the current edition's start list.
+            Core identity (name, birth date, WAID, WA URL) is preserved forever.
+          </p>
+        </Panel>
+      </section>
+    </div>
+  );
+}
+
+export { AthletePortalOverview, AthletesListPage, AthleteImportPage, AthletePortalSettingsPage, AthleteRegistryPage };

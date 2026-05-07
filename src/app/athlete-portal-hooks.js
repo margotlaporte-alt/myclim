@@ -1,9 +1,17 @@
 import { useEffect, useState } from "react";
-import { collection, doc, onSnapshot } from "firebase/firestore";
+import { collection, doc, onSnapshot, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../services/firebase";
 
 const ATHLETE_PORTAL_SETTINGS_PATH = ["appSettings", "athletePortalSettings"];
 const ATHLETES_COLLECTION = "athletes";
+
+/**
+ * Permanent cross-edition athlete registry.
+ * Document ID = WAID (as string) when known, otherwise
+ * "noWaid_{lastName}|{firstName}|{birthYear}" lowercased & normalised.
+ * Core identity fields only — no per-edition operational data.
+ */
+const ATHLETE_REGISTRY_COLLECTION = "athleteRegistry";
 
 // ─── Field definitions ────────────────────────────────────────────────────────
 
@@ -238,6 +246,8 @@ async function fetchAthleteFromWaService(waid, settings, event) {
   function fmtPb(r)  { return r ? `${r.mark}${r.date ? ` (${r.date.slice(0,4)})` : ""}` : null; }
   function fmtSb(r)  { return r ? `${r.mark}${r.date ? ` @ ${(r.venue ?? "").trim()}`.trimEnd() : ""}` : null; }
 
+  const waUrl = data.firstName ? `https://worldathletics.org/athletes/_/${waid}` : null;
+
   return {
     waPbIndoor:        fmtPb(waPbIndoor),
     waPbOutdoor:       fmtPb(waPbOutdoor),
@@ -245,7 +255,16 @@ async function fetchAthleteFromWaService(waid, settings, event) {
     waIndoorSbCurrent: fmtSb(waIndoorSbCurrent),
     waOutdoorSb:       fmtSb(waOutdoorSb),
     waFetchedAt: new Date().toISOString(),
-    waUrl: data.firstName ? `https://worldathletics.org/athletes/_/${waid}` : null,
+    waUrl,
+    // Identity fields from WA — used by callers to upsert the athlete registry
+    _waIdentity: {
+      firstName:   data.firstName   || null,
+      lastName:    data.lastName    || null,
+      birthDate:   data.birthDate   || null,
+      countryCode: data.countryCode || null,
+      waid:        Number(waid),
+      waUrl,
+    },
   };
 }
 
@@ -329,10 +348,85 @@ function athleteMergeKey(lastName, firstName, nationality) {
     .join("|");
 }
 
+// ─── Athlete Registry ─────────────────────────────────────────────────────────
+
+/**
+ * Derive a stable Firestore document ID for the permanent athlete registry.
+ * Uses WAID when available (most stable), falls back to a normalised name key.
+ */
+function registryDocId(waid, lastName, firstName, birthYear) {
+  if (waid) return String(waid);
+  const norm = (s) => String(s || "").trim().toLowerCase().replace(/\s+/g, "_");
+  return `noWaid_${norm(lastName)}_${norm(firstName)}_${birthYear || ""}`;
+}
+
+/**
+ * Upsert an athlete's permanent identity record into the `athleteRegistry`
+ * collection.  Only writes identity fields — never per-edition data.
+ *
+ * @param {object} fields  Any subset of:
+ *   { lastName, firstName, nationality, birthYear, birthDate, waid, waUrl, gender }
+ */
+async function upsertAthleteRegistry(fields) {
+  const { lastName, firstName, nationality, birthYear, birthDate, waid, waUrl, gender } = fields;
+  if (!lastName && !firstName) return; // nothing useful to store
+
+  const docId = registryDocId(waid, lastName, firstName, birthYear);
+  const record = {};
+  if (lastName)     record.lastName     = lastName;
+  if (firstName)    record.firstName    = firstName;
+  if (nationality)  record.nationality  = nationality;
+  if (birthYear)    record.birthYear    = Number(birthYear);
+  if (birthDate)    record.birthDate    = birthDate;
+  if (waid)         record.waid         = Number(waid);
+  if (waUrl)        record.waUrl        = waUrl;
+  if (gender)       record.gender       = gender;
+  record.updatedAt = serverTimestamp();
+
+  await setDoc(
+    doc(db, ATHLETE_REGISTRY_COLLECTION, docId),
+    { ...record, createdAt: serverTimestamp() },
+    { merge: true },  // merge so createdAt is only written on first insert
+  );
+}
+
+/**
+ * Subscribe to the full athlete registry (all editions).
+ * Sorted client-side: lastName ASC then firstName ASC.
+ */
+function useAthleteRegistry(enabled = true) {
+  const [registry, setRegistry] = useState([]);
+  const [loading,  setLoading]  = useState(true);
+
+  useEffect(() => {
+    if (!enabled) { setLoading(false); return undefined; }
+
+    const unsubscribe = onSnapshot(
+      collection(db, ATHLETE_REGISTRY_COLLECTION),
+      (snapshot) => {
+        const items = snapshot.docs
+          .map((d) => ({ _docId: d.id, ...d.data() }))
+          .sort((a, b) => {
+            const cmp = String(a.lastName || "").localeCompare(String(b.lastName || ""));
+            return cmp !== 0 ? cmp : String(a.firstName || "").localeCompare(String(b.firstName || ""));
+          });
+        setRegistry(items);
+        setLoading(false);
+      },
+      () => setLoading(false),
+    );
+    return unsubscribe;
+  }, [enabled]);
+
+  return { registry, loading };
+}
+
 export {
   useAthletePortalSettings,
   useAthletes,
+  useAthleteRegistry,
   fetchAthleteFromWaService,
+  upsertAthleteRegistry,
   canAccessAthletePortal,
   canImportAthletes,
   getVisibleFields,
@@ -345,4 +439,5 @@ export {
   DEFAULT_PORTAL_SETTINGS,
   ATHLETE_PORTAL_SETTINGS_PATH,
   ATHLETES_COLLECTION,
+  ATHLETE_REGISTRY_COLLECTION,
 };

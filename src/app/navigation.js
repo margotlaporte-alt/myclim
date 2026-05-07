@@ -120,7 +120,7 @@ function buildNavigationFromRoles(roles) {
 }
 
 function buildAthletePortalNavigation(roles, portalSettings, { canImport }) {
-  const isAdmin = roles.includes("admin");
+  const isAdmin = roles.includes("admin") || roles.includes("meeting_director");
   const links = [
     makeLink("/app/athlete-portal", "Overview", "dashboard"),
     makeLink("/app/athlete-portal/athletes", "Athletes", "users"),
@@ -131,6 +131,10 @@ function buildAthletePortalNavigation(roles, portalSettings, { canImport }) {
   }
 
   if (isAdmin) {
+    links.push(makeLink("/app/athlete-portal/registry", "Athletes database", "users"));
+  }
+
+  if (roles.includes("admin")) {
     links.push(makeLink("/app/athlete-portal/settings", "Portal settings", "shield"));
   }
 
