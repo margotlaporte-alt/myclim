@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { doc, serverTimestamp, setDoc, updateDoc, writeBatch } from "firebase/firestore";
 import { useAuth } from "../context/auth-context";
@@ -6,6 +6,7 @@ import { getActiveRoles } from "./navigation";
 import {
   ALL_ATHLETE_FIELDS,
   ATHLETES_COLLECTION,
+  ATHLETE_REGISTRY_COLLECTION,
   DEFAULT_PORTAL_SETTINGS,
   FIELD_GROUPS,
   athleteMergeKey,
@@ -15,7 +16,9 @@ import {
   getVisibleFields,
   normalizeBirthYear,
   parsePb,
+  upsertAthleteRegistry,
   useAthletePortalSettings,
+  useAthleteRegistry,
   useAthletes,
   ATHLETE_PORTAL_SETTINGS_PATH,
 } from "./athlete-portal-hooks";
@@ -447,8 +450,17 @@ function WaSyncButton({ athlete, settings, onDone }) {
     setStatus("syncing");
     setError("");
     try {
-      const waData = await fetchAthleteFromWaService(athlete.waid, settings);
-      await updateDoc(doc(db, ATHLETES_COLLECTION, athlete.id), waData);
+      const waData = await fetchAthleteFromWaService(athlete.waid, settings, athlete.event);
+      const { _waIdentity, ...firestoreData } = waData;
+      await updateDoc(doc(db, ATHLETES_COLLECTION, athlete.id), firestoreData);
+      // Persist identity to the permanent registry (fire & forget)
+      if (_waIdentity) {
+        upsertAthleteRegistry({
+          ..._waIdentity,
+          nationality: athlete.nationality,
+          birthYear:   athlete.birthYear,
+        }).catch(() => {});
+      }
       setStatus("ok");
       onDone?.();
     } catch (err) {
@@ -547,6 +559,10 @@ function AthletePortalOverview({ Panel }) {
           <div className="dashboard-action-grid">
             <NavLink className="button button--secondary button-link" to="/app/athlete-portal/athletes">View athletes</NavLink>
             {canImport && <NavLink className="button button--secondary button-link" to="/app/athlete-portal/import">Import file</NavLink>}
+            {isAdmin && <NavLink className="button button--secondary button-link" to="/app/athlete-portal/registry">Athletes database</NavLink>}
+            {isAdmin && <NavLink className="button button--secondary button-link" to="/app/athlete-portal/history">Meeting results</NavLink>}
+            {isAdmin && <NavLink className="button button--secondary button-link" to="/app/athlete-portal/records">Meeting records</NavLink>}
+            {isAdmin && <NavLink className="button button--secondary button-link" to="/app/athlete-portal/winners">Hall of winners</NavLink>}
             {isAdmin && <NavLink className="button button--secondary button-link" to="/app/athlete-portal/settings">Portal settings</NavLink>}
           </div>
         </Panel>
@@ -667,6 +683,23 @@ function AthletesListPage({ Panel }) {
   const [filterStatus, setFilterStatus] = useState("");
   const [filterWa,     setFilterWa]     = useState("");
   const [groupByEvent, setGroupByEvent] = useState(true);
+  // Column visibility — keys in this set are hidden (lastName + firstName always visible)
+  const [hiddenCols,    setHiddenCols]    = useState(new Set());
+  const [colPickerOpen, setColPickerOpen] = useState(false);
+  const colPickerRef = useRef(null);
+  const tableRef = useRef(null);
+
+  // Close column picker when clicking outside it
+  useLayoutEffect(() => {
+    if (!colPickerOpen) return;
+    function handleClick(e) {
+      if (colPickerRef.current && !colPickerRef.current.contains(e.target)) {
+        setColPickerOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [colPickerOpen]);
   const [syncingAll,      setSyncingAll]      = useState(false);
   const [syncAllStatus,   setSyncAllStatus]   = useState("");
   const [syncAllFailures, setSyncAllFailures] = useState([]); // [{ name, waid, error }]
@@ -740,22 +773,59 @@ function AthletesListPage({ Panel }) {
 
   // ── Column config ───────────────────────────────────────────────────────────
   // In grouped view, drop "event" (shown in section header instead)
+  // tableFields = all fields the user is allowed to see (before the hide toggle)
   const tableFields = useMemo(
     () => (groupByEvent ? visibleFields.filter((f) => f.key !== "event") : visibleFields),
     [visibleFields, groupByEvent],
   );
 
-  // Show "Ref. Pace" column whenever any performance data is visible
-  const showPace = visibleFields.some((f) =>
+  // displayedFields = tableFields minus any the user has hidden via the column picker
+  // lastName and firstName are always shown (they are the frozen/sticky columns)
+  const displayedFields = useMemo(
+    () => tableFields.filter((f) => !hiddenCols.has(f.key)),
+    [tableFields, hiddenCols],
+  );
+
+  // Columns the user can toggle in the picker (all except the frozen identity cols)
+  const toggleableCols = useMemo(
+    () => tableFields.filter((f) => f.key !== "lastName" && f.key !== "firstName"),
+    [tableFields],
+  );
+
+  // Show "Ref. Pace" column whenever any performance data is visible AND not hidden
+  const showPace = displayedFields.some((f) =>
     ["sb","pb","pbIndoor","pbOutdoor","waPbIndoor","waPbOutdoor",
      "waIndoorSb","waIndoorSbCurrent","waOutdoorSb"].includes(f.key),
   );
 
   const colCount =
-    tableFields.length
+    displayedFields.length
     + (showPace ? 1 : 0)
-    + (canEdit && !tableFields.find((f) => f.key === "waid") ? 1 : 0)
+    + (canEdit && !displayedFields.find((f) => f.key === "waid") ? 1 : 0)
     + (canEdit ? 1 : 0);
+
+  // ── Sticky column left-offset computation ────────────────────────────────────
+  // Run after every render that could change column layout.
+  // Measures each `data-sticky-col` <th> width and sets the `left` CSS property
+  // on both the <th> and every <td> in that column so they freeze correctly.
+  useLayoutEffect(() => {
+    const table = tableRef.current;
+    if (!table) return;
+    const theadRow = table.querySelector("thead tr");
+    if (!theadRow) return;
+    const ths = [...theadRow.children];
+    let left = 0;
+    ths.forEach((th, colIdx) => {
+      if (!th.dataset.stickyCol) return;
+      th.style.left = `${left}px`;
+      const w = th.getBoundingClientRect().width;
+      table.querySelectorAll("tbody tr").forEach((row) => {
+        const cell = row.children[colIdx];
+        if (cell) cell.style.left = `${left}px`;
+      });
+      left += w;
+    });
+  });
 
   // ── Handlers ────────────────────────────────────────────────────────────────
   async function handleSaveWaid(athleteId, waid) {
@@ -772,8 +842,17 @@ function AthletesListPage({ Panel }) {
     setSyncAllFailures([]);
     for (const athlete of withWaid) {
       try {
-        const waData = await fetchAthleteFromWaService(athlete.waid, settings);
-        await updateDoc(doc(db, ATHLETES_COLLECTION, athlete.id), waData);
+        const waData = await fetchAthleteFromWaService(athlete.waid, settings, athlete.event);
+        const { _waIdentity, ...firestoreData } = waData;
+        await updateDoc(doc(db, ATHLETES_COLLECTION, athlete.id), firestoreData);
+        // Persist identity to the permanent registry (fire & forget)
+        if (_waIdentity) {
+          upsertAthleteRegistry({
+            ..._waIdentity,
+            nationality: athlete.nationality,
+            birthYear:   athlete.birthYear,
+          }).catch(() => {});
+        }
         ok++;
       } catch (err) {
         failures.push({
@@ -946,13 +1025,83 @@ function AthletesListPage({ Panel }) {
             title={groupByEvent ? `${grouped.length} event${grouped.length !== 1 ? "s" : ""}` : "Athlete list"}
             subtitle={`${filtered.length} athlete${filtered.length !== 1 ? "s" : ""}`}
           >
-            <div className="table-wrap">
-              <table className="data-table">
+            {/* ── Column picker ── */}
+            <div ref={colPickerRef} style={{ position: "relative", display: "inline-block", marginBottom: "0.75rem" }}>
+              <button
+                className="button button--ghost button--small"
+                type="button"
+                onClick={() => setColPickerOpen((v) => !v)}
+                style={{ fontSize: "0.8rem" }}
+              >
+                Colonnes {colPickerOpen ? "▲" : "▼"}
+                {hiddenCols.size > 0 && (
+                  <span style={{
+                    marginLeft: 6, background: "#1b6b55", color: "#fff",
+                    borderRadius: 999, padding: "1px 7px", fontSize: "0.7rem", fontWeight: 700,
+                  }}>
+                    {hiddenCols.size} masquée{hiddenCols.size > 1 ? "s" : ""}
+                  </span>
+                )}
+              </button>
+              {colPickerOpen && (
+                <div className="col-picker-popover">
+                  <div style={{ fontWeight: 600, fontSize: "0.78rem", color: "#587079",
+                    textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.5rem" }}>
+                    Afficher / masquer
+                  </div>
+                  {toggleableCols.map((f) => {
+                    const hidden = hiddenCols.has(f.key);
+                    return (
+                      <label key={f.key} className="col-picker-row">
+                        <input
+                          type="checkbox"
+                          checked={!hidden}
+                          onChange={() => setHiddenCols((prev) => {
+                            const next = new Set(prev);
+                            if (hidden) next.delete(f.key); else next.add(f.key);
+                            return next;
+                          })}
+                        />
+                        <span>{f.label}</span>
+                      </label>
+                    );
+                  })}
+                  {hiddenCols.size > 0 && (
+                    <button
+                      type="button"
+                      className="button button--ghost button--small"
+                      style={{ marginTop: "0.5rem", width: "100%", fontSize: "0.78rem" }}
+                      onClick={() => setHiddenCols(new Set())}
+                    >
+                      Tout afficher
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="table-wrap table-wrap--athletes">
+              <table className="data-table" ref={tableRef}>
                 <thead>
                   <tr>
-                    {tableFields.map((f) => <th key={f.key}>{f.label}</th>)}
+                    {displayedFields.map((f) => {
+                      const isSticky = f.key === "lastName" || f.key === "firstName";
+                      const isLast = isSticky &&
+                        !displayedFields.slice(displayedFields.indexOf(f) + 1).some(
+                          (x) => x.key === "lastName" || x.key === "firstName"
+                        );
+                      return (
+                        <th
+                          key={f.key}
+                          className={isSticky ? `col-sticky${isLast ? " col-sticky--last" : ""}` : ""}
+                          data-sticky-col={isSticky ? "1" : undefined}
+                        >
+                          {f.label}
+                        </th>
+                      );
+                    })}
                     {showPace && <th title="Best available reference time for competition seeding">Ref. Pace</th>}
-                    {canEdit && !tableFields.find((f) => f.key === "waid") && <th>WAID</th>}
+                    {canEdit && !displayedFields.find((f) => f.key === "waid") && <th>WAID</th>}
                     {canEdit && <th>WA sync</th>}
                   </tr>
                 </thead>
@@ -977,7 +1126,21 @@ function AthletesListPage({ Panel }) {
                           </tr>
                           {group.map((a) => (
                             <tr key={a.id} className={a.status === "out" ? "row--muted" : ""}>
-                              {tableFields.map((f) => <td key={f.key}>{renderCell(f, a)}</td>)}
+                              {displayedFields.map((f) => {
+                                const isSticky = f.key === "lastName" || f.key === "firstName";
+                                const isLast = isSticky &&
+                                  !displayedFields.slice(displayedFields.indexOf(f) + 1).some(
+                                    (x) => x.key === "lastName" || x.key === "firstName"
+                                  );
+                                return (
+                                  <td
+                                    key={f.key}
+                                    className={isSticky ? `col-sticky${isLast ? " col-sticky--last" : ""}` : ""}
+                                  >
+                                    {renderCell(f, a)}
+                                  </td>
+                                );
+                              })}
                               {showPace && (
                                 <td>
                                   {getCompPace(a)
@@ -985,7 +1148,7 @@ function AthletesListPage({ Panel }) {
                                     : <span style={{ color: "#bbb" }}>—</span>}
                                 </td>
                               )}
-                              {canEdit && !tableFields.find((f) => f.key === "waid") && (
+                              {canEdit && !displayedFields.find((f) => f.key === "waid") && (
                                 <td><WaidCell athlete={a} onSave={handleSaveWaid} /></td>
                               )}
                               {canEdit && <td><WaSyncButton athlete={a} settings={settings} /></td>}
@@ -998,7 +1161,21 @@ function AthletesListPage({ Panel }) {
                     <tbody>
                       {filtered.map((a) => (
                         <tr key={a.id} className={a.status === "out" ? "row--muted" : ""}>
-                          {tableFields.map((f) => <td key={f.key}>{renderCell(f, a)}</td>)}
+                          {displayedFields.map((f) => {
+                            const isSticky = f.key === "lastName" || f.key === "firstName";
+                            const isLast = isSticky &&
+                              !displayedFields.slice(displayedFields.indexOf(f) + 1).some(
+                                (x) => x.key === "lastName" || x.key === "firstName"
+                              );
+                            return (
+                              <td
+                                key={f.key}
+                                className={isSticky ? `col-sticky${isLast ? " col-sticky--last" : ""}` : ""}
+                              >
+                                {renderCell(f, a)}
+                              </td>
+                            );
+                          })}
                           {showPace && (
                             <td>
                               {getCompPace(a)
@@ -1006,7 +1183,7 @@ function AthletesListPage({ Panel }) {
                                 : <span style={{ color: "#bbb" }}>—</span>}
                             </td>
                           )}
-                          {canEdit && !tableFields.find((f) => f.key === "waid") && (
+                          {canEdit && !displayedFields.find((f) => f.key === "waid") && (
                             <td><WaidCell athlete={a} onSave={handleSaveWaid} /></td>
                           )}
                           {canEdit && <td><WaSyncButton athlete={a} settings={settings} /></td>}
@@ -1105,6 +1282,21 @@ function AthleteImportPage({ Panel }) {
         });
       });
       await batch.commit();
+
+      // Upsert identity into the permanent athlete registry (fire & forget)
+      merged
+        .filter((a) => a.lastName || a.firstName)
+        .forEach((a) => {
+          upsertAthleteRegistry({
+            lastName:    a.lastName,
+            firstName:   a.firstName,
+            nationality: a.nationality,
+            birthYear:   a.birthYear,
+            waid:        a.waid,
+            waUrl:       a.waUrl,
+          }).catch(() => {});
+        });
+
       const parts = [`${added} added`, `${updated} updated`];
       if (markedOut > 0) parts.push(`${markedOut} marked out (not in file)`);
       setStatus(`Done. ${parts.join(" · ")} · ${merged.length} total.`);
@@ -1509,4 +1701,144 @@ function AthletePortalSettingsPage({ Panel }) {
   );
 }
 
-export { AthletePortalOverview, AthletesListPage, AthleteImportPage, AthletePortalSettingsPage };
+// ─── Athlete Registry page ────────────────────────────────────────────────────
+
+function AthleteRegistryPage({ Panel }) {
+  const { userProfile } = useAuth();
+  const roles = getActiveRoles(userProfile);
+  const canAccess = roles.includes("admin") || roles.includes("meeting_director");
+
+  const { registry, loading } = useAthleteRegistry(canAccess);
+  const [search, setSearch] = useState("");
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    if (!q) return registry;
+    return registry.filter((a) => {
+      const hay = [a.lastName, a.firstName, a.nationality, a.waid, a.birthDate]
+        .filter(Boolean).join(" ").toLowerCase();
+      return hay.includes(q);
+    });
+  }, [registry, search]);
+
+  if (!canAccess) {
+    return (
+      <div className="page">
+        <section className="page-header"><div><h1>Athletes Database</h1></div></section>
+        <div className="notice-card notice-card--warn">
+          <strong>Access restricted</strong>
+          <p>Admin and Meeting Director only.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="page">
+      <section className="page-header">
+        <div>
+          <p className="eyebrow">Athlete Portal</p>
+          <h1>Athletes Database</h1>
+          <p>
+            {loading ? "Loading…" : `${registry.length} athletes across all editions`}
+            {" · "}Grows automatically when athletes are imported or WA-synced.
+          </p>
+        </div>
+      </section>
+
+      <section className="panel-grid panel-grid--1">
+        <Panel title="Search" subtitle={`${filtered.length} result${filtered.length !== 1 ? "s" : ""}`}>
+          <div style={{ marginBottom: "0.75rem" }}>
+            <input
+              className="input"
+              placeholder="Name, nationality, WAID…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ maxWidth: 340 }}
+            />
+          </div>
+
+          {loading ? (
+            <p className="panel-note">Loading registry…</p>
+          ) : registry.length === 0 ? (
+            <div className="notice-card">
+              <strong>Registry is empty</strong>
+              <p>Import athletes or run a WA sync to populate the database.</p>
+            </div>
+          ) : (
+            <div className="table-wrap table-wrap--athletes">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th data-sticky-col="1" className="col-sticky col-sticky--last">Last name</th>
+                    <th>First name</th>
+                    <th>Nat.</th>
+                    <th>Birth date</th>
+                    <th>WAID</th>
+                    <th>WA Profile</th>
+                    <th>Editions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((a) => {
+                    const editions = Array.isArray(a.editions) ? a.editions : [];
+                    const years = [...new Set(editions.map((e) => e.year))].sort((x, y) => x - y);
+                    return (
+                      <tr key={a._docId}>
+                        <td className="col-sticky col-sticky--last" style={{ fontWeight: 600 }}>
+                          {a.lastName || "—"}
+                        </td>
+                        <td>{a.firstName || "—"}</td>
+                        <td>{a.nationality || "—"}</td>
+                        <td style={{ color: "#555", fontSize: "0.85rem" }}>
+                          {a.birthDate
+                            ? a.birthDate.slice(0, 10)
+                            : a.birthYear
+                              ? String(a.birthYear)
+                              : "—"}
+                        </td>
+                        <td style={{ fontFamily: "monospace", fontSize: "0.85rem" }}>
+                          {a.waid || "—"}
+                        </td>
+                        <td>
+                          {a.waUrl
+                            ? <a href={a.waUrl} target="_blank" rel="noopener noreferrer"
+                                 style={{ fontSize: "0.82rem" }}>WA ↗</a>
+                            : <span style={{ color: "#bbb" }}>—</span>}
+                        </td>
+                        <td>
+                          {years.length > 0 ? (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+                              {years.map((yr) => (
+                                <span key={yr} style={{
+                                  fontSize: "0.68rem", fontWeight: 600,
+                                  background: "#dbeafe", color: "#1d4ed8",
+                                  padding: "1px 5px", borderRadius: 8,
+                                }}>
+                                  {yr}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span style={{ color: "#ccc", fontSize: "0.8rem" }}>—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <p className="panel-note" style={{ marginTop: "0.5rem" }}>
+            Records are permanent — an athlete is never removed from this database,
+            even if they no longer appear in the current edition's start list.
+            Core identity (name, birth date, WAID, WA URL) is preserved forever.
+          </p>
+        </Panel>
+      </section>
+    </div>
+  );
+}
+
+export { AthletePortalOverview, AthletesListPage, AthleteImportPage, AthletePortalSettingsPage, AthleteRegistryPage };

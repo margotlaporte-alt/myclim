@@ -105,7 +105,9 @@ function isIndoor(r) {
   if (venue.includes("(i)")) return true;
   const disc = (r.discipline || "").toLowerCase();
   if (disc.startsWith("60")) return true;
-  return r.indoor === true;
+  // Do NOT fall back to r.indoor — WA's boolean is unreliable and causes
+  // outdoor results to be misclassified as indoor PBs.
+  return false;
 }
 
 // ─── Normalizers ──────────────────────────────────────────────────────────────

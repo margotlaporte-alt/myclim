@@ -110,8 +110,10 @@ function isIndoor(r) {
   const disc = (r.discipline || "").toLowerCase();
   if (disc.startsWith("60")) return true;
 
-  // 3. WA boolean field — last resort (often unreliable / returns false for indoor)
-  return r.indoor === true;
+  // NOTE: we intentionally do NOT fall back to `r.indoor` from WA.
+  // WA's boolean field is known to return `true` for outdoor results,
+  // which causes outdoor performances to be misclassified as indoor PBs.
+  return false;
 }
 
 function normalizeResult(r) {
@@ -138,8 +140,10 @@ async function fetchAthlete(waid) {
   if (!competitor) throw new Error(`No competitor found for WAID ${id}`);
 
   const personalBests = (competitor.personalBests?.results || []).map(normalizeResult);
-  const firstName     = competitor.basicData?.firstName || null;
-  const lastName      = competitor.basicData?.lastName  || null;
+  const firstName     = competitor.basicData?.firstName   || null;
+  const lastName      = competitor.basicData?.lastName    || null;
+  const birthDate     = competitor.basicData?.birthDate   || null;
+  const countryCode   = competitor.basicData?.countryCode || null;
 
   // Fetch SBs for multiple seasons (current year and previous two)
   const currentYear = new Date().getFullYear();
@@ -157,7 +161,7 @@ async function fetchAthlete(waid) {
     return (res.value?.getSingleCompetitorSeasonBests?.results || []).map(normalizeResult);
   });
 
-  return { firstName, lastName, personalBests, seasonBests };
+  return { firstName, lastName, birthDate, countryCode, personalBests, seasonBests };
 }
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
@@ -187,9 +191,11 @@ export default async function handler(req) {
   try {
     const athlete = await fetchAthlete(waid);
     return json(200, {
-      waid: Number(waid),
+      waid:         Number(waid),
       firstName:    athlete.firstName,
       lastName:     athlete.lastName,
+      birthDate:    athlete.birthDate,
+      countryCode:  athlete.countryCode,
       source:       "live",
       personalBests: athlete.personalBests,
       seasonBests:   athlete.seasonBests,
