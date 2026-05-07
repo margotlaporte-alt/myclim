@@ -142,13 +142,42 @@ function useAthletes(enabled = true) {
 // ─── WA service integration ───────────────────────────────────────────────────
 
 /**
+ * Normalize an event discipline string to the WA disciplineCode format.
+ *
+ * Examples:
+ *   "800m"    → "800"
+ *   "60m"     → "60"
+ *   "60mH"    → "60H"
+ *   "110mH"   → "110H"
+ *   "400mH"   → "400H"
+ *   "3000mSC" → "3000SC"
+ *   "HJ"      → "HJ"   (field events — already correct)
+ */
+function normalizeDisciplineCode(disc) {
+  if (!disc) return null;
+  return disc
+    .replace(/mSC$/i, "SC")   // steeplechase
+    .replace(/mH$/i,  "H")    // hurdles
+    .replace(/m$/i,   "")     // strip trailing "m" for track events
+    .toUpperCase();
+}
+
+/**
  * Fetch a single athlete's data from the wa-service and extract the
  * season-relevant SBs.
  *
+ * @param {string|number} waid       World Athletics ID
+ * @param {object}        settings   Portal settings (waServiceUrl, seasons)
+ * @param {string}        [event]    Athlete event string, e.g. "800m W".
+ *                                   Used to filter WA results to the correct
+ *                                   discipline so a 1500m PB isn't mistaken
+ *                                   for an 800m PB.
+ *
  * Returns an object with the fields to write back to Firestore:
- *   waPbIndoor, waPbOutdoor, waIndoorSb, waOutdoorSb, waFetchedAt, waUrl
+ *   waPbIndoor, waPbOutdoor, waIndoorSb, waIndoorSbCurrent, waOutdoorSb,
+ *   waFetchedAt, waUrl
  */
-async function fetchAthleteFromWaService(waid, settings) {
+async function fetchAthleteFromWaService(waid, settings, event) {
   const baseUrl = String(settings?.waServiceUrl || DEFAULT_PORTAL_SETTINGS.waServiceUrl).replace(/\/$/, "");
   const seasons = settings?.seasons ?? DEFAULT_PORTAL_SETTINGS.seasons;
 
@@ -174,19 +203,37 @@ async function fetchAthleteFromWaService(waid, settings) {
   const pbs = Array.isArray(data.personalBests) ? data.personalBests : [];
   const sbs = Array.isArray(data.seasonBests) ? data.seasonBests : [];
 
-  // Best PB for each environment.
+  // Derive a WA disciplineCode from the athlete's event field so we only pick
+  // PBs/SBs in their actual discipline (avoids a 1500m PB showing up for an
+  // 800m athlete because it has a higher resultScore).
+  // Strip gender suffix first: "800m W" → "800m" → "800"
+  const rawDisc = (event || "").trim().replace(/\s+(W|M|F|H|Women|Men|Femmes?|Hommes?)\s*$/i, "").trim();
+  const discCode = normalizeDisciplineCode(rawDisc); // e.g. "800", "60H", null
+
+  /**
+   * Returns true if the WA result belongs to the athlete's discipline.
+   * Falls back to true (no filter) when discCode is unknown.
+   */
+  function matchesDiscipline(r) {
+    if (!discCode) return true;
+    const code = (r.disciplineCode || "").toUpperCase();
+    return code === discCode;
+  }
+
+  // Best PB for each environment, restricted to the athlete's discipline.
   // The `indoor` field is computed server-side from venue "(i)" suffix + discipline name,
   // so it is reliable — use it directly instead of guessing from discipline name.
-  const waPbIndoor  = bestMark(pbs.filter((r) => r.indoor === true));
-  const waPbOutdoor = bestMark(pbs.filter((r) => r.indoor === false));
+  const waPbIndoor  = bestMark(pbs.filter((r) => r.indoor === true  && matchesDiscipline(r)));
+  const waPbOutdoor = bestMark(pbs.filter((r) => r.indoor === false && matchesDiscipline(r)));
 
-  // Season bests:
+  // Season bests — same discipline filter applied.
   //   indoor        = previous indoor season (N-1, completed, most athletes have results)
   //   indoorCurrent = current indoor season (N, just started, few results)
   //   outdoor       = previous outdoor season (N-1)
-  const waIndoorSb        = bestMarkForYear(sbs, seasons.indoor,        true);
-  const waIndoorSbCurrent = bestMarkForYear(sbs, seasons.indoorCurrent, true);
-  const waOutdoorSb       = bestMarkForYear(sbs, seasons.outdoor,       false);
+  const filteredSbs = sbs.filter(matchesDiscipline);
+  const waIndoorSb        = bestMarkForYear(filteredSbs, seasons.indoor,        true);
+  const waIndoorSbCurrent = bestMarkForYear(filteredSbs, seasons.indoorCurrent, true);
+  const waOutdoorSb       = bestMarkForYear(filteredSbs, seasons.outdoor,       false);
 
   function fmtPb(r)  { return r ? `${r.mark}${r.date ? ` (${r.date.slice(0,4)})` : ""}` : null; }
   function fmtSb(r)  { return r ? `${r.mark}${r.date ? ` @ ${(r.venue ?? "").trim()}`.trimEnd() : ""}` : null; }

@@ -447,7 +447,7 @@ function WaSyncButton({ athlete, settings, onDone }) {
     setStatus("syncing");
     setError("");
     try {
-      const waData = await fetchAthleteFromWaService(athlete.waid, settings);
+      const waData = await fetchAthleteFromWaService(athlete.waid, settings, athlete.event);
       await updateDoc(doc(db, ATHLETES_COLLECTION, athlete.id), waData);
       setStatus("ok");
       onDone?.();
@@ -772,7 +772,7 @@ function AthletesListPage({ Panel }) {
     setSyncAllFailures([]);
     for (const athlete of withWaid) {
       try {
-        const waData = await fetchAthleteFromWaService(athlete.waid, settings);
+        const waData = await fetchAthleteFromWaService(athlete.waid, settings, athlete.event);
         await updateDoc(doc(db, ATHLETES_COLLECTION, athlete.id), waData);
         ok++;
       } catch (err) {
