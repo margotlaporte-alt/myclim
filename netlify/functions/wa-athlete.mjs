@@ -167,11 +167,21 @@ export default async function handler(req) {
 
   if (req.method !== "GET") return json(405, { error: "Method not allowed." });
 
-  const url  = new URL(req.url);
-  const waid = url.searchParams.get("waid");
+  const url = new URL(req.url);
+
+  // 1. Try query param (set by the netlify.toml redirect: ?waid=:waid)
+  let waid = url.searchParams.get("waid");
+
+  // 2. Fall back to extracting from the URL path — Netlify Functions v2 sometimes
+  //    receives the original request URL (/api/wa/athlete/14621598/performances)
+  //    rather than the rewritten one, so the query param is absent.
+  if (!waid) {
+    const m = url.pathname.match(/\/(\d{7,10})(?:\/|$)/);
+    waid = m?.[1] ?? null;
+  }
 
   if (!waid || isNaN(Number(waid)) || Number(waid) <= 0) {
-    return json(400, { error: "Missing or invalid ?waid parameter." });
+    return json(400, { error: `Missing or invalid waid (url: ${url.pathname}${url.search})` });
   }
 
   try {
