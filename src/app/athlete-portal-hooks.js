@@ -159,14 +159,16 @@ async function fetchAthleteFromWaService(waid, settings) {
   const pbs = Array.isArray(data.personalBests) ? data.personalBests : [];
   const sbs = Array.isArray(data.seasonBests) ? data.seasonBests : [];
 
-  // Best PB for each environment (indoor track is typically ≤ 200m)
-  const waPbIndoor  = bestMark(pbs.filter((r) => isIndoorDiscipline(r.discipline)));
-  const waPbOutdoor = bestMark(pbs.filter((r) => !isIndoorDiscipline(r.discipline)));
+  // Best PB for each environment.
+  // The `indoor` field is computed server-side from venue "(i)" suffix + discipline name,
+  // so it is reliable — use it directly instead of guessing from discipline name.
+  const waPbIndoor  = bestMark(pbs.filter((r) => r.indoor === true));
+  const waPbOutdoor = bestMark(pbs.filter((r) => r.indoor === false));
 
   // Season bests:
-  //   indoor     = previous indoor season (N-1, completed, most athletes have results)
+  //   indoor        = previous indoor season (N-1, completed, most athletes have results)
   //   indoorCurrent = current indoor season (N, just started, few results)
-  //   outdoor    = previous outdoor season (N-1)
+  //   outdoor       = previous outdoor season (N-1)
   const waIndoorSb        = bestMarkForYear(sbs, seasons.indoor,        true);
   const waIndoorSbCurrent = bestMarkForYear(sbs, seasons.indoorCurrent, true);
   const waOutdoorSb       = bestMarkForYear(sbs, seasons.outdoor,       false);
@@ -185,15 +187,6 @@ async function fetchAthleteFromWaService(waid, settings) {
   };
 }
 
-// Indoor disciplines: 60m, 60mH, 200m (indoor only), pole vault, etc.
-// Simple heuristic: distance ≤ 200 + standard track & field events at indoor meets.
-// WA doesn't always tag disciplines as indoor/outdoor explicitly.
-function isIndoorDiscipline(discipline) {
-  if (!discipline) return false;
-  const d = discipline.toLowerCase();
-  return d.startsWith("60") || d === "200m" || d.includes("indoor");
-}
-
 function bestMark(results) {
   if (!results.length) return null;
   // Sort by resultScore desc if available, otherwise just take first
@@ -206,9 +199,9 @@ function bestMarkForYear(results, year, indoor) {
     if (!r.date) return false;
     if (!r.date.startsWith(yearStr)) return false;
     if (indoor !== undefined) {
-      const isIn = isIndoorDiscipline(r.discipline);
-      if (indoor && !isIn) return false;
-      if (!indoor && isIn) return false;
+      // `indoor` field is computed server-side from venue "(i)" suffix
+      if (indoor && r.indoor !== true) return false;
+      if (!indoor && r.indoor !== false) return false;
     }
     return true;
   });
