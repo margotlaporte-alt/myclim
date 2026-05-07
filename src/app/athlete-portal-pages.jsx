@@ -985,48 +985,53 @@ function AthletePortalSettingsPage({ Panel }) {
           </Panel>
         </section>
 
-        {/* ── Access & WA ───────────────────────────────────────────── */}
-        <section className="panel-grid panel-grid--3">
+        {/* ── Access & Import rights ────────────────────────────────── */}
+        <section className="panel-grid panel-grid--2">
           <Panel title="Portal access" subtitle="Who can open the Athlete Portal.">
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
               {PLATFORM_ROLES.map((role) => (
-                <label key={role.key} style={{ display: "flex", gap: "0.6rem", alignItems: "center", cursor: role.key === "admin" ? "default" : "pointer" }}>
+                <label key={role.key} style={{ display: "grid", gridTemplateColumns: "20px 1fr auto", gap: "0.5rem", alignItems: "center", cursor: role.key === "admin" ? "default" : "pointer", minWidth: 0 }}>
                   <input type="checkbox"
                     checked={accessRoles.includes(role.key)}
                     disabled={role.key === "admin"}
                     onChange={() => toggleRole(accessRoles, setAccessRoles, role.key)} />
-                  <span style={{ flex: 1 }}>{role.label}</span>
-                  {role.key === "admin" && <span className="status-pill status-pill--accent" style={{ fontSize: "0.7rem" }}>always</span>}
+                  <span style={{ fontSize: "0.875rem", wordBreak: "break-word" }}>{role.label}</span>
+                  {role.key === "admin" && <span className="status-pill status-pill--accent" style={{ fontSize: "0.7rem", whiteSpace: "nowrap" }}>always</span>}
+                  {role.key !== "admin" && <span />}
                 </label>
               ))}
             </div>
           </Panel>
 
-          <Panel title="Import rights" subtitle="Who can upload Excel files.">
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+          <Panel title="Import rights" subtitle="Who can upload Excel files. Only roles with portal access are shown.">
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
               {activeRoles.map((role) => (
-                <label key={role.key} style={{ display: "flex", gap: "0.6rem", alignItems: "center", cursor: "pointer" }}>
+                <label key={role.key} style={{ display: "grid", gridTemplateColumns: "20px 1fr", gap: "0.5rem", alignItems: "center", cursor: "pointer", minWidth: 0 }}>
                   <input type="checkbox"
                     checked={importerRoles.includes(role.key)}
                     onChange={() => toggleRole(importerRoles, setImporterRoles, role.key)} />
-                  <span>{role.label}</span>
+                  <span style={{ fontSize: "0.875rem" }}>{role.label}</span>
                 </label>
               ))}
             </div>
-            <p className="panel-note" style={{ marginTop: "0.75rem" }}>Only roles with portal access are listed.</p>
           </Panel>
+        </section>
 
-          <Panel title="World Athletics" subtitle="Backend URL for WA data sync.">
-            <label className="field">
-              <span>WA service URL</span>
-              <input type="text" value={waServiceUrl}
-                onChange={(e) => setWaServiceUrl(e.target.value)}
-                placeholder="/api/wa" />
-            </label>
-            <p className="panel-note" style={{ marginTop: "0.75rem" }}>
-              Default <code>/api/wa</code> → Netlify Function (works in production).<br />
-              For local dev, switch to <code>http://localhost:3001</code> while running <code>wa-service/</code>.
-            </p>
+        {/* ── WA service URL ────────────────────────────────────────── */}
+        <section className="panel-grid panel-grid--1">
+          <Panel title="World Athletics service" subtitle="URL used by the ↻ WA sync buttons.">
+            <div style={{ maxWidth: 480 }}>
+              <label className="field">
+                <span>WA service URL</span>
+                <input type="text" value={waServiceUrl}
+                  onChange={(e) => setWaServiceUrl(e.target.value)}
+                  placeholder="/api/wa" />
+              </label>
+              <p className="panel-note" style={{ marginTop: "0.5rem" }}>
+                Default <code>/api/wa</code> → Netlify Function (works in production with no extra setup).<br />
+                For local dev, switch to <code>http://localhost:3001</code> while running <code>wa-service/</code>.
+              </p>
+            </div>
           </Panel>
         </section>
 
