@@ -257,54 +257,89 @@ function MeetingHistoryPage({ Panel }) {
           ) : (
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "center" }}>
               {editions.map((ed) => (
-                <button
-                  key={ed.year}
-                  onClick={() => setSelectedYear(ed.year)}
-                  style={{
-                    padding: "0.35rem 0.9rem",
-                    borderRadius: 20,
-                    border: "1.5px solid",
-                    cursor: "pointer",
-                    fontWeight: effectiveYear === ed.year ? 700 : 400,
-                    background: effectiveYear === ed.year ? "#1d4ed8" : "#f8fafc",
-                    color: effectiveYear === ed.year ? "#fff" : "#374151",
-                    borderColor: effectiveYear === ed.year ? "#1d4ed8" : "#cbd5e1",
-                    fontSize: "0.88rem",
-                  }}
-                >
-                  {ed.year}
-                  {ed.isClosed && (
-                    <span style={{ marginLeft: 4, fontSize: "0.68rem", opacity: 0.75 }}>✓</span>
-                  )}
-                </button>
+                ed.cancelled ? (
+                  <span
+                    key={ed.year}
+                    title={ed.note}
+                    style={{
+                      padding: "0.35rem 0.9rem",
+                      borderRadius: 20,
+                      border: "1.5px dashed #d1d5db",
+                      background: "#f9fafb",
+                      color: "#9ca3af",
+                      fontSize: "0.88rem",
+                      cursor: "default",
+                      userSelect: "none",
+                      textDecoration: "line-through",
+                    }}
+                  >
+                    {ed.year}
+                  </span>
+                ) : (
+                  <button
+                    key={ed.year}
+                    onClick={() => setSelectedYear(ed.year)}
+                    style={{
+                      padding: "0.35rem 0.9rem",
+                      borderRadius: 20,
+                      border: "1.5px solid",
+                      cursor: "pointer",
+                      fontWeight: effectiveYear === ed.year ? 700 : 400,
+                      background: effectiveYear === ed.year ? "#1d4ed8" : "#f8fafc",
+                      color: effectiveYear === ed.year ? "#fff" : "#374151",
+                      borderColor: effectiveYear === ed.year ? "#1d4ed8" : "#cbd5e1",
+                      fontSize: "0.88rem",
+                    }}
+                  >
+                    {ed.year}
+                    {ed.isClosed && (
+                      <span style={{ marginLeft: 4, fontSize: "0.68rem", opacity: 0.75 }}>✓</span>
+                    )}
+                  </button>
+                )
               ))}
             </div>
           )}
 
           {selectedEdition && (
-            <div style={{
-              marginTop: "0.75rem",
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "1rem",
-              alignItems: "center",
-              fontSize: "0.85rem",
-              color: "#555",
-            }}>
-              <span>📅 {selectedEdition.date}</span>
-              <span>🏟 {selectedEdition.venue}</span>
-              <span>🏆 Edition #{selectedEdition.edition}</span>
-              {selectedEdition.label && <span>🏅 {selectedEdition.label}</span>}
-              {selectedEdition.note && (
-                <span style={{ color: "#f59e0b" }}>⚠ {selectedEdition.note}</span>
-              )}
-              {selectedEdition.isClosed && (
-                <span style={{
-                  background: "#dcfce7", color: "#15803d",
-                  padding: "2px 8px", borderRadius: 12, fontWeight: 600, fontSize: "0.75rem",
-                }}>Closed</span>
-              )}
-            </div>
+            selectedEdition.cancelled ? (
+              <div style={{
+                marginTop: "0.75rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.75rem",
+                padding: "0.6rem 1rem",
+                background: "#fef9c3",
+                border: "1px solid #fde047",
+                borderRadius: 8,
+                fontSize: "0.85rem",
+                color: "#854d0e",
+              }}>
+                <span style={{ fontSize: "1.1rem" }}>🚫</span>
+                <span><strong>{selectedEdition.year}</strong> — {selectedEdition.note}</span>
+              </div>
+            ) : (
+              <div style={{
+                marginTop: "0.75rem",
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "1rem",
+                alignItems: "center",
+                fontSize: "0.85rem",
+                color: "#555",
+              }}>
+                <span>📅 {selectedEdition.date}</span>
+                <span>🏟 {selectedEdition.venue}</span>
+                {selectedEdition.edition && <span>🏆 Edition #{selectedEdition.edition}</span>}
+                {selectedEdition.label && <span>🏅 {selectedEdition.label}</span>}
+                {selectedEdition.isClosed && (
+                  <span style={{
+                    background: "#dcfce7", color: "#15803d",
+                    padding: "2px 8px", borderRadius: 12, fontWeight: 600, fontSize: "0.75rem",
+                  }}>Closed</span>
+                )}
+              </div>
+            )
           )}
         </Panel>
       </section>
