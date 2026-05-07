@@ -152,22 +152,63 @@ function useAthletes(enabled = true) {
 /**
  * Normalize an event discipline string to the WA disciplineCode format.
  *
+ * Handles both compact codes ("60mH", "3000mSC") and full English names
+ * ("60 m hurdles", "Long Jump", "Pole Vault") as found in meeting start lists.
+ *
  * Examples:
- *   "800m"    → "800"
- *   "60m"     → "60"
- *   "60mH"    → "60H"
- *   "110mH"   → "110H"
- *   "400mH"   → "400H"
- *   "3000mSC" → "3000SC"
- *   "HJ"      → "HJ"   (field events — already correct)
+ *   "800m W"         → "800"
+ *   "60 m"           → "60"
+ *   "60mH"           → "60H"
+ *   "60 m hurdles"   → "60H"
+ *   "100 m hurdles"  → "100H"
+ *   "3000mSC"        → "3000SC"
+ *   "3000 m steeplechase" → "3000SC"
+ *   "Long Jump"      → "LJ"
+ *   "Triple Jump"    → "TJ"
+ *   "High Jump"      → "HJ"
+ *   "Pole Vault"     → "PV"
+ *   "Shot Put"       → "SP"
  */
 function normalizeDisciplineCode(disc) {
   if (!disc) return null;
-  return disc
-    .replace(/mSC$/i, "SC")   // steeplechase
-    .replace(/mH$/i,  "H")    // hurdles
-    .replace(/m$/i,   "")     // strip trailing "m" for track events
+
+  // Strip gender/round suffixes: "800m W", "60 m hurdles Women", etc.
+  const s = disc.trim()
+    .replace(/\s+(W|M|F|Women|Men|Femmes?|Hommes?)\s*$/i, "")
+    .replace(/\s+(Final|Heat|Round)\s*$/i, "")
+    .trim();
+
+  const lower = s.toLowerCase();
+
+  // ── Field events by full name ──────────────────────────────────────────────
+  if (/long\s*jump/i.test(s))   return "LJ";
+  if (/triple\s*jump/i.test(s)) return "TJ";
+  if (/high\s*jump/i.test(s))   return "HJ";
+  if (/pole\s*vault/i.test(s))  return "PV";
+  if (/shot\s*put/i.test(s))    return "SP";
+  if (/discus/i.test(s))        return "DT";
+  if (/hammer/i.test(s))        return "HT";
+  if (/javelin/i.test(s))       return "JT";
+
+  // ── Hurdles / Steeplechase by full name ────────────────────────────────────
+  if (/hurd/i.test(lower)) {
+    const m = s.match(/(\d+)/);
+    return m ? `${m[1]}H` : null;
+  }
+  if (/steeplechase/i.test(lower)) {
+    const m = s.match(/(\d+)/);
+    return m ? `${m[1]}SC` : null;
+  }
+
+  // ── Compact format: "800m", "60mH", "3000mSC", "60 m", "800 m" ───────────
+  const compact = s.replace(/\s+/g, ""); // remove spaces: "60 m" → "60m"
+  const code = compact
+    .replace(/mSC$/i, "SC")
+    .replace(/mH$/i,  "H")
+    .replace(/m$/i,   "")
     .toUpperCase();
+
+  return code || null;
 }
 
 /**
