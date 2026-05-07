@@ -30,6 +30,58 @@ const PLATFORM_ROLES = [
   { key: "parent_u14",       label: "U14 Parent" },
 ];
 
+// ─── Travel entry parser ──────────────────────────────────────────────────────
+// Parses strings like "17. flight 21:45 with LG8254 from Nice"
+//                  or "19. flight 06:00 with LG3759 to Lisbon"
+// into structured fields: day, time, flightNo, dir ("from"|"to"), city.
+
+const _TRAVEL_RE = /^(\d+)\.\s+(\S+)\s+(\d{1,2}:\d{2})\s+with\s+([A-Z0-9]+)\s+(from|to)\s+(.+)$/i;
+
+function parseTravelEntry(text) {
+  if (!text) return null;
+  const m = _TRAVEL_RE.exec(String(text).trim());
+  if (!m) return null;
+  return {
+    day:      parseInt(m[1], 10),
+    mode:     m[2].toLowerCase(),      // "flight", "train", …
+    time:     m[3],
+    flightNo: m[4].toUpperCase(),
+    dir:      m[5].toLowerCase(),      // "from" | "to"
+    city:     m[6].trim(),
+  };
+}
+
+/** Expand a raw arrival or departure string into structured sub-fields. */
+function expandTravelField(raw, prefix) {
+  // prefix = "arrival" | "departure"
+  const p = parseTravelEntry(raw);
+  if (!p) return {};
+  const cityKey = prefix === "arrival" ? `${prefix}From` : `${prefix}To`;
+  return {
+    [`${prefix}Day`]:    p.day,
+    [`${prefix}Time`]:   p.time,
+    [`${prefix}Flight`]: p.flightNo,
+    [cityKey]:           p.city,
+  };
+}
+
+function TravelCell({ raw, prefix }) {
+  if (!raw) return <span style={{ color: "#bbb" }}>—</span>;
+  const p = parseTravelEntry(raw);
+  if (!p) return <span style={{ fontSize: "0.82rem", color: "#555" }}>{raw}</span>;
+  const arrow = prefix === "arrival" ? "← " : "→ ";
+  return (
+    <div style={{ lineHeight: 1.65, fontSize: "0.82rem" }}>
+      <div style={{ fontWeight: 600 }}>
+        Jour {p.day}{p.time ? ` · ${p.time}` : ""}
+      </div>
+      <div style={{ color: "#555" }}>
+        ✈ {p.flightNo} {arrow}{p.city}
+      </div>
+    </div>
+  );
+}
+
 // ─── File type detection & parsing ───────────────────────────────────────────
 
 // Column-name patterns for the new "all-in-one" combined file format.
@@ -151,6 +203,8 @@ function parseTravelRow(row) {
   const lastName = norm(row[1]);
   const firstName = norm(row[2]);
   if (!lastName || !firstName) return null;
+  const arrival   = norm(row[5]) || null;
+  const departure = norm(row[6]) || null;
   return {
     event: norm(row[0]), lastName, firstName,
     nationality: norm(row[3]),
@@ -158,8 +212,8 @@ function parseTravelRow(row) {
     pb: null, pbIndoor: null, pbOutdoor: null, sb: null,
     waUrl: null, waid: null, heat: null, lane: null,
     manager: norm(row[4]) || null,
-    arrival: norm(row[5]) || null,
-    departure: norm(row[6]) || null,
+    arrival, ...expandTravelField(arrival, "arrival"),
+    departure, ...expandTravelField(departure, "departure"),
   };
 }
 
@@ -189,9 +243,11 @@ function parseCombinedRow(row, colMap) {
     waid:         extractWaid(rawWaUrl),
     heat:         g("heat") || null,
     lane:         rawLane !== "" && !isNaN(Number(rawLane)) ? Number(rawLane) : null,
-    manager:      g("manager")   || null,
-    arrival:      g("arrival")   || null,
-    departure:    g("departure") || null,
+    manager:   g("manager")   || null,
+    arrival:   g("arrival")   || null,
+    departure: g("departure") || null,
+    ...expandTravelField(g("arrival")   || null, "arrival"),
+    ...expandTravelField(g("departure") || null, "departure"),
   };
 }
 
@@ -459,6 +515,81 @@ function AthletePortalOverview({ Panel }) {
   );
 }
 
+// ─── Athletes list page — helpers ────────────────────────────────────────────
+
+// Splits "60m W" → { discipline:"60m", gender:"W" }   "W 100m" → { discipline:"100m", gender:"W" }
+const _GENDER_SUFFIX_RE = /^(.+?)\s+(W|M|F|H|Women|Men|Femmes?|Hommes?)$/i;
+const _GENDER_PREFIX_RE = /^(W|M|F|H)\s+(.+)$/i;
+
+function parseEventField(raw) {
+  if (!raw) return { discipline: "", gender: null };
+  const s = String(raw).trim();
+  let m = _GENDER_SUFFIX_RE.exec(s);
+  if (m) {
+    const g = m[2][0].toUpperCase();
+    return { discipline: m[1].trim(), gender: (g === "W" || g === "F") ? "W" : "M" };
+  }
+  m = _GENDER_PREFIX_RE.exec(s);
+  if (m) {
+    const g = m[1][0].toUpperCase();
+    return { discipline: m[2].trim(), gender: (g === "W" || g === "F") ? "W" : "M" };
+  }
+  return { discipline: s, gender: null };
+}
+
+const _DISC_RANK = [
+  "60m","60mH","100m","200m","400m","600m","800m","1000m","1500m","1mile",
+  "2000m","3000m","2miles","5000m","10000m","110mH","400mH","3000mSC",
+  "HJ","PV","LJ","TJ","SP","DT","HT","JT","Pen","Hep","Dec",
+];
+function disciplineRank(disc) {
+  const d = (disc || "").toLowerCase().replace(/[\s-]/g, "");
+  const i = _DISC_RANK.findIndex((x) => d === x.toLowerCase() || d.startsWith(x.toLowerCase()));
+  return i >= 0 ? i : 999;
+}
+
+function compareEventGroups([keyA], [keyB]) {
+  const pa = parseEventField(keyA);
+  const pb = parseEventField(keyB);
+  const da = disciplineRank(pa.discipline);
+  const db = disciplineRank(pb.discipline);
+  if (da !== db) return da - db;
+  // Women (W) before Men (M) — typical meeting program order
+  if (pa.gender !== pb.gender) {
+    if (pa.gender === "W") return -1;
+    if (pb.gender === "W") return  1;
+  }
+  return keyA.localeCompare(keyB);
+}
+
+/**
+ * Best available competition reference time for heat seeding.
+ * Priority: current indoor SB → prev indoor SB → outdoor SB → indoor PB → outdoor PB → raw SB/PB
+ */
+function getCompPace(a) {
+  return a.waIndoorSbCurrent || a.waIndoorSb || a.waOutdoorSb
+      || a.waPbIndoor || a.waPbOutdoor
+      || a.sb || a.pb || null;
+}
+
+function GenderBadge({ gender }) {
+  if (!gender) return null;
+  const w = gender === "W";
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center",
+      padding: "2px 10px", borderRadius: 999,
+      fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.06em",
+      background: w ? "#fce4ec" : "#e3f2fd",
+      color: w ? "#b71c1c" : "#1565c0",
+      flexShrink: 0,
+      textTransform: "uppercase",
+    }}>
+      {w ? "Women" : "Men"}
+    </span>
+  );
+}
+
 // ─── Athletes list page ───────────────────────────────────────────────────────
 
 function AthletesListPage({ Panel }) {
@@ -470,23 +601,56 @@ function AthletesListPage({ Panel }) {
   const canEdit = roles.includes("admin") || roles.includes("meeting_director");
   const seasons = settings?.seasons ?? DEFAULT_PORTAL_SETTINGS.seasons;
 
-  const [search, setSearch] = useState("");
-  const [filterEvent, setFilterEvent] = useState("");
+  // ── Filter state ────────────────────────────────────────────────────────────
+  const [search,       setSearch]       = useState("");
+  const [filterEvent,  setFilterEvent]  = useState("");
+  const [filterGender, setFilterGender] = useState("");
+  const [filterNat,    setFilterNat]    = useState("");
+  const [filterHeat,   setFilterHeat]   = useState("");
   const [filterStatus, setFilterStatus] = useState("");
-  const [syncingAll, setSyncingAll] = useState(false);
-  const [syncAllStatus, setSyncAllStatus] = useState("");
+  const [filterWa,     setFilterWa]     = useState("");
+  const [groupByEvent, setGroupByEvent] = useState(true);
+  const [syncingAll,      setSyncingAll]      = useState(false);
+  const [syncAllStatus,   setSyncAllStatus]   = useState("");
 
-  const events = useMemo(() => {
-    const s = new Set();
-    athletes.forEach((a) => { if (a.event) s.add(String(a.event).trim()); });
-    return [...s].sort();
-  }, [athletes]);
+  // ── Augment each athlete with parsed event fields ───────────────────────────
+  const athletesParsed = useMemo(
+    () => athletes.map((a) => ({ ...a, _ev: parseEventField(a.event) })),
+    [athletes],
+  );
 
+  // ── Build dropdown option lists ─────────────────────────────────────────────
+  const filterOptions = useMemo(() => {
+    const disciplines = new Set();
+    const nats  = new Set();
+    const heats = new Set();
+    athletesParsed.forEach((a) => {
+      if (a._ev.discipline) disciplines.add(a._ev.discipline);
+      if (a.nationality)    nats.add(String(a.nationality).trim());
+      if (a.heat)           heats.add(String(a.heat).trim());
+    });
+    return {
+      disciplines: [...disciplines].sort((a, b) => disciplineRank(a) - disciplineRank(b) || a.localeCompare(b)),
+      nats:  [...nats].sort(),
+      heats: [...heats].sort((a, b) => {
+        const na = parseInt(a, 10); const nb = parseInt(b, 10);
+        return (!isNaN(na) && !isNaN(nb)) ? na - nb : a.localeCompare(b);
+      }),
+    };
+  }, [athletesParsed]);
+
+  // ── Apply all filters ───────────────────────────────────────────────────────
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-    return athletes.filter((a) => {
-      if (filterEvent && String(a.event || "").trim() !== filterEvent) return false;
-      if (filterStatus && a.status !== filterStatus) return false;
+    return athletesParsed.filter((a) => {
+      if (filterEvent  && a._ev.discipline !== filterEvent)               return false;
+      if (filterGender && a._ev.gender     !== filterGender)              return false;
+      if (filterNat    && String(a.nationality || "").trim() !== filterNat) return false;
+      if (filterHeat   && String(a.heat    || "").trim() !== filterHeat)  return false;
+      if (filterStatus && a.status !== filterStatus)                      return false;
+      if (filterWa === "synced"   && !a.waFetchedAt) return false;
+      if (filterWa === "has_waid" && !a.waid)        return false;
+      if (filterWa === "no_waid"  &&  a.waid)        return false;
       if (q) {
         const hay = [a.lastName, a.firstName, a.nationality, a.waid]
           .filter(Boolean).join(" ").toLowerCase();
@@ -494,8 +658,48 @@ function AthletesListPage({ Panel }) {
       }
       return true;
     });
-  }, [athletes, search, filterEvent, filterStatus]);
+  }, [athletesParsed, search, filterEvent, filterGender, filterNat, filterHeat, filterStatus, filterWa]);
 
+  // ── Group athletes by event, sort within group by heat → lane → name ────────
+  const grouped = useMemo(() => {
+    const map = new Map();
+    filtered.forEach((a) => {
+      const key = String(a.event || "").trim() || "(no event)";
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(a);
+    });
+    map.forEach((grp) => {
+      grp.sort((a, b) => {
+        const ha = parseInt(a.heat, 10) || 999; const hb = parseInt(b.heat, 10) || 999;
+        if (ha !== hb) return ha - hb;
+        const la = parseInt(a.lane, 10) || 999; const lb = parseInt(b.lane, 10) || 999;
+        if (la !== lb) return la - lb;
+        return String(a.lastName || "").localeCompare(String(b.lastName || ""));
+      });
+    });
+    return [...map.entries()].sort(compareEventGroups);
+  }, [filtered]);
+
+  // ── Column config ───────────────────────────────────────────────────────────
+  // In grouped view, drop "event" (shown in section header instead)
+  const tableFields = useMemo(
+    () => (groupByEvent ? visibleFields.filter((f) => f.key !== "event") : visibleFields),
+    [visibleFields, groupByEvent],
+  );
+
+  // Show "Ref. Pace" column whenever any performance data is visible
+  const showPace = visibleFields.some((f) =>
+    ["sb","pb","pbIndoor","pbOutdoor","waPbIndoor","waPbOutdoor",
+     "waIndoorSb","waIndoorSbCurrent","waOutdoorSb"].includes(f.key),
+  );
+
+  const colCount =
+    tableFields.length
+    + (showPace ? 1 : 0)
+    + (canEdit && !tableFields.find((f) => f.key === "waid") ? 1 : 0)
+    + (canEdit ? 1 : 0);
+
+  // ── Handlers ────────────────────────────────────────────────────────────────
   async function handleSaveWaid(athleteId, waid) {
     await updateDoc(doc(db, ATHLETES_COLLECTION, athleteId), { waid });
   }
@@ -504,29 +708,24 @@ function AthletesListPage({ Panel }) {
     const withWaid = athletes.filter((a) => a.waid);
     if (!withWaid.length) { setSyncAllStatus("No athletes with a WAID to sync."); return; }
     setSyncingAll(true);
-    setSyncAllStatus(`Syncing ${withWaid.length} athletes with World Athletics…`);
-
-    let ok = 0;
-    let failed = 0;
+    setSyncAllStatus(`Syncing ${withWaid.length} athletes…`);
+    let ok = 0; let failed = 0;
     for (const athlete of withWaid) {
       try {
         const waData = await fetchAthleteFromWaService(athlete.waid, settings);
         await updateDoc(doc(db, ATHLETES_COLLECTION, athlete.id), waData);
         ok++;
-      } catch {
-        failed++;
-      }
-      await new Promise((r) => setTimeout(r, 400)); // polite delay
+      } catch { failed++; }
+      await new Promise((r) => setTimeout(r, 400));
     }
-
-    setSyncAllStatus(`Sync complete: ${ok} updated, ${failed} failed.`);
+    setSyncAllStatus(`Done: ${ok} updated, ${failed} failed.`);
     setSyncingAll(false);
   }
 
+  // ── Guards ──────────────────────────────────────────────────────────────────
   if (settingsLoading || athletesLoading) {
     return <div className="page"><section className="page-header"><div><h1>Athletes</h1></div></section><p className="panel-note">Loading…</p></div>;
   }
-
   if (visibleFields.length === 0) {
     return (
       <div className="page">
@@ -539,18 +738,31 @@ function AthletesListPage({ Panel }) {
     );
   }
 
-  // Determine which column groups are visible
-  const showWa     = visibleFields.some((f) => f.group === "wa");
-  const showExcel  = visibleFields.some((f) => f.group === "excel");
+  // ── Cell renderer ────────────────────────────────────────────────────────────
+  function renderCell(f, a) {
+    if (f.key === "waid" && canEdit) return <WaidCell athlete={a} onSave={handleSaveWaid} />;
+    if (f.key === "status") return <StatusBadge status={a.status} />;
+    if (f.key === "waUrl" && a.waUrl)
+      return <a href={a.waUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.8rem" }}>WA ↗</a>;
+    if (f.group === "wa" && f.key !== "waid" && f.key !== "waUrl" && f.key !== "waFetchedAt")
+      return <WaBadge value={a[f.key]} />;
+    // Arrival / departure: render structured if raw string present
+    if (f.key === "arrival")   return <TravelCell raw={a.arrival}   prefix="arrival" />;
+    if (f.key === "departure") return <TravelCell raw={a.departure} prefix="departure" />;
+    return a[f.key] ?? "—";
+  }
 
+  // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <div className="page">
+
+      {/* ── Page header ── */}
       <section className="page-header">
         <div>
           <p className="eyebrow">Athlete Portal</p>
           <h1>Athletes</h1>
           <p>
-            {filtered.length} of {athletes.length} athletes ·&nbsp;
+            {filtered.length} of {athletes.length} athletes ·{" "}
             <strong>Indoor {seasons.indoor}</strong>
             {seasons.indoorCurrent && seasons.indoorCurrent !== seasons.indoor && (
               <> / <strong>{seasons.indoorCurrent}</strong></>
@@ -560,12 +772,7 @@ function AthletesListPage({ Panel }) {
         </div>
         {canEdit && (
           <div>
-            <button
-              className="button button--secondary"
-              type="button"
-              onClick={handleSyncAll}
-              disabled={syncingAll}
-            >
+            <button className="button button--secondary" type="button" onClick={handleSyncAll} disabled={syncingAll}>
               {syncingAll ? "Syncing…" : "↻ Sync all with WA"}
             </button>
             {syncAllStatus && <p className="panel-note" style={{ marginTop: 4 }}>{syncAllStatus}</p>}
@@ -573,32 +780,74 @@ function AthletesListPage({ Panel }) {
         )}
       </section>
 
+      {/* ── Filters ── */}
       <section className="panel-grid panel-grid--1">
-        <Panel title="Filter">
-          <div className="field-grid">
+        <Panel title="Filters &amp; view">
+          <div className="field-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))" }}>
             <label className="field">
               <span>Search</span>
-              <input placeholder="Name, nationality, WAID…" value={search} onChange={(e) => setSearch(e.target.value)} />
+              <input placeholder="Name, nat., WAID…" value={search} onChange={(e) => setSearch(e.target.value)} />
             </label>
             <label className="field">
-              <span>Event</span>
+              <span>Discipline</span>
               <select value={filterEvent} onChange={(e) => setFilterEvent(e.target.value)}>
-                <option value="">All events</option>
-                {events.map((ev) => <option key={ev} value={ev}>{ev}</option>)}
+                <option value="">All disciplines</option>
+                {filterOptions.disciplines.map((d) => <option key={d} value={d}>{d}</option>)}
               </select>
             </label>
+            <label className="field">
+              <span>Gender</span>
+              <select value={filterGender} onChange={(e) => setFilterGender(e.target.value)}>
+                <option value="">All</option>
+                <option value="W">Women (W)</option>
+                <option value="M">Men (M)</option>
+              </select>
+            </label>
+            <label className="field">
+              <span>Nationality</span>
+              <select value={filterNat} onChange={(e) => setFilterNat(e.target.value)}>
+                <option value="">All nations</option>
+                {filterOptions.nats.map((n) => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </label>
+            {filterOptions.heats.length > 0 && (
+              <label className="field">
+                <span>Heat</span>
+                <select value={filterHeat} onChange={(e) => setFilterHeat(e.target.value)}>
+                  <option value="">All heats</option>
+                  {filterOptions.heats.map((h) => <option key={h} value={h}>Heat {h}</option>)}
+                </select>
+              </label>
+            )}
             <label className="field">
               <span>Status</span>
               <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
                 <option value="">All</option>
-                <option value="ok">OK</option>
-                <option value="out">Out</option>
+                <option value="ok">Confirmed (OK)</option>
+                <option value="out">Withdrawn (Out)</option>
               </select>
+            </label>
+            <label className="field">
+              <span>WA sync</span>
+              <select value={filterWa} onChange={(e) => setFilterWa(e.target.value)}>
+                <option value="">All</option>
+                <option value="synced">WA synced ✓</option>
+                <option value="has_waid">Has WAID</option>
+                <option value="no_waid">No WAID</option>
+              </select>
+            </label>
+            <label className="field" style={{ display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+              <span>&nbsp;</span>
+              <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", cursor: "pointer", padding: "7px 0" }}>
+                <input type="checkbox" checked={groupByEvent} onChange={(e) => setGroupByEvent(e.target.checked)} />
+                <span style={{ fontSize: "0.875rem" }}>Group by event</span>
+              </label>
             </label>
           </div>
         </Panel>
       </section>
 
+      {/* ── Table ── */}
       {athletes.length === 0 ? (
         <div className="notice-card">
           <strong>No athletes yet</strong>
@@ -606,49 +855,94 @@ function AthletesListPage({ Panel }) {
         </div>
       ) : (
         <section className="panel-grid panel-grid--1">
-          <Panel title="Athlete list" subtitle={`${filtered.length} results`}>
+          <Panel
+            title={groupByEvent ? `${grouped.length} event${grouped.length !== 1 ? "s" : ""}` : "Athlete list"}
+            subtitle={`${filtered.length} athlete${filtered.length !== 1 ? "s" : ""}`}
+          >
             <div className="table-wrap">
               <table className="data-table">
                 <thead>
                   <tr>
-                    {visibleFields.map((f) => <th key={f.key}>{f.label}</th>)}
-                    {/* WAID and WA sync are always shown to admin/meeting_director */}
-                    {canEdit && !visibleFields.find((f) => f.key === "waid") && <th>WAID</th>}
+                    {tableFields.map((f) => <th key={f.key}>{f.label}</th>)}
+                    {showPace && <th title="Best available reference time for competition seeding">Ref. Pace</th>}
+                    {canEdit && !tableFields.find((f) => f.key === "waid") && <th>WAID</th>}
                     {canEdit && <th>WA sync</th>}
                   </tr>
                 </thead>
-                <tbody>
-                  {filtered.map((a) => (
-                    <tr key={a.id} className={a.status === "out" ? "row--muted" : ""}>
-                      {visibleFields.map((f) => (
-                        <td key={f.key}>
-                          {f.key === "waid" && canEdit
-                            ? <WaidCell athlete={a} onSave={handleSaveWaid} />
-                            : f.key === "status"
-                              ? <StatusBadge status={a.status} />
-                              : f.key === "waUrl" && a.waUrl
-                                ? <a href={a.waUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.8rem" }}>WA ↗</a>
-                                : (f.group === "wa" && f.key !== "waid" && f.key !== "waUrl" && f.key !== "waFetchedAt")
-                                  ? <WaBadge value={a[f.key]} />
-                                  : a[f.key] ?? "—"}
-                        </td>
+
+                {groupByEvent
+                  ? grouped.map(([eventKey, group]) => {
+                      const ev = parseEventField(eventKey);
+                      return (
+                        <tbody key={eventKey} className="event-group">
+                          <tr className="event-group-header">
+                            <td colSpan={colCount}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", flexWrap: "wrap" }}>
+                                <span style={{ fontWeight: 700, fontSize: "1rem", letterSpacing: "-0.01em" }}>
+                                  {ev.discipline || eventKey}
+                                </span>
+                                <GenderBadge gender={ev.gender} />
+                                <span style={{ color: "#888", fontSize: "0.8rem", fontWeight: 400 }}>
+                                  {group.length} athlete{group.length !== 1 ? "s" : ""}
+                                </span>
+                              </div>
+                            </td>
+                          </tr>
+                          {group.map((a) => (
+                            <tr key={a.id} className={a.status === "out" ? "row--muted" : ""}>
+                              {tableFields.map((f) => <td key={f.key}>{renderCell(f, a)}</td>)}
+                              {showPace && (
+                                <td>
+                                  {getCompPace(a)
+                                    ? <span className="status-pill status-pill--accent">{getCompPace(a)}</span>
+                                    : <span style={{ color: "#bbb" }}>—</span>}
+                                </td>
+                              )}
+                              {canEdit && !tableFields.find((f) => f.key === "waid") && (
+                                <td><WaidCell athlete={a} onSave={handleSaveWaid} /></td>
+                              )}
+                              {canEdit && <td><WaSyncButton athlete={a} settings={settings} /></td>}
+                            </tr>
+                          ))}
+                        </tbody>
+                      );
+                    })
+                  : (
+                    <tbody>
+                      {filtered.map((a) => (
+                        <tr key={a.id} className={a.status === "out" ? "row--muted" : ""}>
+                          {tableFields.map((f) => <td key={f.key}>{renderCell(f, a)}</td>)}
+                          {showPace && (
+                            <td>
+                              {getCompPace(a)
+                                ? <span className="status-pill status-pill--accent">{getCompPace(a)}</span>
+                                : <span style={{ color: "#bbb" }}>—</span>}
+                            </td>
+                          )}
+                          {canEdit && !tableFields.find((f) => f.key === "waid") && (
+                            <td><WaidCell athlete={a} onSave={handleSaveWaid} /></td>
+                          )}
+                          {canEdit && <td><WaSyncButton athlete={a} settings={settings} /></td>}
+                        </tr>
                       ))}
-                      {canEdit && !visibleFields.find((f) => f.key === "waid") && (
-                        <td><WaidCell athlete={a} onSave={handleSaveWaid} /></td>
-                      )}
-                      {canEdit && (
-                        <td><WaSyncButton athlete={a} settings={settings} /></td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
+                    </tbody>
+                  )
+                }
               </table>
             </div>
-            {showWa && (
-              <p className="panel-note" style={{ marginTop: "0.5rem" }}>
-                <span className="status-pill status-pill--accent">value</span> = sourced from World Athletics · overrides Excel data
-              </p>
-            )}
+            <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
+              {showPace && (
+                <p className="panel-note">
+                  <span className="status-pill status-pill--accent">7.05 …</span>{" "}
+                  Ref. Pace = best available: indoor SB (current) → indoor SB → outdoor SB → PB
+                </p>
+              )}
+              {visibleFields.some((f) => f.group === "wa") && (
+                <p className="panel-note">
+                  <span className="status-pill status-pill--accent">WA value</span> = sourced from World Athletics
+                </p>
+              )}
+            </div>
           </Panel>
         </section>
       )}
@@ -808,7 +1102,7 @@ function AthleteImportPage({ Panel }) {
                           <><td>{r.heat ?? "—"}</td><td>{r.lane ?? "—"}</td></>
                         )}
                         {(parsed.fileType === "TRAVEL" || parsed.fileType === "COMBINED") && (
-                          <><td>{r.manager ?? "—"}</td><td>{r.arrival ?? "—"}</td><td>{r.departure ?? "—"}</td></>
+                          <><td>{r.manager ?? "—"}</td><td><TravelCell raw={r.arrival} prefix="arrival" /></td><td><TravelCell raw={r.departure} prefix="departure" /></td></>
                         )}
                       </tr>
                     ))}

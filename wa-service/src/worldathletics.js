@@ -1,100 +1,45 @@
 /**
  * World Athletics GraphQL client.
  *
- * WA does not publish a public API but their website calls a GraphQL endpoint
- * that accepts unauthenticated requests for public athlete data.
- * The endpoint and query shape have been stable since 2021; we add a fallback
- * scraper in case it ever changes.
- *
- * Reference implementations:
- *   https://github.com/GoldenCheetah/WorldAthletics  (query names)
- *   https://pypi.org/project/worldathletics/          (Python wrapper)
+ * Uses the WA internal GraphQL endpoint discovered from their JS bundles.
+ * The `indoor` boolean field returned by WA is unreliable (often wrong),
+ * so we detect indoor results from the venue "(i)" suffix and discipline name.
  */
 
-const WA_GRAPHQL_URL = "https://graphql-prod-4.athleticswa.com/graphql";
+const WA_GRAPHQL_URL = "https://graphql-prod-4871.edge.aws.worldathletics.org/graphql";
+const WA_API_KEY     = "da2-j25npjv5w5ft7bgv3smr22xcda";
 
 const HEADERS = {
   "Content-Type": "application/json",
   "Accept": "application/json",
-  // Mimic the browser the WA website uses
+  "x-api-key": WA_API_KEY,
   "Origin": "https://worldathletics.org",
   "Referer": "https://worldathletics.org/",
   "User-Agent": "Mozilla/5.0 (compatible; MyCLIM-WA-Service/1.0)",
-  "x-amz-user-agent": "aws-amplify/3.0.7",
 };
 
-// ─── GraphQL query ────────────────────────────────────────────────────────────
+// ─── GraphQL queries ──────────────────────────────────────────────────────────
 
-const ATHLETE_QUERY = `
-  query GetSingleAthleteByWAId($id: Int!) {
-    getSingleAthleteByWAId(waid: $id) {
-      aaId
-      iaafId
-      urlSlug
-      givenName
-      familyName
-      birthDate
-      sexNameUrlSlug
-      disciplines {
-        name
-        disciplineCode
-      }
-      personalBests {
-        discipline
-        disciplineCode
-        mark
-        wind
-        notLegal
-        date
-        venueCity
-        venueCountry
-        resultScore
-      }
-      seasonBests {
-        discipline
-        disciplineCode
-        mark
-        wind
-        notLegal
-        date
-        venueCity
-        venueCountry
-        resultScore
-      }
-    }
-  }
-`;
-
-// Some WA installations use getAthleteProfileByAthleteId instead
-const ATHLETE_QUERY_V2 = `
-  query GetAthleteProfileByAthleteId($id: Int!) {
-    getAthleteProfileByAthleteId(id: $id) {
+const QUERY_PB = `
+  query GetSingleCompetitor($id: Int!) {
+    getSingleCompetitor(id: $id) {
       basicData {
-        iaafId
-        aaId
-        givenName
-        familyName
+        firstName
+        lastName
         birthDate
+        countryCode
+        sexNameUrlSlug
       }
       personalBests {
         results {
+          indoor
           discipline
+          disciplineCode
           mark
           wind
           notLegal
-          date
           venue
-          resultScore
-        }
-      }
-      seasonBests {
-        results {
-          discipline
-          mark
-          wind
-          notLegal
           date
-          venue
           resultScore
         }
       }
@@ -102,7 +47,25 @@ const ATHLETE_QUERY_V2 = `
   }
 `;
 
-// ─── HTTP helper ─────────────────────────────────────────────────────────────
+const QUERY_SB = `
+  query GetSingleCompetitorSeasonBests($id: Int!, $year: Int!) {
+    getSingleCompetitorSeasonBests(id: $id, seasonsBestsSeason: $year) {
+      results {
+        indoor
+        discipline
+        disciplineCode
+        mark
+        wind
+        notLegal
+        venue
+        date
+        resultScore
+      }
+    }
+  }
+`;
+
+// ─── HTTP helper ──────────────────────────────────────────────────────────────
 
 async function graphql(query, variables) {
   const response = await fetch(WA_GRAPHQL_URL, {
@@ -126,70 +89,45 @@ async function graphql(query, variables) {
   return json.data;
 }
 
-// ─── Normalizers ─────────────────────────────────────────────────────────────
+// ─── Indoor detection ─────────────────────────────────────────────────────────
 
-function normalizeVenue(result) {
-  if (result.venue) return result.venue;
-  const parts = [result.venueCity, result.venueCountry].filter(Boolean);
-  return parts.join(", ") || null;
+/**
+ * Detect whether a result is indoor.
+ * WA's own `indoor` boolean is unreliable (often returns false for indoor results).
+ * We use multiple signals in priority order:
+ *  1. venue string contains " (i)" suffix  ← most reliable
+ *  2. disciplineNameUrlSlug contains "indoor"
+ *  3. discipline name starts with "60"  ← 60m / 60mH are indoor-only events
+ *  4. WA's `indoor` boolean  ← last resort
+ */
+function isIndoor(r) {
+  const venue = (r.venue || "").toLowerCase();
+  if (venue.includes("(i)")) return true;
+  const disc = (r.discipline || "").toLowerCase();
+  if (disc.startsWith("60")) return true;
+  return r.indoor === true;
 }
 
-function normalizeResult(result) {
+// ─── Normalizers ──────────────────────────────────────────────────────────────
+
+function normalizeResult(r) {
   return {
-    discipline: result.discipline || null,
-    disciplineCode: result.disciplineCode || null,
-    mark: result.mark || null,
-    wind: result.wind ?? null,
-    notLegal: result.notLegal ?? false,
-    date: result.date || null,
-    venue: normalizeVenue(result),
-    resultScore: result.resultScore ?? null,
+    discipline:     r.discipline     || null,
+    disciplineCode: r.disciplineCode || null,
+    mark:           r.mark           || null,
+    wind:           r.wind           ?? null,
+    notLegal:       r.notLegal       ?? false,
+    venue:          r.venue          || null,
+    date:           r.date           || null,
+    resultScore:    r.resultScore    ?? null,
+    indoor:         isIndoor(r),
   };
 }
 
-function normalizeV1(data) {
-  const a = data.getSingleAthleteByWAId;
-  if (!a) return null;
-
-  return {
-    waid: a.aaId || a.iaafId,
-    urlSlug: a.urlSlug || null,
-    firstName: a.givenName || null,
-    lastName: a.familyName || null,
-    birthDate: a.birthDate || null,
-    gender: a.sexNameUrlSlug || null,
-    disciplines: (a.disciplines || []).map((d) => ({
-      name: d.name,
-      code: d.disciplineCode,
-    })),
-    personalBests: (a.personalBests || []).map(normalizeResult),
-    seasonBests: (a.seasonBests || []).map(normalizeResult),
-  };
-}
-
-function normalizeV2(data) {
-  const a = data.getAthleteProfileByAthleteId;
-  if (!a) return null;
-
-  const basic = a.basicData || {};
-  return {
-    waid: basic.aaId || basic.iaafId,
-    urlSlug: null,
-    firstName: basic.givenName || null,
-    lastName: basic.familyName || null,
-    birthDate: basic.birthDate || null,
-    gender: null,
-    disciplines: [],
-    personalBests: (a.personalBests?.results || []).map(normalizeResult),
-    seasonBests: (a.seasonBests?.results || []).map(normalizeResult),
-  };
-}
-
-// ─── Public API ──────────────────────────────────────────────────────────────
+// ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
  * Fetch all public data for a single athlete from World Athletics.
- * Tries the v1 query first; falls back to v2 if the field name differs.
  *
  * @param {number} waid  World Athletics ID (integer)
  * @returns {Promise<object>}  Normalized athlete object
@@ -198,20 +136,40 @@ async function fetchAthlete(waid) {
   const id = Number(waid);
   if (!Number.isInteger(id) || id <= 0) throw new Error("Invalid WAID");
 
-  // Try primary query
-  try {
-    const data = await graphql(ATHLETE_QUERY, { id });
-    const normalized = normalizeV1(data);
-    if (normalized) return normalized;
-  } catch (err) {
-    console.warn(`[WA] v1 query failed for WAID ${id}: ${err.message}`);
-  }
+  // Fetch PBs
+  const pbData     = await graphql(QUERY_PB, { id });
+  const competitor = pbData?.getSingleCompetitor;
+  if (!competitor) throw new Error(`No competitor found for WAID ${id}`);
 
-  // Fallback to v2 query shape
-  const data = await graphql(ATHLETE_QUERY_V2, { id });
-  const normalized = normalizeV2(data);
-  if (!normalized) throw new Error(`No data returned from WA for WAID ${id}`);
-  return normalized;
+  const basic         = competitor.basicData || {};
+  const personalBests = (competitor.personalBests?.results || []).map(normalizeResult);
+
+  // Fetch SBs for current year and the two previous years
+  const currentYear = new Date().getFullYear();
+  const years = [currentYear, currentYear - 1, currentYear - 2];
+
+  const sbResults = await Promise.allSettled(
+    years.map((year) => graphql(QUERY_SB, { id, year })),
+  );
+
+  const seasonBests = sbResults.flatMap((res, i) => {
+    if (res.status !== "fulfilled") {
+      console.warn(`[WA] SB fetch failed for WAID ${id} year ${years[i]}: ${res.reason?.message}`);
+      return [];
+    }
+    return (res.value?.getSingleCompetitorSeasonBests?.results || []).map(normalizeResult);
+  });
+
+  return {
+    waid:         id,
+    firstName:    basic.firstName   || null,
+    lastName:     basic.lastName    || null,
+    birthDate:    basic.birthDate   || null,
+    countryCode:  basic.countryCode || null,
+    gender:       basic.sexNameUrlSlug || null,
+    personalBests,
+    seasonBests,
+  };
 }
 
 export { fetchAthlete };
