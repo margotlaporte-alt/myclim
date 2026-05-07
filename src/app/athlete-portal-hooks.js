@@ -158,8 +158,15 @@ async function fetchAthleteFromWaService(waid, settings) {
   });
 
   if (!response.ok) {
-    const text = await response.text().catch(() => "");
-    throw new Error(`WA service returned ${response.status}: ${text}`);
+    // Try to extract the structured error detail from the Netlify Function response
+    let detail = "";
+    try {
+      const body = await response.json();
+      detail = body.detail || body.error || JSON.stringify(body);
+    } catch {
+      detail = await response.text().catch(() => "");
+    }
+    throw new Error(`HTTP ${response.status} — ${detail}`);
   }
 
   const data = await response.json();

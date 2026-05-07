@@ -416,8 +416,23 @@ function WaSyncButton({ athlete, settings, onDone }) {
   }
 
   if (status === "syncing") return <span style={{ color: "#888", fontSize: "0.8rem" }}>syncing…</span>;
-  if (status === "ok") return <span className="status-pill status-pill--ok" style={{ fontSize: "0.75rem" }}>synced ✓</span>;
-  if (status === "error") return <span title={error} className="status-pill status-pill--warn" style={{ cursor: "help", fontSize: "0.75rem" }}>error ✕</span>;
+  if (status === "ok")      return <span className="status-pill status-pill--ok" style={{ fontSize: "0.75rem" }}>synced ✓</span>;
+
+  if (status === "error") return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "3px", maxWidth: 220 }}>
+      <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+        <span className="status-pill status-pill--warn" style={{ fontSize: "0.75rem" }}>error ✕</span>
+        <button className="button button--ghost button--small" type="button" onClick={handleSync} title="Retry">↻</button>
+      </div>
+      <span style={{
+        fontSize: "0.7rem", color: "#b71c1c", lineHeight: 1.35,
+        display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical",
+        overflow: "hidden", wordBreak: "break-word",
+      }} title={error}>
+        {error}
+      </span>
+    </div>
+  );
 
   return (
     <button className="button button--ghost button--small" type="button" onClick={handleSync}>
@@ -612,6 +627,7 @@ function AthletesListPage({ Panel }) {
   const [groupByEvent, setGroupByEvent] = useState(true);
   const [syncingAll,      setSyncingAll]      = useState(false);
   const [syncAllStatus,   setSyncAllStatus]   = useState("");
+  const [syncAllFailures, setSyncAllFailures] = useState([]); // [{ name, waid, error }]
 
   // ── Augment each athlete with parsed event fields ───────────────────────────
   const athletesParsed = useMemo(
@@ -709,16 +725,25 @@ function AthletesListPage({ Panel }) {
     if (!withWaid.length) { setSyncAllStatus("No athletes with a WAID to sync."); return; }
     setSyncingAll(true);
     setSyncAllStatus(`Syncing ${withWaid.length} athletes…`);
-    let ok = 0; let failed = 0;
+    let ok = 0;
+    const failures = [];
+    setSyncAllFailures([]);
     for (const athlete of withWaid) {
       try {
         const waData = await fetchAthleteFromWaService(athlete.waid, settings);
         await updateDoc(doc(db, ATHLETES_COLLECTION, athlete.id), waData);
         ok++;
-      } catch { failed++; }
+      } catch (err) {
+        failures.push({
+          name: [athlete.firstName, athlete.lastName].filter(Boolean).join(" "),
+          waid: athlete.waid,
+          error: err.message,
+        });
+      }
       await new Promise((r) => setTimeout(r, 400));
     }
-    setSyncAllStatus(`Done: ${ok} updated, ${failed} failed.`);
+    setSyncAllStatus(`Done: ${ok} updated, ${failures.length} failed.`);
+    setSyncAllFailures(failures);
     setSyncingAll(false);
   }
 
@@ -771,11 +796,31 @@ function AthletesListPage({ Panel }) {
           </p>
         </div>
         {canEdit && (
-          <div>
+          <div style={{ maxWidth: 320 }}>
             <button className="button button--secondary" type="button" onClick={handleSyncAll} disabled={syncingAll}>
               {syncingAll ? "Syncing…" : "↻ Sync all with WA"}
             </button>
-            {syncAllStatus && <p className="panel-note" style={{ marginTop: 4 }}>{syncAllStatus}</p>}
+            {syncAllStatus && (
+              <p className="panel-note" style={{ marginTop: 4 }}>
+                {syncAllStatus}
+              </p>
+            )}
+            {syncAllFailures.length > 0 && (
+              <details style={{ marginTop: 6 }}>
+                <summary style={{ fontSize: "0.8rem", cursor: "pointer", color: "#b71c1c" }}>
+                  {syncAllFailures.length} failure{syncAllFailures.length > 1 ? "s" : ""} — see details
+                </summary>
+                <ul style={{ margin: "4px 0 0 0", padding: "0 0 0 1rem", fontSize: "0.75rem", color: "#555" }}>
+                  {syncAllFailures.map((f, i) => (
+                    <li key={i} style={{ marginBottom: 4 }}>
+                      <strong>{f.name}</strong>{f.waid ? ` (${f.waid})` : ""}
+                      <br />
+                      <span style={{ color: "#b71c1c" }}>{f.error}</span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
           </div>
         )}
       </section>
