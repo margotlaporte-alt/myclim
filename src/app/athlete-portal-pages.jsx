@@ -927,6 +927,15 @@ function AthletePortalSettingsPage({ Panel }) {
 
   const activeRoles = PLATFORM_ROLES.filter((r) => accessRoles.includes(r.key));
 
+  const colCount = activeRoles.length;
+  // CSS grid: field label column + one column per active role
+  const visGrid = {
+    display: "grid",
+    gridTemplateColumns: `220px repeat(${colCount}, 1fr)`,
+    gap: "0",
+    alignItems: "center",
+  };
+
   return (
     <div className="page">
       <section className="page-header">
@@ -935,137 +944,172 @@ function AthletePortalSettingsPage({ Panel }) {
           <h1>Portal settings</h1>
           <p>Access control, season configuration and World Athletics integration.</p>
         </div>
+        <div>
+          <button className="button button--primary" form="settings-form" type="submit" disabled={saving}>
+            {saving ? "Saving…" : "Save settings"}
+          </button>
+          {saveStatus && <p className="panel-note" style={{ marginTop: 4 }}>{saveStatus}</p>}
+        </div>
       </section>
 
-      <form onSubmit={handleSave}>
-        {/* Seasons & WA service */}
-        <section className="panel-grid panel-grid--2">
-          <Panel title="Active seasons" subtitle="CMCM is in early January — most athletes have the previous year's indoor SB">
-            <div className="field-grid">
+      <form id="settings-form" onSubmit={handleSave}>
+
+        {/* ── Seasons ──────────────────────────────────────────────── */}
+        <section className="panel-grid panel-grid--1">
+          <Panel title="Seasons" subtitle="CMCM takes place in early January — the indoor season has barely started at meeting time.">
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem 2rem", maxWidth: 520 }}>
               <label className="field">
-                <span>Indoor season (previous year)</span>
-                <input type="number" min="2020" max="2040" value={indoorSeason} onChange={(e) => setIndoorSeason(e.target.value)} />
+                <span>Indoor — previous year</span>
+                <input type="number" min="2020" max="2040" value={indoorSeason}
+                  onChange={(e) => setIndoorSeason(e.target.value)} />
+                <span className="field-hint">Main SB (season completed)</span>
               </label>
               <label className="field">
-                <span>Indoor season (current year)</span>
-                <input type="number" min="2020" max="2040" value={indoorCurrentSeason} onChange={(e) => setIndoorCurrentSeason(e.target.value)} />
+                <span>Indoor — current year</span>
+                <input type="number" min="2020" max="2040" value={indoorCurrentSeason}
+                  onChange={(e) => setIndoorCurrentSeason(e.target.value)} />
+                <span className="field-hint">Also shown if available</span>
               </label>
               <label className="field">
-                <span>Outdoor season</span>
-                <input type="number" min="2020" max="2040" value={outdoorSeason} onChange={(e) => setOutdoorSeason(e.target.value)} />
+                <span>Outdoor</span>
+                <input type="number" min="2020" max="2040" value={outdoorSeason}
+                  onChange={(e) => setOutdoorSeason(e.target.value)} />
+                <span className="field-hint">Previous summer (N−1)</span>
               </label>
             </div>
-            <p className="panel-note">
-              For CMCM {indoorCurrentSeason}: Indoor {indoorSeason} (main) · Indoor {indoorCurrentSeason} (current, few results) · Outdoor {outdoorSeason}.
+            <p className="panel-note" style={{ marginTop: "1rem" }}>
+              Example for CMCM <strong>{indoorCurrentSeason}</strong>: Indoor SB <strong>{indoorSeason}</strong> (main) ·
+              Indoor SB <strong>{indoorCurrentSeason}</strong> (current, few results) ·
+              Outdoor SB <strong>{outdoorSeason}</strong>.
             </p>
           </Panel>
-          <Panel title="World Athletics service" subtitle="URL of the wa-service backend.">
+        </section>
+
+        {/* ── Access & WA ───────────────────────────────────────────── */}
+        <section className="panel-grid panel-grid--3">
+          <Panel title="Portal access" subtitle="Who can open the Athlete Portal.">
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+              {PLATFORM_ROLES.map((role) => (
+                <label key={role.key} style={{ display: "flex", gap: "0.6rem", alignItems: "center", cursor: role.key === "admin" ? "default" : "pointer" }}>
+                  <input type="checkbox"
+                    checked={accessRoles.includes(role.key)}
+                    disabled={role.key === "admin"}
+                    onChange={() => toggleRole(accessRoles, setAccessRoles, role.key)} />
+                  <span style={{ flex: 1 }}>{role.label}</span>
+                  {role.key === "admin" && <span className="status-pill status-pill--accent" style={{ fontSize: "0.7rem" }}>always</span>}
+                </label>
+              ))}
+            </div>
+          </Panel>
+
+          <Panel title="Import rights" subtitle="Who can upload Excel files.">
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+              {activeRoles.map((role) => (
+                <label key={role.key} style={{ display: "flex", gap: "0.6rem", alignItems: "center", cursor: "pointer" }}>
+                  <input type="checkbox"
+                    checked={importerRoles.includes(role.key)}
+                    onChange={() => toggleRole(importerRoles, setImporterRoles, role.key)} />
+                  <span>{role.label}</span>
+                </label>
+              ))}
+            </div>
+            <p className="panel-note" style={{ marginTop: "0.75rem" }}>Only roles with portal access are listed.</p>
+          </Panel>
+
+          <Panel title="World Athletics" subtitle="Backend URL for WA data sync.">
             <label className="field">
               <span>WA service URL</span>
-              <input
-                type="url"
-                value={waServiceUrl}
+              <input type="text" value={waServiceUrl}
                 onChange={(e) => setWaServiceUrl(e.target.value)}
-                placeholder="http://localhost:3001"
-              />
+                placeholder="/api/wa" />
             </label>
-            <p className="panel-note">
-              Run <code>npm start</code> in <code>wa-service/</code> for local development.
-              In production, deploy the service and enter its public URL here.
+            <p className="panel-note" style={{ marginTop: "0.75rem" }}>
+              Default <code>/api/wa</code> → Netlify Function (works in production).<br />
+              For local dev, switch to <code>http://localhost:3001</code> while running <code>wa-service/</code>.
             </p>
           </Panel>
         </section>
 
-        {/* Access & import rights */}
-        <section className="panel-grid panel-grid--2">
-          <Panel title="Portal access" subtitle="Who can enter the Athlete Portal.">
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-              {PLATFORM_ROLES.map((role) => (
-                <label key={role.key} style={{ display: "flex", gap: "0.5rem", alignItems: "center", cursor: "pointer" }}>
-                  <input type="checkbox" checked={accessRoles.includes(role.key)} disabled={role.key === "admin"} onChange={() => toggleRole(accessRoles, setAccessRoles, role.key)} />
-                  <span>{role.label}</span>
-                  {role.key === "admin" && <span className="status-pill status-pill--accent">always</span>}
-                </label>
+        {/* ── Field visibility ──────────────────────────────────────── */}
+        <section className="panel-grid panel-grid--1">
+          <Panel title="Field visibility per role" subtitle="Which columns each role can see in the athlete list.">
+
+            {/* Sticky role header */}
+            <div style={{ ...visGrid, borderBottom: "2px solid var(--color-border, #e0e0e0)", paddingBottom: "0.5rem", marginBottom: "0.25rem" }}>
+              <div style={{ fontSize: "0.75rem", color: "#888", textTransform: "uppercase", letterSpacing: "0.05em" }}>Field</div>
+              {activeRoles.map((r) => (
+                <div key={r.key} style={{ textAlign: "center", fontWeight: 600, fontSize: "0.85rem", lineHeight: 1.3, padding: "0 4px" }}>
+                  {r.label}
+                </div>
               ))}
             </div>
-          </Panel>
-          <Panel title="Import rights" subtitle="Who can upload Excel files.">
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-              {activeRoles.map((role) => (
-                <label key={role.key} style={{ display: "flex", gap: "0.5rem", alignItems: "center", cursor: "pointer" }}>
-                  <input type="checkbox" checked={importerRoles.includes(role.key)} onChange={() => toggleRole(importerRoles, setImporterRoles, role.key)} />
-                  <span>{role.label}</span>
-                </label>
-              ))}
-            </div>
-            <p className="panel-note">Only roles with portal access are shown.</p>
-          </Panel>
-        </section>
 
-        {/* Field visibility */}
-        <section className="panel-grid panel-grid--1">
-          <Panel title="Field visibility per role" subtitle="Which columns each role can see. WA data always overrides Excel for the same field.">
-            <div style={{ overflowX: "auto" }}>
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th style={{ minWidth: 160 }}>Field</th>
-                    <th style={{ minWidth: 110 }}>Source</th>
-                    {activeRoles.map((r) => <th key={r.key} style={{ minWidth: 130, textAlign: "center" }}>{r.label}</th>)}
-                  </tr>
-                </thead>
-                <tbody>
-                  {FIELD_GROUPS.map((group) => {
-                    const gFields = ALL_ATHLETE_FIELDS.filter((f) => f.group === group.key);
-                    return gFields.map((field, fi) => (
-                      <tr key={field.key}>
-                        <td>{field.label}</td>
-                        {fi === 0 ? (
-                          <td rowSpan={gFields.length} style={{ verticalAlign: "middle" }}>
-                            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                              <span className="status-pill">{group.label}</span>
-                              {activeRoles.map((r) => (
-                                <button
-                                  key={r.key}
-                                  type="button"
-                                  className="button button--ghost button--small"
-                                  onClick={() => setGroupForRole(r.key, group.key, !groupAllGranted(r.key, group.key))}
-                                  style={{ fontSize: "0.68rem", padding: "1px 5px" }}
-                                >
-                                  {groupAllGranted(r.key, group.key) ? "−" : "+"} {r.label.split(" ")[0]}
-                                </button>
-                              ))}
-                            </div>
-                          </td>
-                        ) : null}
-                        {activeRoles.map((r) => (
-                          <td key={r.key} style={{ textAlign: "center" }}>
-                            <input
-                              type="checkbox"
-                              checked={(fieldVisibility[r.key] ?? []).includes(field.key)}
-                              onChange={() => toggleField(r.key, field.key)}
-                            />
-                          </td>
-                        ))}
-                      </tr>
-                    ));
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </Panel>
-        </section>
+            {/* Groups */}
+            {FIELD_GROUPS.map((group) => {
+              const gFields = ALL_ATHLETE_FIELDS.filter((f) => f.group === group.key);
+              return (
+                <div key={group.key} style={{ marginTop: "1.25rem" }}>
 
-        <section className="panel-grid panel-grid--1">
-          <Panel title="Save">
-            <div className="dashboard-action-grid">
+                  {/* Group header row */}
+                  <div style={{ ...visGrid, background: "var(--color-surface-2, #f5f5f5)", borderRadius: 6, padding: "0.4rem 0.5rem", marginBottom: "0.15rem" }}>
+                    <div style={{ fontWeight: 600, fontSize: "0.82rem", textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--color-text-muted, #555)" }}>
+                      {group.label}
+                    </div>
+                    {activeRoles.map((r) => {
+                      const allOn = groupAllGranted(r.key, group.key);
+                      return (
+                        <div key={r.key} style={{ textAlign: "center" }}>
+                          <button
+                            type="button"
+                            className={`button button--small ${allOn ? "button--secondary" : "button--ghost"}`}
+                            style={{ fontSize: "0.72rem", padding: "2px 8px" }}
+                            onClick={() => setGroupForRole(r.key, group.key, !allOn)}
+                            title={allOn ? `Remove all ${group.label} fields for ${r.label}` : `Grant all ${group.label} fields to ${r.label}`}
+                          >
+                            {allOn ? "All ✓" : "None"}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Field rows */}
+                  {gFields.map((field, fi) => (
+                    <div
+                      key={field.key}
+                      style={{
+                        ...visGrid,
+                        padding: "0.35rem 0.5rem",
+                        borderRadius: 4,
+                        background: fi % 2 === 0 ? "transparent" : "var(--color-surface-1, #fafafa)",
+                      }}
+                    >
+                      <div style={{ fontSize: "0.875rem" }}>{field.label}</div>
+                      {activeRoles.map((r) => (
+                        <div key={r.key} style={{ textAlign: "center" }}>
+                          <input
+                            type="checkbox"
+                            style={{ width: 16, height: 16, cursor: "pointer" }}
+                            checked={(fieldVisibility[r.key] ?? []).includes(field.key)}
+                            onChange={() => toggleField(r.key, field.key)}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+
+            <div style={{ marginTop: "1.5rem", paddingTop: "1rem", borderTop: "1px solid var(--color-border, #e0e0e0)", display: "flex", gap: "1rem", alignItems: "center" }}>
               <button className="button button--primary" type="submit" disabled={saving}>
                 {saving ? "Saving…" : "Save settings"}
               </button>
+              {saveStatus && <p className="panel-note" style={{ margin: 0 }}>{saveStatus}</p>}
             </div>
-            {saveStatus && <p className="panel-note">{saveStatus}</p>}
           </Panel>
         </section>
+
       </form>
     </div>
   );
