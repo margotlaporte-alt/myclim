@@ -33,12 +33,13 @@
   },
   {
     "year": 2022,
-    "edition": 20,
-    "date": "2022-01-01",
-    "name": "CMCM Indoor Meeting",
-    "venue": "Coque, Luxembourg",
+    "edition": null,
+    "date": null,
+    "name": null,
+    "venue": null,
     "label": "",
-    "note": "No PDF available"
+    "cancelled": true,
+    "note": "Année blanche — annulé en raison du Covid-19"
   },
   {
     "year": 2023,
@@ -62,6 +63,14 @@
     "date": "2025-01-19",
     "name": "CMCM Luxembourg Indoor Meeting",
     "venue": "Coque, Luxembourg",
-    "label": "Bronze Label"
+    "label": "Silver Label"
+  },
+  {
+    "year": 2026,
+    "edition": 24,
+    "date": "2026-01-18",
+    "name": "CMCM Luxembourg Indoor Meeting",
+    "venue": "Coque, Luxembourg",
+    "label": "Silver Label"
   }
 ]
