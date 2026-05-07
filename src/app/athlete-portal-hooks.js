@@ -38,9 +38,17 @@ const ALL_ATHLETE_FIELDS = [
   { key: "lane",          label: "Lane",               group: "lanes" },
 
   // Travel logistics (from travel file)
-  { key: "manager",       label: "Manager",            group: "travel" },
-  { key: "arrival",       label: "Arrival",            group: "travel" },
-  { key: "departure",     label: "Departure",          group: "travel" },
+  { key: "manager",         label: "Manager",          group: "travel" },
+  { key: "arrival",         label: "Arrival (raw)",    group: "travel" },
+  { key: "arrivalDay",      label: "Arr. Day",         group: "travel" },
+  { key: "arrivalTime",     label: "Arr. Time",        group: "travel" },
+  { key: "arrivalFlight",   label: "Arr. Flight",      group: "travel" },
+  { key: "arrivalFrom",     label: "Arr. From",        group: "travel" },
+  { key: "departure",       label: "Departure (raw)",  group: "travel" },
+  { key: "departureDay",    label: "Dep. Day",         group: "travel" },
+  { key: "departureTime",   label: "Dep. Time",        group: "travel" },
+  { key: "departureFlight", label: "Dep. Flight",      group: "travel" },
+  { key: "departureTo",     label: "Dep. To",          group: "travel" },
 ];
 
 const FIELD_GROUPS = [

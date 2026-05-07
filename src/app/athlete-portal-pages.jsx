@@ -30,6 +30,58 @@ const PLATFORM_ROLES = [
   { key: "parent_u14",       label: "U14 Parent" },
 ];
 
+// ─── Travel entry parser ──────────────────────────────────────────────────────
+// Parses strings like "17. flight 21:45 with LG8254 from Nice"
+//                  or "19. flight 06:00 with LG3759 to Lisbon"
+// into structured fields: day, time, flightNo, dir ("from"|"to"), city.
+
+const _TRAVEL_RE = /^(\d+)\.\s+(\S+)\s+(\d{1,2}:\d{2})\s+with\s+([A-Z0-9]+)\s+(from|to)\s+(.+)$/i;
+
+function parseTravelEntry(text) {
+  if (!text) return null;
+  const m = _TRAVEL_RE.exec(String(text).trim());
+  if (!m) return null;
+  return {
+    day:      parseInt(m[1], 10),
+    mode:     m[2].toLowerCase(),      // "flight", "train", …
+    time:     m[3],
+    flightNo: m[4].toUpperCase(),
+    dir:      m[5].toLowerCase(),      // "from" | "to"
+    city:     m[6].trim(),
+  };
+}
+
+/** Expand a raw arrival or departure string into structured sub-fields. */
+function expandTravelField(raw, prefix) {
+  // prefix = "arrival" | "departure"
+  const p = parseTravelEntry(raw);
+  if (!p) return {};
+  const cityKey = prefix === "arrival" ? `${prefix}From` : `${prefix}To`;
+  return {
+    [`${prefix}Day`]:    p.day,
+    [`${prefix}Time`]:   p.time,
+    [`${prefix}Flight`]: p.flightNo,
+    [cityKey]:           p.city,
+  };
+}
+
+function TravelCell({ raw, prefix }) {
+  if (!raw) return <span style={{ color: "#bbb" }}>—</span>;
+  const p = parseTravelEntry(raw);
+  if (!p) return <span style={{ fontSize: "0.82rem", color: "#555" }}>{raw}</span>;
+  const arrow = prefix === "arrival" ? "← " : "→ ";
+  return (
+    <div style={{ lineHeight: 1.65, fontSize: "0.82rem" }}>
+      <div style={{ fontWeight: 600 }}>
+        Jour {p.day}{p.time ? ` · ${p.time}` : ""}
+      </div>
+      <div style={{ color: "#555" }}>
+        ✈ {p.flightNo} {arrow}{p.city}
+      </div>
+    </div>
+  );
+}
+
 // ─── File type detection & parsing ───────────────────────────────────────────
 
 // Column-name patterns for the new "all-in-one" combined file format.
@@ -151,6 +203,8 @@ function parseTravelRow(row) {
   const lastName = norm(row[1]);
   const firstName = norm(row[2]);
   if (!lastName || !firstName) return null;
+  const arrival   = norm(row[5]) || null;
+  const departure = norm(row[6]) || null;
   return {
     event: norm(row[0]), lastName, firstName,
     nationality: norm(row[3]),
@@ -158,8 +212,8 @@ function parseTravelRow(row) {
     pb: null, pbIndoor: null, pbOutdoor: null, sb: null,
     waUrl: null, waid: null, heat: null, lane: null,
     manager: norm(row[4]) || null,
-    arrival: norm(row[5]) || null,
-    departure: norm(row[6]) || null,
+    arrival, ...expandTravelField(arrival, "arrival"),
+    departure, ...expandTravelField(departure, "departure"),
   };
 }
 
@@ -189,9 +243,11 @@ function parseCombinedRow(row, colMap) {
     waid:         extractWaid(rawWaUrl),
     heat:         g("heat") || null,
     lane:         rawLane !== "" && !isNaN(Number(rawLane)) ? Number(rawLane) : null,
-    manager:      g("manager")   || null,
-    arrival:      g("arrival")   || null,
-    departure:    g("departure") || null,
+    manager:   g("manager")   || null,
+    arrival:   g("arrival")   || null,
+    departure: g("departure") || null,
+    ...expandTravelField(g("arrival")   || null, "arrival"),
+    ...expandTravelField(g("departure") || null, "departure"),
   };
 }
 
@@ -690,6 +746,9 @@ function AthletesListPage({ Panel }) {
       return <a href={a.waUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.8rem" }}>WA ↗</a>;
     if (f.group === "wa" && f.key !== "waid" && f.key !== "waUrl" && f.key !== "waFetchedAt")
       return <WaBadge value={a[f.key]} />;
+    // Arrival / departure: render structured if raw string present
+    if (f.key === "arrival")   return <TravelCell raw={a.arrival}   prefix="arrival" />;
+    if (f.key === "departure") return <TravelCell raw={a.departure} prefix="departure" />;
     return a[f.key] ?? "—";
   }
 
@@ -1043,7 +1102,7 @@ function AthleteImportPage({ Panel }) {
                           <><td>{r.heat ?? "—"}</td><td>{r.lane ?? "—"}</td></>
                         )}
                         {(parsed.fileType === "TRAVEL" || parsed.fileType === "COMBINED") && (
-                          <><td>{r.manager ?? "—"}</td><td>{r.arrival ?? "—"}</td><td>{r.departure ?? "—"}</td></>
+                          <><td>{r.manager ?? "—"}</td><td><TravelCell raw={r.arrival} prefix="arrival" /></td><td><TravelCell raw={r.departure} prefix="departure" /></td></>
                         )}
                       </tr>
                     ))}

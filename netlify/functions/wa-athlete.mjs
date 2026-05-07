@@ -36,7 +36,6 @@ const QUERY_PB = `
           indoor
           discipline
           disciplineCode
-          disciplineNameUrlSlug
           mark
           wind
           notLegal
@@ -57,7 +56,6 @@ const QUERY_SB = `
         indoor
         discipline
         disciplineCode
-        disciplineNameUrlSlug
         mark
         wind
         notLegal
@@ -104,31 +102,29 @@ async function graphql(query, variables) {
  *  4. `indoor` boolean field from WA (unreliable — often wrong)
  */
 function isIndoor(r) {
+  // 1. venue "(i)" suffix — most reliable signal
   const venue = (r.venue || "").toLowerCase();
   if (venue.includes("(i)")) return true;
 
-  const slug = (r.disciplineNameUrlSlug || "").toLowerCase();
-  if (slug.includes("indoor")) return true;
-
+  // 2. discipline name — 60m / 60mH are indoor-only events
   const disc = (r.discipline || "").toLowerCase();
-  if (disc.startsWith("60")) return true;   // 60m / 60mH are indoor-only events
+  if (disc.startsWith("60")) return true;
 
-  // Fall back to the WA boolean as a last resort (it is sometimes correct)
+  // 3. WA boolean field — last resort (often unreliable / returns false for indoor)
   return r.indoor === true;
 }
 
 function normalizeResult(r) {
   return {
-    discipline:            r.discipline            || null,
-    disciplineCode:        r.disciplineCode        || null,
-    disciplineNameUrlSlug: r.disciplineNameUrlSlug || null,
-    mark:        r.mark        || null,
-    wind:        r.wind        ?? null,
-    notLegal:    r.notLegal    ?? false,
-    venue:       r.venue       || null,
-    date:        r.date        || null,
-    resultScore: r.resultScore ?? null,
-    indoor:      isIndoor(r),   // our computed value, not WA's unreliable field
+    discipline:    r.discipline    || null,
+    disciplineCode: r.disciplineCode || null,
+    mark:          r.mark          || null,
+    wind:          r.wind          ?? null,
+    notLegal:      r.notLegal      ?? false,
+    venue:         r.venue         || null,
+    date:          r.date          || null,
+    resultScore:   r.resultScore   ?? null,
+    indoor:        isIndoor(r),   // computed from venue "(i)" + discipline name
   };
 }
 

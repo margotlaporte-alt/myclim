@@ -35,7 +35,6 @@ const QUERY_PB = `
           indoor
           discipline
           disciplineCode
-          disciplineNameUrlSlug
           mark
           wind
           notLegal
@@ -55,7 +54,6 @@ const QUERY_SB = `
         indoor
         discipline
         disciplineCode
-        disciplineNameUrlSlug
         mark
         wind
         notLegal
@@ -105,13 +103,8 @@ async function graphql(query, variables) {
 function isIndoor(r) {
   const venue = (r.venue || "").toLowerCase();
   if (venue.includes("(i)")) return true;
-
-  const slug = (r.disciplineNameUrlSlug || "").toLowerCase();
-  if (slug.includes("indoor")) return true;
-
   const disc = (r.discipline || "").toLowerCase();
   if (disc.startsWith("60")) return true;
-
   return r.indoor === true;
 }
 
@@ -119,16 +112,15 @@ function isIndoor(r) {
 
 function normalizeResult(r) {
   return {
-    discipline:            r.discipline            || null,
-    disciplineCode:        r.disciplineCode        || null,
-    disciplineNameUrlSlug: r.disciplineNameUrlSlug || null,
-    mark:        r.mark        || null,
-    wind:        r.wind        ?? null,
-    notLegal:    r.notLegal    ?? false,
-    venue:       r.venue       || null,
-    date:        r.date        || null,
-    resultScore: r.resultScore ?? null,
-    indoor:      isIndoor(r),
+    discipline:     r.discipline     || null,
+    disciplineCode: r.disciplineCode || null,
+    mark:           r.mark           || null,
+    wind:           r.wind           ?? null,
+    notLegal:       r.notLegal       ?? false,
+    venue:          r.venue          || null,
+    date:           r.date           || null,
+    resultScore:    r.resultScore    ?? null,
+    indoor:         isIndoor(r),
   };
 }
 
