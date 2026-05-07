@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { doc, serverTimestamp, setDoc, updateDoc, writeBatch } from "firebase/firestore";
 import { useAuth } from "../context/auth-context";
@@ -667,6 +667,23 @@ function AthletesListPage({ Panel }) {
   const [filterStatus, setFilterStatus] = useState("");
   const [filterWa,     setFilterWa]     = useState("");
   const [groupByEvent, setGroupByEvent] = useState(true);
+  // Column visibility — keys in this set are hidden (lastName + firstName always visible)
+  const [hiddenCols,    setHiddenCols]    = useState(new Set());
+  const [colPickerOpen, setColPickerOpen] = useState(false);
+  const colPickerRef = useRef(null);
+  const tableRef = useRef(null);
+
+  // Close column picker when clicking outside it
+  useLayoutEffect(() => {
+    if (!colPickerOpen) return;
+    function handleClick(e) {
+      if (colPickerRef.current && !colPickerRef.current.contains(e.target)) {
+        setColPickerOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [colPickerOpen]);
   const [syncingAll,      setSyncingAll]      = useState(false);
   const [syncAllStatus,   setSyncAllStatus]   = useState("");
   const [syncAllFailures, setSyncAllFailures] = useState([]); // [{ name, waid, error }]
@@ -740,22 +757,59 @@ function AthletesListPage({ Panel }) {
 
   // ── Column config ───────────────────────────────────────────────────────────
   // In grouped view, drop "event" (shown in section header instead)
+  // tableFields = all fields the user is allowed to see (before the hide toggle)
   const tableFields = useMemo(
     () => (groupByEvent ? visibleFields.filter((f) => f.key !== "event") : visibleFields),
     [visibleFields, groupByEvent],
   );
 
-  // Show "Ref. Pace" column whenever any performance data is visible
-  const showPace = visibleFields.some((f) =>
+  // displayedFields = tableFields minus any the user has hidden via the column picker
+  // lastName and firstName are always shown (they are the frozen/sticky columns)
+  const displayedFields = useMemo(
+    () => tableFields.filter((f) => !hiddenCols.has(f.key)),
+    [tableFields, hiddenCols],
+  );
+
+  // Columns the user can toggle in the picker (all except the frozen identity cols)
+  const toggleableCols = useMemo(
+    () => tableFields.filter((f) => f.key !== "lastName" && f.key !== "firstName"),
+    [tableFields],
+  );
+
+  // Show "Ref. Pace" column whenever any performance data is visible AND not hidden
+  const showPace = displayedFields.some((f) =>
     ["sb","pb","pbIndoor","pbOutdoor","waPbIndoor","waPbOutdoor",
      "waIndoorSb","waIndoorSbCurrent","waOutdoorSb"].includes(f.key),
   );
 
   const colCount =
-    tableFields.length
+    displayedFields.length
     + (showPace ? 1 : 0)
-    + (canEdit && !tableFields.find((f) => f.key === "waid") ? 1 : 0)
+    + (canEdit && !displayedFields.find((f) => f.key === "waid") ? 1 : 0)
     + (canEdit ? 1 : 0);
+
+  // ── Sticky column left-offset computation ────────────────────────────────────
+  // Run after every render that could change column layout.
+  // Measures each `data-sticky-col` <th> width and sets the `left` CSS property
+  // on both the <th> and every <td> in that column so they freeze correctly.
+  useLayoutEffect(() => {
+    const table = tableRef.current;
+    if (!table) return;
+    const theadRow = table.querySelector("thead tr");
+    if (!theadRow) return;
+    const ths = [...theadRow.children];
+    let left = 0;
+    ths.forEach((th, colIdx) => {
+      if (!th.dataset.stickyCol) return;
+      th.style.left = `${left}px`;
+      const w = th.getBoundingClientRect().width;
+      table.querySelectorAll("tbody tr").forEach((row) => {
+        const cell = row.children[colIdx];
+        if (cell) cell.style.left = `${left}px`;
+      });
+      left += w;
+    });
+  });
 
   // ── Handlers ────────────────────────────────────────────────────────────────
   async function handleSaveWaid(athleteId, waid) {
@@ -946,13 +1000,83 @@ function AthletesListPage({ Panel }) {
             title={groupByEvent ? `${grouped.length} event${grouped.length !== 1 ? "s" : ""}` : "Athlete list"}
             subtitle={`${filtered.length} athlete${filtered.length !== 1 ? "s" : ""}`}
           >
-            <div className="table-wrap">
-              <table className="data-table">
+            {/* ── Column picker ── */}
+            <div ref={colPickerRef} style={{ position: "relative", display: "inline-block", marginBottom: "0.75rem" }}>
+              <button
+                className="button button--ghost button--small"
+                type="button"
+                onClick={() => setColPickerOpen((v) => !v)}
+                style={{ fontSize: "0.8rem" }}
+              >
+                Colonnes {colPickerOpen ? "▲" : "▼"}
+                {hiddenCols.size > 0 && (
+                  <span style={{
+                    marginLeft: 6, background: "#1b6b55", color: "#fff",
+                    borderRadius: 999, padding: "1px 7px", fontSize: "0.7rem", fontWeight: 700,
+                  }}>
+                    {hiddenCols.size} masquée{hiddenCols.size > 1 ? "s" : ""}
+                  </span>
+                )}
+              </button>
+              {colPickerOpen && (
+                <div className="col-picker-popover">
+                  <div style={{ fontWeight: 600, fontSize: "0.78rem", color: "#587079",
+                    textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "0.5rem" }}>
+                    Afficher / masquer
+                  </div>
+                  {toggleableCols.map((f) => {
+                    const hidden = hiddenCols.has(f.key);
+                    return (
+                      <label key={f.key} className="col-picker-row">
+                        <input
+                          type="checkbox"
+                          checked={!hidden}
+                          onChange={() => setHiddenCols((prev) => {
+                            const next = new Set(prev);
+                            if (hidden) next.delete(f.key); else next.add(f.key);
+                            return next;
+                          })}
+                        />
+                        <span>{f.label}</span>
+                      </label>
+                    );
+                  })}
+                  {hiddenCols.size > 0 && (
+                    <button
+                      type="button"
+                      className="button button--ghost button--small"
+                      style={{ marginTop: "0.5rem", width: "100%", fontSize: "0.78rem" }}
+                      onClick={() => setHiddenCols(new Set())}
+                    >
+                      Tout afficher
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="table-wrap table-wrap--athletes">
+              <table className="data-table" ref={tableRef}>
                 <thead>
                   <tr>
-                    {tableFields.map((f) => <th key={f.key}>{f.label}</th>)}
+                    {displayedFields.map((f) => {
+                      const isSticky = f.key === "lastName" || f.key === "firstName";
+                      const isLast = isSticky &&
+                        !displayedFields.slice(displayedFields.indexOf(f) + 1).some(
+                          (x) => x.key === "lastName" || x.key === "firstName"
+                        );
+                      return (
+                        <th
+                          key={f.key}
+                          className={isSticky ? `col-sticky${isLast ? " col-sticky--last" : ""}` : ""}
+                          data-sticky-col={isSticky ? "1" : undefined}
+                        >
+                          {f.label}
+                        </th>
+                      );
+                    })}
                     {showPace && <th title="Best available reference time for competition seeding">Ref. Pace</th>}
-                    {canEdit && !tableFields.find((f) => f.key === "waid") && <th>WAID</th>}
+                    {canEdit && !displayedFields.find((f) => f.key === "waid") && <th>WAID</th>}
                     {canEdit && <th>WA sync</th>}
                   </tr>
                 </thead>
@@ -977,7 +1101,21 @@ function AthletesListPage({ Panel }) {
                           </tr>
                           {group.map((a) => (
                             <tr key={a.id} className={a.status === "out" ? "row--muted" : ""}>
-                              {tableFields.map((f) => <td key={f.key}>{renderCell(f, a)}</td>)}
+                              {displayedFields.map((f) => {
+                                const isSticky = f.key === "lastName" || f.key === "firstName";
+                                const isLast = isSticky &&
+                                  !displayedFields.slice(displayedFields.indexOf(f) + 1).some(
+                                    (x) => x.key === "lastName" || x.key === "firstName"
+                                  );
+                                return (
+                                  <td
+                                    key={f.key}
+                                    className={isSticky ? `col-sticky${isLast ? " col-sticky--last" : ""}` : ""}
+                                  >
+                                    {renderCell(f, a)}
+                                  </td>
+                                );
+                              })}
                               {showPace && (
                                 <td>
                                   {getCompPace(a)
@@ -985,7 +1123,7 @@ function AthletesListPage({ Panel }) {
                                     : <span style={{ color: "#bbb" }}>—</span>}
                                 </td>
                               )}
-                              {canEdit && !tableFields.find((f) => f.key === "waid") && (
+                              {canEdit && !displayedFields.find((f) => f.key === "waid") && (
                                 <td><WaidCell athlete={a} onSave={handleSaveWaid} /></td>
                               )}
                               {canEdit && <td><WaSyncButton athlete={a} settings={settings} /></td>}
@@ -998,7 +1136,21 @@ function AthletesListPage({ Panel }) {
                     <tbody>
                       {filtered.map((a) => (
                         <tr key={a.id} className={a.status === "out" ? "row--muted" : ""}>
-                          {tableFields.map((f) => <td key={f.key}>{renderCell(f, a)}</td>)}
+                          {displayedFields.map((f) => {
+                            const isSticky = f.key === "lastName" || f.key === "firstName";
+                            const isLast = isSticky &&
+                              !displayedFields.slice(displayedFields.indexOf(f) + 1).some(
+                                (x) => x.key === "lastName" || x.key === "firstName"
+                              );
+                            return (
+                              <td
+                                key={f.key}
+                                className={isSticky ? `col-sticky${isLast ? " col-sticky--last" : ""}` : ""}
+                              >
+                                {renderCell(f, a)}
+                              </td>
+                            );
+                          })}
                           {showPace && (
                             <td>
                               {getCompPace(a)
@@ -1006,7 +1158,7 @@ function AthletesListPage({ Panel }) {
                                 : <span style={{ color: "#bbb" }}>—</span>}
                             </td>
                           )}
-                          {canEdit && !tableFields.find((f) => f.key === "waid") && (
+                          {canEdit && !displayedFields.find((f) => f.key === "waid") && (
                             <td><WaidCell athlete={a} onSave={handleSaveWaid} /></td>
                           )}
                           {canEdit && <td><WaSyncButton athlete={a} settings={settings} /></td>}

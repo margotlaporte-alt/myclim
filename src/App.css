@@ -1866,12 +1866,58 @@ textarea {
   background: rgba(239, 11, 28, 0.08);
 }
 
+/* ── Athletes table: scrollable container with sticky support ─────────────── */
+.table-wrap--athletes {
+  overflow: auto;
+  max-height: calc(100vh - 260px);
+  border-radius: 6px;
+  /* Needed so position:sticky children stick to THIS scroll container */
+}
+
+/* Sticky thead — freezes column headers while scrolling down */
+.table-wrap--athletes .data-table thead tr {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+}
+.table-wrap--athletes .data-table thead th {
+  background: #fff;
+  box-shadow: 0 1px 0 #e2ecea;
+}
+
+/* Sticky columns (lastName, firstName) — freeze while scrolling right */
+.data-table .col-sticky {
+  position: sticky;
+  z-index: 2;
+  /* left: set dynamically by useLayoutEffect */
+  background: #fff; /* solid background so rows behind don't bleed through */
+}
+.data-table tbody tr:hover .col-sticky {
+  background: #f5faf9; /* keep in sync with any row hover style */
+}
+.data-table thead .col-sticky {
+  z-index: 5; /* above both data rows sticky + normal header */
+}
+/* Shadow on the last frozen column to signal that more is hidden */
+.data-table .col-sticky--last {
+  box-shadow: 3px 0 6px -2px rgba(0, 0, 0, 0.10);
+}
+.data-table thead .col-sticky--last {
+  box-shadow: 3px 0 6px -2px rgba(0, 0, 0, 0.10), 0 1px 0 #e2ecea;
+}
+
 /* Athlete list — event group headers */
 .event-group-header td {
   background: #f0f4f3;
   padding: 0.6rem 0.85rem;
   border-top: 2px solid #d0dedd;
   border-bottom: 1px solid #d0dedd;
+}
+/* Sticky event group header — shows which event you're browsing while scrolling down */
+.table-wrap--athletes .event-group-header td {
+  position: sticky;
+  top: 46px; /* just below the frozen thead (~46px tall) */
+  z-index: 3;
 }
 
 .event-group + .event-group .event-group-header td {
@@ -1881,6 +1927,44 @@ textarea {
 /* Muted row (withdrawn athletes) */
 .row--muted td {
   opacity: 0.45;
+}
+/* Muted rows keep a consistent background on sticky cells */
+.row--muted .col-sticky {
+  background: #fff;
+  opacity: 0.45;
+}
+
+/* ── Column picker popover ─────────────────────────────────────────────────── */
+.col-picker-popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 100;
+  background: #fff;
+  border: 1px solid #d4e4e1;
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.10);
+  padding: 0.75rem 0.9rem;
+  min-width: 210px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+.col-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 3px 0;
+  cursor: pointer;
+  font-size: 0.83rem;
+  color: #12313c;
+  white-space: nowrap;
+}
+.col-picker-row input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  accent-color: #1b6b55;
+  flex-shrink: 0;
 }
 
 .data-table__row--success td {
