@@ -670,6 +670,12 @@ function AthleteImportPage({ Panel }) {
   const [saving, setSaving] = useState(false);
   const fileRef = useRef(null);
 
+  // ⚠️ useMemo must be declared before any early returns (Rules of Hooks)
+  const mergePreview = useMemo(
+    () => (parsed ? mergeAthletes(athletes, parsed.records, parsed.fileType) : null),
+    [parsed, athletes],
+  );
+
   if (settingsLoading) return <div className="page"><p className="panel-note">Loading…</p></div>;
 
   if (!canImport) {
@@ -724,11 +730,6 @@ function AthleteImportPage({ Panel }) {
     } catch (err) { setStatus(`Import failed: ${err.message}`); }
     finally { setSaving(false); }
   }
-
-  const mergePreview = useMemo(
-    () => (parsed ? mergeAthletes(athletes, parsed.records, parsed.fileType) : null),
-    [parsed, athletes],
-  );
 
   return (
     <div className="page">
