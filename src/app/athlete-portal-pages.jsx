@@ -560,6 +560,9 @@ function AthletePortalOverview({ Panel }) {
             <NavLink className="button button--secondary button-link" to="/app/athlete-portal/athletes">View athletes</NavLink>
             {canImport && <NavLink className="button button--secondary button-link" to="/app/athlete-portal/import">Import file</NavLink>}
             {isAdmin && <NavLink className="button button--secondary button-link" to="/app/athlete-portal/registry">Athletes database</NavLink>}
+            {isAdmin && <NavLink className="button button--secondary button-link" to="/app/athlete-portal/history">Meeting results</NavLink>}
+            {isAdmin && <NavLink className="button button--secondary button-link" to="/app/athlete-portal/records">Meeting records</NavLink>}
+            {isAdmin && <NavLink className="button button--secondary button-link" to="/app/athlete-portal/winners">Hall of winners</NavLink>}
             {isAdmin && <NavLink className="button button--secondary button-link" to="/app/athlete-portal/settings">Portal settings</NavLink>}
           </div>
         </Panel>
@@ -1773,34 +1776,56 @@ function AthleteRegistryPage({ Panel }) {
                     <th>Birth date</th>
                     <th>WAID</th>
                     <th>WA Profile</th>
+                    <th>Editions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((a) => (
-                    <tr key={a._docId}>
-                      <td className="col-sticky col-sticky--last" style={{ fontWeight: 600 }}>
-                        {a.lastName || "—"}
-                      </td>
-                      <td>{a.firstName || "—"}</td>
-                      <td>{a.nationality || "—"}</td>
-                      <td style={{ color: "#555", fontSize: "0.85rem" }}>
-                        {a.birthDate
-                          ? a.birthDate.slice(0, 10)          // ISO → YYYY-MM-DD
-                          : a.birthYear
-                            ? String(a.birthYear)
-                            : "—"}
-                      </td>
-                      <td style={{ fontFamily: "monospace", fontSize: "0.85rem" }}>
-                        {a.waid || "—"}
-                      </td>
-                      <td>
-                        {a.waUrl
-                          ? <a href={a.waUrl} target="_blank" rel="noopener noreferrer"
-                               style={{ fontSize: "0.82rem" }}>WA ↗</a>
-                          : <span style={{ color: "#bbb" }}>—</span>}
-                      </td>
-                    </tr>
-                  ))}
+                  {filtered.map((a) => {
+                    const editions = Array.isArray(a.editions) ? a.editions : [];
+                    const years = [...new Set(editions.map((e) => e.year))].sort((x, y) => x - y);
+                    return (
+                      <tr key={a._docId}>
+                        <td className="col-sticky col-sticky--last" style={{ fontWeight: 600 }}>
+                          {a.lastName || "—"}
+                        </td>
+                        <td>{a.firstName || "—"}</td>
+                        <td>{a.nationality || "—"}</td>
+                        <td style={{ color: "#555", fontSize: "0.85rem" }}>
+                          {a.birthDate
+                            ? a.birthDate.slice(0, 10)
+                            : a.birthYear
+                              ? String(a.birthYear)
+                              : "—"}
+                        </td>
+                        <td style={{ fontFamily: "monospace", fontSize: "0.85rem" }}>
+                          {a.waid || "—"}
+                        </td>
+                        <td>
+                          {a.waUrl
+                            ? <a href={a.waUrl} target="_blank" rel="noopener noreferrer"
+                                 style={{ fontSize: "0.82rem" }}>WA ↗</a>
+                            : <span style={{ color: "#bbb" }}>—</span>}
+                        </td>
+                        <td>
+                          {years.length > 0 ? (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+                              {years.map((yr) => (
+                                <span key={yr} style={{
+                                  fontSize: "0.68rem", fontWeight: 600,
+                                  background: "#dbeafe", color: "#1d4ed8",
+                                  padding: "1px 5px", borderRadius: 8,
+                                }}>
+                                  {yr}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span style={{ color: "#ccc", fontSize: "0.8rem" }}>—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

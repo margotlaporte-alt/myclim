@@ -132,6 +132,9 @@ function buildAthletePortalNavigation(roles, portalSettings, { canImport }) {
 
   if (isAdmin) {
     links.push(makeLink("/app/athlete-portal/registry", "Athletes database", "users"));
+    links.push(makeLink("/app/athlete-portal/history", "Meeting results", "calendar"));
+    links.push(makeLink("/app/athlete-portal/records", "Meeting records", "star"));
+    links.push(makeLink("/app/athlete-portal/winners", "Hall of winners", "trophy"));
   }
 
   if (roles.includes("admin")) {

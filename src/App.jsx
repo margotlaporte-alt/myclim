@@ -71,6 +71,9 @@ const AthletesListPageScreen = lazyNamed(() => import("./app/athlete-portal-page
 const AthleteImportPageScreen = lazyNamed(() => import("./app/athlete-portal-pages"), "AthleteImportPage");
 const AthletePortalSettingsPageScreen = lazyNamed(() => import("./app/athlete-portal-pages"), "AthletePortalSettingsPage");
 const AthleteRegistryPageScreen = lazyNamed(() => import("./app/athlete-portal-pages"), "AthleteRegistryPage");
+const MeetingHistoryPageScreen = lazyNamed(() => import("./app/meeting-history-pages"), "MeetingHistoryPage");
+const MeetingRecordsPageScreen = lazyNamed(() => import("./app/meeting-history-pages"), "MeetingRecordsPage");
+const MeetingWinnersPageScreen = lazyNamed(() => import("./app/meeting-history-pages"), "MeetingWinnersPage");
 
 async function loadMailQueueModule() {
   if (!mailQueueModulePromise) {
@@ -268,6 +271,18 @@ function AthleteRegistryPage() {
   return <AthleteRegistryPageScreen Panel={Panel} />;
 }
 
+function MeetingHistoryPage() {
+  return <MeetingHistoryPageScreen Panel={Panel} />;
+}
+
+function MeetingRecordsPage() {
+  return <MeetingRecordsPageScreen Panel={Panel} />;
+}
+
+function MeetingWinnersPage() {
+  return <MeetingWinnersPageScreen Panel={Panel} />;
+}
+
 function AccreditationsPage() {
   return (
     <AccreditationsPageScreen
@@ -409,6 +424,9 @@ export default function App() {
                 <Route path="import" element={<AthleteImportPage />} />
                 <Route element={<RequireRouteAccess allowedRoles={["admin", "meeting_director"]} />}>
                   <Route path="registry" element={<AthleteRegistryPage />} />
+                  <Route path="history" element={<MeetingHistoryPage />} />
+                  <Route path="records" element={<MeetingRecordsPage />} />
+                  <Route path="winners" element={<MeetingWinnersPage />} />
                 </Route>
                 <Route element={<RequireRouteAccess allowedRoles={["admin"]} />}>
                   <Route path="settings" element={<AthletePortalSettingsPage />} />
