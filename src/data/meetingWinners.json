@@ -2614,5 +2614,113 @@
     "firstName": "Melissa",
     "noc": "NLD",
     "result": "17.15 m"
+  },
+  {
+    "year": 2026,
+    "discipline": "60 m",
+    "gender": "W",
+    "lastName": "VAN DER WEKEN",
+    "firstName": "Patrizia",
+    "noc": "LUX",
+    "result": "7.14"
+  },
+  {
+    "year": 2026,
+    "discipline": "200 m",
+    "gender": "W",
+    "lastName": "SEVILLA",
+    "firstName": "Paula",
+    "noc": "ESP",
+    "result": "23.16"
+  },
+  {
+    "year": 2026,
+    "discipline": "800 m",
+    "gender": "W",
+    "lastName": "ARENDT",
+    "firstName": "Fanny",
+    "noc": "LUX",
+    "result": "2:00.83"
+  },
+  {
+    "year": 2026,
+    "discipline": "1500 m",
+    "gender": "W",
+    "lastName": "MULUGETA",
+    "firstName": "Samrawit",
+    "noc": "ETH",
+    "result": "4:07.59"
+  },
+  {
+    "year": 2026,
+    "discipline": "60 m hurdles",
+    "gender": "W",
+    "lastName": "ALESSANDRINI",
+    "firstName": "Sacha",
+    "noc": "FRA",
+    "result": "8.00"
+  },
+  {
+    "year": 2026,
+    "discipline": "Pole Vault",
+    "gender": "W",
+    "lastName": "PETIT",
+    "firstName": "Berenice",
+    "noc": "FRA",
+    "result": "4.45 m"
+  },
+  {
+    "year": 2026,
+    "discipline": "400 m",
+    "gender": "M",
+    "lastName": "BREDAU",
+    "firstName": "Jean Paul",
+    "noc": "GER",
+    "result": "45.94"
+  },
+  {
+    "year": 2026,
+    "discipline": "800 m",
+    "gender": "M",
+    "lastName": "ENGLISH",
+    "firstName": "Mark",
+    "noc": "IRL",
+    "result": "1:44.65"
+  },
+  {
+    "year": 2026,
+    "discipline": "1500 m",
+    "gender": "M",
+    "lastName": "SISK",
+    "firstName": "Pieter",
+    "noc": "BEL",
+    "result": "3:34.63"
+  },
+  {
+    "year": 2026,
+    "discipline": "3000 m",
+    "gender": "M",
+    "lastName": "VERHEYDEN",
+    "firstName": "Ruben",
+    "noc": "BEL",
+    "result": "7:40.31"
+  },
+  {
+    "year": 2026,
+    "discipline": "60 m hurdles",
+    "gender": "M",
+    "lastName": "SZYMANSKI",
+    "firstName": "Jakub",
+    "noc": "POL",
+    "result": "7.48"
+  },
+  {
+    "year": 2026,
+    "discipline": "Long Jump",
+    "gender": "M",
+    "lastName": "GUERRA",
+    "firstName": "Jaime",
+    "noc": "ESP",
+    "result": "7.84 m"
   }
 ]

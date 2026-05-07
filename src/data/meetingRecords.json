@@ -38,11 +38,11 @@
   {
     "gender": "M",
     "discipline": "400 m",
-    "mark": "46.20",
-    "fullName": "DOOM Alexander",
-    "noc": "BEL",
-    "date": "22.01.2023",
-    "year": 2023
+    "mark": "45.94",
+    "fullName": "BREDAU Jean Paul",
+    "noc": "GER",
+    "date": "18.01.2026",
+    "year": 2026
   },
   {
     "gender": "M",
@@ -65,11 +65,11 @@
   {
     "gender": "M",
     "discipline": "1500 m",
-    "mark": "3.36.71",
+    "mark": "3.34.63",
     "fullName": "SISK Pieter",
     "noc": "BEL",
-    "date": "19.01.2025",
-    "year": 2025
+    "date": "18.01.2026",
+    "year": 2026
   },
   {
     "gender": "M",
@@ -145,12 +145,21 @@
   },
   {
     "gender": "W",
+    "discipline": "60 m",
+    "mark": "7.07",
+    "fullName": "VAN DER WEKEN Patrizia",
+    "noc": "LUX",
+    "date": "19.01.2025",
+    "year": 2025
+  },
+  {
+    "gender": "W",
     "discipline": "800 m",
-    "mark": "2.01.85",
-    "fullName": "MASNA Lenka",
-    "noc": "CZE",
-    "date": "16.01.2010",
-    "year": 2010
+    "mark": "2.00.83",
+    "fullName": "ARENDT Fanny",
+    "noc": "LUX",
+    "date": "18.01.2026",
+    "year": 2026
   },
   {
     "gender": "W",
