@@ -35,7 +35,12 @@ const PLATFORM_ROLES = [
 //                  or "19. flight 06:00 with LG3759 to Lisbon"
 // into structured fields: day, time, flightNo, dir ("from"|"to"), city.
 
-const _TRAVEL_RE = /^(\d+)\.\s+(\S+)\s+(\d{1,2}:\d{2})\s+with\s+([A-Z0-9]+)\s+(from|to)\s+(.+)$/i;
+// Flexible travel regex:
+//   "17. flight 21:45 with LG3752 from Lisbon"
+//   "16. flight 22:20 with KL 1715 from AMS"   ← space in flight no.
+//   "17. flight 10:15 LH9528 from Frankfurt"    ← no "with"
+//   "17. flight 17:50 with KL1713"              ← no city
+const _TRAVEL_RE = /^(\d+)\.\s+(\S+)\s+(\d{1,2}:\d{2})\s+(?:with\s+)?([A-Z]{1,3}\s*\d+[A-Z0-9]*)(?:\s+(from|to)\s+(.+))?$/i;
 
 function parseTravelEntry(text) {
   if (!text) return null;
@@ -43,11 +48,11 @@ function parseTravelEntry(text) {
   if (!m) return null;
   return {
     day:      parseInt(m[1], 10),
-    mode:     m[2].toLowerCase(),      // "flight", "train", …
+    mode:     m[2].toLowerCase(),
     time:     m[3],
-    flightNo: m[4].toUpperCase(),
-    dir:      m[5].toLowerCase(),      // "from" | "to"
-    city:     m[6].trim(),
+    flightNo: m[4].replace(/\s+/g, "").toUpperCase(), // "KL 1715" → "KL1715"
+    dir:      (m[5] || "").toLowerCase(),              // "from" | "to" | ""
+    city:     (m[6] || "").trim(),
   };
 }
 
@@ -260,10 +265,30 @@ function parseRows(rows, detected) {
   return [];
 }
 
+// Helper: copy all structured travel sub-fields from a record onto a merged athlete.
+function applyTravelFields(merged, record) {
+  if (record.arrival !== undefined) {
+    merged.arrival       = record.arrival       ?? null;
+    merged.arrivalDay    = record.arrivalDay    ?? null;
+    merged.arrivalTime   = record.arrivalTime   ?? null;
+    merged.arrivalFlight = record.arrivalFlight ?? null;
+    merged.arrivalFrom   = record.arrivalFrom   ?? null;
+  }
+  if (record.departure !== undefined) {
+    merged.departure       = record.departure       ?? null;
+    merged.departureDay    = record.departureDay    ?? null;
+    merged.departureTime   = record.departureTime   ?? null;
+    merged.departureFlight = record.departureFlight ?? null;
+    merged.departureTo     = record.departureTo     ?? null;
+  }
+  if (record.manager !== undefined) merged.manager = record.manager ?? null;
+}
+
 function mergeAthletes(existing, incoming, fileType) {
   const byKey = new Map(
     existing.map((a) => [athleteMergeKey(a.lastName, a.firstName, a.nationality), { ...a }]),
   );
+  const matchedKeys = new Set(); // tracks which existing athletes appear in this import
   let added = 0;
   let updated = 0;
 
@@ -271,37 +296,35 @@ function mergeAthletes(existing, incoming, fileType) {
     const key = athleteMergeKey(record.lastName, record.firstName, record.nationality);
     const ex = byKey.get(key);
 
-    if (!ex) { byKey.set(key, record); added++; continue; }
+    if (!ex) { byKey.set(key, { ...record }); added++; continue; }
 
+    matchedKeys.add(key);
     const merged = { ...ex };
+
     if (fileType === "COMBINED") {
-      // Full update — every field in the file wins, except WA-sourced data (never overwritten by import)
-      if (record.event)              merged.event        = record.event;
-      if (record.status !== null)    merged.status       = record.status;
+      if (record.event)                merged.event        = record.event;
+      if (record.status !== null)      merged.status       = record.status;
       if (record.worldRanking != null) merged.worldRanking = record.worldRanking;
-      if (record.pb)                 merged.pb           = record.pb;
-      if (record.pbIndoor)           merged.pbIndoor     = record.pbIndoor;
-      if (record.pbOutdoor)          merged.pbOutdoor    = record.pbOutdoor;
-      if (record.sb)                 merged.sb           = record.sb;
-      if (record.waUrl && !merged.waUrl) merged.waUrl   = record.waUrl;
-      if (record.waid  && !merged.waid)  merged.waid    = record.waid;
-      if (record.heat !== null)      merged.heat         = record.heat;
-      if (record.lane !== null)      merged.lane         = record.lane;
-      if (record.manager)            merged.manager      = record.manager;
-      if (record.arrival)            merged.arrival      = record.arrival;
-      if (record.departure)          merged.departure    = record.departure;
+      if (record.pb)                   merged.pb           = record.pb;
+      if (record.pbIndoor)             merged.pbIndoor     = record.pbIndoor;
+      if (record.pbOutdoor)            merged.pbOutdoor    = record.pbOutdoor;
+      if (record.sb)                   merged.sb           = record.sb;
+      if (record.waUrl && !merged.waUrl) merged.waUrl      = record.waUrl;
+      if (record.waid  && !merged.waid)  merged.waid       = record.waid;
+      merged.heat = record.heat ?? null;
+      merged.lane = record.lane ?? null;
+      applyTravelFields(merged, record);
     } else if (fileType === "TRAVEL") {
-      if (record.manager)   merged.manager   = record.manager;
-      if (record.arrival)   merged.arrival   = record.arrival;
-      if (record.departure) merged.departure = record.departure;
+      applyTravelFields(merged, record);
     } else if (fileType === "FINAL_LANES") {
       if (record.heat !== null) merged.heat = record.heat;
       if (record.lane !== null) merged.lane = record.lane;
-      if (!merged.pb && record.pb)           merged.pb       = record.pb;
+      if (!merged.pb && record.pb)             merged.pb       = record.pb;
       if (!merged.pbIndoor && record.pbIndoor) merged.pbIndoor = record.pbIndoor;
       if (!merged.pbOutdoor && record.pbOutdoor) merged.pbOutdoor = record.pbOutdoor;
-      if (!merged.sb && record.sb)           merged.sb       = record.sb;
+      if (!merged.sb && record.sb)             merged.sb       = record.sb;
     } else {
+      // START_LIST
       if (record.status !== null)       merged.status       = record.status;
       if (record.worldRanking !== null) merged.worldRanking = record.worldRanking;
       if (record.pb)        merged.pb        = record.pb;
@@ -316,7 +339,26 @@ function mergeAthletes(existing, incoming, fileType) {
     updated++;
   }
 
-  return { merged: [...byKey.values()], added, updated };
+  // For COMBINED / START_LIST: athletes in the DB but absent from this import
+  // → mark as "out", clear heat/lane/travel (they're no longer on the start list).
+  // They are NEVER deleted — they stay in the system permanently.
+  let markedOut = 0;
+  if (fileType === "COMBINED" || fileType === "START_LIST") {
+    for (const [key, athlete] of byKey) {
+      if (athlete.id && !matchedKeys.has(key)) {
+        byKey.set(key, {
+          ...athlete,
+          status:    "out",
+          heat: null, lane: null, manager: null,
+          arrival: null, arrivalDay: null, arrivalTime: null, arrivalFlight: null, arrivalFrom: null,
+          departure: null, departureDay: null, departureTime: null, departureFlight: null, departureTo: null,
+        });
+        markedOut++;
+      }
+    }
+  }
+
+  return { merged: [...byKey.values()], added, updated, markedOut };
 }
 
 // ─── Small shared components ─────────────────────────────────────────────────
@@ -1050,12 +1092,12 @@ function AthleteImportPage({ Panel }) {
     if (!parsed) return;
     setSaving(true); setStatus("Merging and saving…");
     try {
-      const { merged, added, updated } = mergeAthletes(athletes, parsed.records, parsed.fileType);
+      const { merged, added, updated, markedOut } = mergeAthletes(athletes, parsed.records, parsed.fileType);
       const batch = writeBatch(db);
-      athletes.forEach((a) => batch.delete(doc(db, ATHLETES_COLLECTION, a.id)));
+      // Never delete athletes — update or create only
       merged.forEach((a, i) => {
         const id = a.id || `athlete_${Date.now()}_${i}`;
-        const { id: _id, ...data } = a;
+        const { id: _id, _ev, ...data } = a; // strip client-only fields
         batch.set(doc(db, ATHLETES_COLLECTION, id), {
           ...data,
           importedAt: serverTimestamp(),
@@ -1063,7 +1105,9 @@ function AthleteImportPage({ Panel }) {
         });
       });
       await batch.commit();
-      setStatus(`Done. ${added} added · ${updated} updated · ${merged.length} total.`);
+      const parts = [`${added} added`, `${updated} updated`];
+      if (markedOut > 0) parts.push(`${markedOut} marked out (not in file)`);
+      setStatus(`Done. ${parts.join(" · ")} · ${merged.length} total.`);
       setParsed(null);
       if (fileRef.current) fileRef.current.value = "";
     } catch (err) { setStatus(`Import failed: ${err.message}`); }
@@ -1113,13 +1157,19 @@ function AthleteImportPage({ Panel }) {
               <Panel title="Merge preview">
                 <ul className="compact-list">
                   <li>Currently in DB: <strong>{athletes.length}</strong></li>
-                  <li>New athletes: <strong>{mergePreview.added}</strong></li>
-                  <li>Updated: <strong>{mergePreview.updated}</strong></li>
-                  <li>Total after import: <strong>{mergePreview.merged.length}</strong></li>
+                  <li>New athletes to add: <strong>{mergePreview.added}</strong></li>
+                  <li>Existing athletes to update: <strong>{mergePreview.updated}</strong></li>
+                  {mergePreview.markedOut > 0 && (
+                    <li style={{ color: "#b45309" }}>
+                      Not in this file → will be marked <strong>Out</strong>{" "}
+                      (heat/lane/travel cleared): <strong>{mergePreview.markedOut}</strong>
+                    </li>
+                  )}
+                  <li>Total in DB after import: <strong>{mergePreview.merged.length}</strong></li>
                 </ul>
-                {parsed.fileType === "COMBINED"    && <p className="panel-note">Updates all fields. Safe to re-upload as many times as needed.</p>}
-                {parsed.fileType === "TRAVEL"      && <p className="panel-note">Only updates manager/arrival/departure.</p>}
-                {parsed.fileType === "FINAL_LANES" && <p className="panel-note">Only updates heat/lane; fills missing PBs.</p>}
+                {parsed.fileType === "COMBINED"    && <p className="panel-note">Updates all fields. Athletes absent from this file are marked Out — never deleted.</p>}
+                {parsed.fileType === "TRAVEL"      && <p className="panel-note">Only updates travel details. No athletes marked out.</p>}
+                {parsed.fileType === "FINAL_LANES" && <p className="panel-note">Only updates heat/lane. No athletes marked out.</p>}
               </Panel>
             )}
           </section>
