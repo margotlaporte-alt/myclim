@@ -60,8 +60,10 @@ const FIELD_GROUPS = [
 const DEFAULT_PORTAL_SETTINGS = {
   accessRoles: ["admin", "meeting_director"],
   importerRoles: ["admin", "meeting_director"],
-  // WA service base URL (the Node.js backend we built)
-  waServiceUrl: "http://localhost:3001",
+  // WA service base URL.
+  // In production: /api/wa → proxied to the Netlify Function wa-athlete.
+  // In local dev: set to http://localhost:3001 in the portal settings to use the wa-service directly.
+  waServiceUrl: "/api/wa",
   // Which seasons to display as SBs
   seasons: { indoor: 2025, indoorCurrent: 2026, outdoor: 2025 },
   fieldVisibility: {
