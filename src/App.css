@@ -1866,6 +1866,23 @@ textarea {
   background: rgba(239, 11, 28, 0.08);
 }
 
+/* Athlete list — event group headers */
+.event-group-header td {
+  background: #f0f4f3;
+  padding: 0.6rem 0.85rem;
+  border-top: 2px solid #d0dedd;
+  border-bottom: 1px solid #d0dedd;
+}
+
+.event-group + .event-group .event-group-header td {
+  border-top-width: 2px;
+}
+
+/* Muted row (withdrawn athletes) */
+.row--muted td {
+  opacity: 0.45;
+}
+
 .data-table__row--success td {
   background: rgba(33, 99, 68, 0.1);
 }
