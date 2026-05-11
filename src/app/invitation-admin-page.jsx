@@ -229,26 +229,39 @@ export function InvitationAdminPage({ Panel }) {
 
   async function handleResend(invitation) {
     setActionStatus("Renvoi en cours…");
+    setResendFallbackUrl("");
+
+    // 1. Renouveler le token en Firestore
+    let activationUrl = "";
     try {
       const token = crypto.randomUUID();
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-      await updateDoc(doc(db, "invitations", invitation.id), { token, status: "pending", expiresAt, resentAt: serverTimestamp() });
-      const activationUrl = `${getAppBaseUrl()}/invite?token=${token}`;
-      try {
-        const { enqueueTransactionalMail, buildInvitationMail } = await import("../services/mailQueue");
-        await enqueueTransactionalMail(buildInvitationMail({
-          email: invitation.email,
-          firstName: invitation.firstName,
-          roles: Array.isArray(invitation.roleLabels) ? invitation.roleLabels : [],
-          activationUrl,
-        }));
-        setActionStatus("Invitation renvoyée ✓");
-      } catch {
-        setResendFallbackUrl(activationUrl);
-        setActionStatus("Mail impossible — copiez le lien ci-dessous :");
-      }
-    } catch (e) {
-      setActionStatus(`Erreur : ${e.message}`);
+      await updateDoc(doc(db, "invitations", invitation.id), {
+        token,
+        status: "pending",
+        expiresAt,
+        resentAt: serverTimestamp(),
+      });
+      activationUrl = `${getAppBaseUrl()}/invite?token=${token}`;
+    } catch (firestoreErr) {
+      setActionStatus(`Erreur : ${firestoreErr.message}`);
+      return;
+    }
+
+    // 2. Envoyer le mail (optionnel — affiche le lien si ça échoue)
+    try {
+      const { enqueueTransactionalMail, buildInvitationMail } = await import("../services/mailQueue");
+      await enqueueTransactionalMail(buildInvitationMail({
+        email: invitation.email,
+        firstName: invitation.firstName,
+        roles: Array.isArray(invitation.roleLabels) ? invitation.roleLabels : [],
+        activationUrl,
+      }));
+      setActionStatus("Invitation renvoyée ✓");
+      setTimeout(() => setActionStatus(""), 3000);
+    } catch (_mailErr) {
+      setResendFallbackUrl(activationUrl);
+      setActionStatus("Mail indisponible — partagez ce lien directement :");
     }
   }
 
