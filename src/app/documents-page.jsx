@@ -1,4 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { storage } from "../services/firebase";
 import {
   addDoc,
   collection,
@@ -519,6 +521,90 @@ function openPrintMarkup(markup) {
   return true;
 }
 
+function DocumentFileField({ value, onChange }) {
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [uploadError, setUploadError] = useState("");
+  const [dragging, setDragging] = useState(false);
+  const inputRef = useRef(null);
+
+  function uploadFile(file) {
+    if (!file) return;
+    setUploadError("");
+    setUploading(true);
+    setProgress(0);
+    const safeName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+    const storageRef = ref(storage, `documents/${safeName}`);
+    const task = uploadBytesResumable(storageRef, file);
+    task.on(
+      "state_changed",
+      (snap) => setProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100)),
+      (err) => { setUploadError(err.message); setUploading(false); },
+      async () => {
+        const url = await getDownloadURL(task.snapshot.ref);
+        onChange(url);
+        setUploading(false);
+      },
+    );
+  }
+
+  return (
+    <div className="field">
+      <span>Fichier / lien de consultation</span>
+      <div
+        onClick={() => !uploading && inputRef.current?.click()}
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(e) => { e.preventDefault(); setDragging(false); uploadFile(e.dataTransfer.files?.[0]); }}
+        style={{
+          border: `2px dashed ${dragging ? "#1066cc" : "rgba(0,0,0,0.2)"}`,
+          borderRadius: 8,
+          padding: "16px",
+          textAlign: "center",
+          cursor: uploading ? "default" : "pointer",
+          background: dragging ? "rgba(16,102,204,0.04)" : "rgba(0,0,0,0.01)",
+          marginBottom: 8,
+        }}
+      >
+        <input
+          ref={inputRef}
+          type="file"
+          accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+          style={{ display: "none" }}
+          onChange={(e) => uploadFile(e.target.files?.[0])}
+        />
+        {uploading ? (
+          <div>
+            <div style={{ fontSize: "0.85rem", color: "#1066cc", marginBottom: 6 }}>Envoi… {progress}%</div>
+            <div style={{ height: 4, background: "rgba(0,0,0,0.1)", borderRadius: 2, overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${progress}%`, background: "#1066cc", borderRadius: 2, transition: "width 0.2s" }} />
+            </div>
+          </div>
+        ) : value && value.startsWith("http") ? (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+            <span style={{ fontSize: "0.85rem", color: "#1066cc", fontWeight: 600 }}>📄 Fichier hébergé</span>
+            <a href={value} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ fontSize: "0.8rem", textDecoration: "underline" }}>Voir le fichier</a>
+            <span style={{ fontSize: "0.78rem", color: "#999" }}>· Cliquer ou glisser pour remplacer</span>
+          </div>
+        ) : (
+          <div>
+            <div style={{ fontSize: "1.2rem", marginBottom: 4 }}>📎</div>
+            <div style={{ fontSize: "0.85rem", color: "#546770" }}>Cliquer ou glisser un fichier</div>
+            <div style={{ fontSize: "0.78rem", color: "#999", marginTop: 2 }}>PDF, images, Office — max 20 Mo</div>
+          </div>
+        )}
+      </div>
+      {uploadError && <small style={{ color: "#e8001c" }}>{uploadError}</small>}
+      <input
+        placeholder="Ou collez un lien externe (Google Drive, Dropbox…)"
+        value={value?.startsWith("http") && !value.includes("firebasestorage") ? value : ""}
+        onChange={(e) => onChange(e.target.value)}
+        style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid rgba(0,0,0,0.15)", fontSize: "0.85rem", fontFamily: "inherit", boxSizing: "border-box" }}
+      />
+    </div>
+  );
+}
+
 function DocumentsPage(props) {
   const { AuthFormField, Panel, getDocumentConsultationUrl } = props;
   const emptyDocumentForm = {
@@ -573,7 +659,7 @@ function DocumentsPage(props) {
     if (!documentForm.title.trim()) return;
     if (documentForm.scope === "teams" && documentForm.teams.length === 0) return;
     if (!documentForm.reference.trim()) {
-      setDocumentStatus("Ajoutez un lien de consultation avant d'enregistrer.");
+      setDocumentStatus("Ajoutez un fichier ou un lien de consultation avant d'enregistrer.");
       return;
     }
 
@@ -890,21 +976,10 @@ function DocumentsPage(props) {
               />
             </AuthFormField>
 
-            <AuthFormField label="Lien de consultation">
-              <div className="document-source-stack">
-                <input
-                  name="reference"
-                  required
-                  placeholder="Collez un lien si le document est déjà hébergé ailleurs"
-                  value={documentForm.reference}
-                  onChange={handleDocumentFormChange}
-                />
-                <small>
-                  Pour le moment, les documents sont publiés via un lien externe. Vous pourrez
-                  réactiver l'upload PDF plus tard si vous activez Firebase Storage.
-                </small>
-              </div>
-            </AuthFormField>
+            <DocumentFileField
+              value={documentForm.reference}
+              onChange={(url) => setDocumentForm((f) => ({ ...f, reference: url }))}
+            />
 
             <div className="field">
               <span>Diffusion</span>

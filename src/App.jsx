@@ -84,6 +84,8 @@ const WebsiteDashboardPageScreen = lazyNamed(() => import("./app/website-admin-p
 const WebsiteNewsPageScreen = lazyNamed(() => import("./app/website-admin-pages"), "WebsiteNewsPage");
 const WebsiteSponsorsPageScreen = lazyNamed(() => import("./app/website-admin-pages"), "WebsiteSponsorsPage");
 const WebsitePressPageScreen = lazyNamed(() => import("./app/website-admin-pages"), "WebsitePressPage");
+const InvitationAdminPageScreen = lazyNamed(() => import("./app/invitation-admin-page"), "InvitationAdminPage");
+const InvitePage = lazyNamed(() => import("./app/invite-page"), "InvitePage");
 
 async function loadMailQueueModule() {
   if (!mailQueueModulePromise) {
@@ -298,6 +300,10 @@ function WebsitePressPage() {
   return <WebsitePressPageScreen Panel={Panel} />;
 }
 
+function InvitationAdminPage() {
+  return <InvitationAdminPageScreen Panel={Panel} />;
+}
+
 function AccreditationsPage() {
   return (
     <AccreditationsPageScreen
@@ -405,6 +411,7 @@ export default function App() {
           </Route>
 
           {/* ── Auth & standalone public pages ───────────── */}
+          <Route path="/invite" element={<InvitePage />} />
           <Route path="/benevoles" element={<VolunteerAccessPage />} />
           <Route path="/pre-programme" element={<U14AccessPage />} />
           <Route path="/vip" element={<VipAccessPage loadMailQueueModule={loadMailQueueModule} />} />
@@ -419,6 +426,7 @@ export default function App() {
               <Route index element={<DashboardHome />} />
               <Route element={<RequireRouteAccess allowedRoles={["admin"]} />}>
                 <Route path="roles" element={<RoleManagementPage />} />
+                <Route path="invitations" element={<InvitationAdminPage />} />
                 <Route path="postes" element={<TeamsPage />} />
               </Route>
               <Route element={<RequireRouteAccess allowedRoles={["admin", "gestionnaire"]} />}>
@@ -460,7 +468,7 @@ export default function App() {
                   <Route path="settings" element={<AthletePortalSettingsPage />} />
                 </Route>
               </Route>
-              <Route element={<RequireRouteAccess allowedRoles={["admin", "gestionnaire"]} />}>
+              <Route element={<RequireRouteAccess allowedRoles={["admin", "gestionnaire", "gestionnaire_site"]} />}>
                 <Route path="website">
                   <Route index element={<WebsiteDashboardPage />} />
                   <Route path="news" element={<WebsiteNewsPage />} />

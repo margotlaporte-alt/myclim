@@ -30,6 +30,7 @@ function buildNavigation(profile) {
 function getDefaultRouteByRoles(roles = []) {
   if (roles.includes("admin")) return "/app";
   if (roles.includes("gestionnaire")) return "/app/benevoles";
+  if (roles.includes("gestionnaire_site")) return "/app/website";
   if (roles.includes("chef_equipe")) return "/app/equipe";
   if (roles.includes("benevole")) return "/app/mes-affectations";
   if (roles.includes("parent_u14")) return "/app/mes-enfants";
@@ -84,6 +85,7 @@ function buildNavigationFromRoles(roles) {
       ...(moduleLinks.length ? [makeSection("Modules", moduleLinks)] : []),
       makeSection("Parametres", [
         makeLink("/app/roles", "Roles plateforme", "shield"),
+        makeLink("/app/invitations", "Invitations", "spark"),
         makeLink("/app/profil", "Mon profil", "profile"),
       ]),
     ];
@@ -115,6 +117,15 @@ function buildNavigationFromRoles(roles) {
       makeLink("/app/mon-dossier-benevole", "Mon dossier bénévole", "badge"),
       makeLink("/app/mes-affectations", "Mes affectations", "pin"),
       makeLink("/app/mes-documents", "Mes documents", "folder"),
+    );
+  }
+
+  if (roles.includes("gestionnaire_site")) {
+    links.push(
+      makeLink("/app/website", "Site web — vue d'ensemble", "grid"),
+      makeLink("/app/website/news", "Actualités", "spark"),
+      makeLink("/app/website/sponsors", "Partenaires", "badge"),
+      makeLink("/app/website/press", "Communiqués presse", "folder"),
     );
   }
 

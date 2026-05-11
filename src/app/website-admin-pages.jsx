@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
+import { FileUpload } from "./file-upload";
 import {
   deleteNewsArticle,
   deletePressRelease,
@@ -293,7 +294,7 @@ export function WebsiteNewsPage({ Panel }) {
 }
 
 /* ── Sponsors admin ──────────────────────────────────────── */
-const SPONSOR_CATEGORIES = ["title", "main", "institutional", "media", "supplier"];
+const SPONSOR_CATEGORIES = ["main", "institutional", "media", "supplier"];
 
 function SponsorForm({ initial, onSave, onCancel }) {
   const [data, setData] = useState({
@@ -337,19 +338,39 @@ function SponsorForm({ initial, onSave, onCancel }) {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
           <div>
             <label style={labelStyle}>Category</label>
-            <select style={inputStyle} value={data.category} onChange={(e) => set("category", e.target.value)}>
+            <select
+              style={inputStyle}
+              value={SPONSOR_CATEGORIES.includes(data.category) ? data.category : "__custom__"}
+              onChange={(e) => {
+                if (e.target.value === "__custom__") set("category", "");
+                else set("category", e.target.value);
+              }}
+            >
               {SPONSOR_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              <option value="__custom__">Autre…</option>
             </select>
+            {!SPONSOR_CATEGORIES.includes(data.category) && (
+              <input
+                style={{ ...inputStyle, marginTop: 8 }}
+                value={data.category}
+                onChange={(e) => set("category", e.target.value)}
+                placeholder="Nom de la nouvelle catégorie"
+                autoFocus
+              />
+            )}
           </div>
           <div>
             <label style={labelStyle}>Display order</label>
             <input type="number" style={inputStyle} value={data.order} onChange={(e) => set("order", Number(e.target.value))} />
           </div>
         </div>
-        <div>
-          <label style={labelStyle}>Logo URL</label>
-          <input style={inputStyle} value={data.logoUrl} onChange={(e) => set("logoUrl", e.target.value)} placeholder="https://… (SVG or PNG recommended)" />
-        </div>
+        <FileUpload
+          label="Logo (PNG, SVG, WEBP)"
+          value={data.logoUrl}
+          onChange={(url) => set("logoUrl", url)}
+          accept="image/png,image/svg+xml,image/webp,image/jpeg"
+          storagePath="sponsors"
+        />
         <div>
           <label style={labelStyle}>Website URL</label>
           <input style={inputStyle} value={data.website} onChange={(e) => set("website", e.target.value)} placeholder="https://…" />
@@ -449,10 +470,10 @@ export function WebsiteSponsorsPage({ Panel }) {
             <tbody>
               {sponsors
                 .sort((a, b) => {
-                  const order = ["title", "main", "institutional", "media", "supplier"];
+                  const order = ["main", "institutional", "media", "supplier"];
                   const ai = order.indexOf(a.category ?? "");
                   const bi = order.indexOf(b.category ?? "");
-                  if (ai !== bi) return ai - bi;
+                  if (ai !== bi) return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
                   return (a.order ?? 99) - (b.order ?? 99);
                 })
                 .map((s) => (
@@ -463,8 +484,10 @@ export function WebsiteSponsorsPage({ Panel }) {
                     </td>
                     <td>{s.order ?? "—"}</td>
                     <td>{s.active ? "✅" : "❌"}</td>
-                    <td style={{ fontSize: "0.78rem", color: "#546770", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {s.logoUrl ? "✓ configured" : "—"}
+                    <td>
+                      {s.logoUrl
+                        ? <img src={s.logoUrl} alt={s.name} style={{ height: 28, maxWidth: 80, objectFit: "contain" }} />
+                        : <span style={{ color: "#ccc", fontSize: "0.8rem" }}>—</span>}
                     </td>
                     <td style={{ fontSize: "0.78rem" }}>
                       {s.website ? (
@@ -551,16 +574,12 @@ function PressReleaseForm({ initial, onSave, onCancel }) {
             <input type="number" style={inputStyle} value={data.year} onChange={(e) => set("year", e.target.value)} />
           </div>
         </div>
-        <div>
-          <label style={labelStyle}>Category</label>
-          <select style={inputStyle} value={data.category} onChange={(e) => set("category", e.target.value)}>
-            {PRESS_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
-        <div>
-          <label style={labelStyle}>PDF File URL</label>
-          <input style={inputStyle} value={data.fileUrl} onChange={(e) => set("fileUrl", e.target.value)} placeholder="https://… (direct link to PDF)" />
-        </div>
+        <FileUpload
+          label="PDF File"
+          value={data.fileUrl}
+          onChange={(url) => set("fileUrl", url)}
+          storagePath="press-releases"
+        />
         <div>
           <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
             <input type="checkbox" checked={data.published} onChange={(e) => set("published", e.target.checked)} style={{ width: 18, height: 18 }} />
