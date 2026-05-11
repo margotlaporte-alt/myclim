@@ -66,6 +66,8 @@ const VolunteerApplyPage = lazyNamed(() => import("./app/public-auth-pages"), "V
 const VipAccessPage = lazyNamed(() => import("./app/vip-pages"), "VipAccessPage");
 const VipPartnerPortalPage = lazyNamed(() => import("./app/vip-pages"), "VipPartnerPortalPage");
 const VipAdminPage = lazyNamed(() => import("./app/vip-admin-page"), "VipAdminPage");
+const PressRegistrationPage = lazyNamed(() => import("./app/press-registration-page"), "PressRegistrationPage");
+const PressAdminPageScreen = lazyNamed(() => import("./app/press-admin-page"), "PressAdminPage");
 const AthletePortalOverviewPage = lazyNamed(() => import("./app/athlete-portal-pages"), "AthletePortalOverview");
 const AthletesListPageScreen = lazyNamed(() => import("./app/athlete-portal-pages"), "AthletesListPage");
 const AthleteImportPageScreen = lazyNamed(() => import("./app/athlete-portal-pages"), "AthleteImportPage");
@@ -251,6 +253,10 @@ function VipPage() {
   return <VipAdminPage Panel={Panel} loadMailQueueModule={loadMailQueueModule} />;
 }
 
+function PressAdminPage() {
+  return <PressAdminPageScreen Panel={Panel} loadMailQueueModule={loadMailQueueModule} />;
+}
+
 function AthletePortalOverview() {
   return <AthletePortalOverviewPage Panel={Panel} />;
 }
@@ -383,6 +389,7 @@ export default function App() {
           <Route path="/pre-programme" element={<U14AccessPage />} />
           <Route path="/vip" element={<VipAccessPage loadMailQueueModule={loadMailQueueModule} />} />
           <Route path="/vip/orga/:portalId" element={<VipPartnerPortalPage />} />
+          <Route path="/presse" element={<PressRegistrationPage loadMailQueueModule={loadMailQueueModule} />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/volunteer-apply" element={<VolunteerApplyPage />} />
@@ -404,6 +411,7 @@ export default function App() {
               <Route element={<RequireRouteAccess allowedRoles={["admin", "gestionnaire"]} />}>
                 <Route path="documents" element={<DocumentsPage />} />
                 <Route path="vip" element={<VipPage />} />
+                <Route path="presse" element={<PressAdminPage />} />
               </Route>
               <Route element={<RequireRouteAccess allowedRoles={["admin", "gestionnaire", "chef_equipe"]} />}>
                 <Route path="equipe" element={<TeamPage />} />
