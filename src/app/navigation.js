@@ -74,6 +74,12 @@ function buildNavigationFromRoles(roles) {
         makeLink("/app/accreditations", "Accreditations", "ticket"),
         makeLink("/app/vip", "VIP", "ticket"),
       ]),
+      makeSection("Site web", [
+        makeLink("/app/website", "Vue d'ensemble site", "grid"),
+        makeLink("/app/website/news", "Actualites", "spark"),
+        makeLink("/app/website/sponsors", "Partenaires", "badge"),
+        makeLink("/app/website/press", "Communiques presse", "folder"),
+      ]),
       ...(moduleLinks.length ? [makeSection("Modules", moduleLinks)] : []),
       makeSection("Parametres", [
         makeLink("/app/roles", "Roles plateforme", "shield"),
