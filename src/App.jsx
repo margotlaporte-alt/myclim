@@ -460,7 +460,7 @@ export default function App() {
                   <Route path="settings" element={<AthletePortalSettingsPage />} />
                 </Route>
               </Route>
-              <Route element={<RequireRouteAccess allowedRoles={["admin", "gestionnaire"]} />}>
+              <Route element={<RequireRouteAccess allowedRoles={["admin", "gestionnaire", "gestionnaire_site"]} />}>
                 <Route path="website">
                   <Route index element={<WebsiteDashboardPage />} />
                   <Route path="news" element={<WebsiteNewsPage />} />

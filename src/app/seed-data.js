@@ -214,6 +214,7 @@ const supportTaskDayOptions = ["Vendredi", "Samedi", "Dimanche", "Lundi"];
 const platformRoleOptions = [
   { value: "admin", label: "Administrateur" },
   { value: "gestionnaire", label: "Gestionnaire" },
+  { value: "gestionnaire_site", label: "Gestion site internet" },
   { value: "chef_equipe", label: "Chef d'équipe" },
   { value: "benevole", label: "Bénévole" },
   { value: "parent_u14", label: "Parent U14" },

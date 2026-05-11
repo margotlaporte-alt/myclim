@@ -172,7 +172,8 @@ function InviteForm({ onSaved, onCancel }) {
 function getRoleDescription(role) {
   const descriptions = {
     admin: "Accès complet à toute la plateforme",
-    gestionnaire: "Gestion des bénévoles, présences, acccréditations",
+    gestionnaire: "Gestion des bénévoles, présences, accréditations",
+    gestionnaire_site: "Gestion du site public : actualités, partenaires, communiqués",
     chef_equipe: "Gestion de son équipe et pointage des présences",
     benevole: "Dossier bénévole, affectations, documents",
     parent_u14: "Inscription et suivi des enfants pré-programme",
