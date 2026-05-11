@@ -3,6 +3,7 @@ import { NavLink } from "react-router-dom";
 import { useMeetingEditions, useMeetingRecords } from "../app/meeting-history-hooks";
 import { usePublishedNews, useSponsors } from "./site-hooks";
 import cmcmLogo from "../assets/cmcm-logo.png";
+import heroPhoto from "../assets/hero-photo.jpg";
 
 /* ── Animated counter ──────────────────────────────────── */
 function AnimatedNumber({ target, suffix = "", prefix = "" }) {
@@ -147,7 +148,7 @@ export function SiteHome() {
           HERO
       ════════════════════════════════════════════════ */}
       <section className="site-hero">
-        <div className="site-hero__bg" />
+        <div className="site-hero__bg" style={{ backgroundImage: `url(${heroPhoto})` }} />
         <div className="site-hero__bg-grid" />
 
         <div className="site-hero__label">
