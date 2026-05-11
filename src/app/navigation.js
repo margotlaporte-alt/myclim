@@ -83,6 +83,7 @@ function buildNavigationFromRoles(roles) {
       ...(moduleLinks.length ? [makeSection("Modules", moduleLinks)] : []),
       makeSection("Parametres", [
         makeLink("/app/roles", "Roles plateforme", "shield"),
+        makeLink("/app/invitations", "Invitations", "spark"),
         makeLink("/app/profil", "Mon profil", "profile"),
       ]),
     ];
