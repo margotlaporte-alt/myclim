@@ -8,6 +8,7 @@ import {
 } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getFunctions } from "firebase/functions";
+import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: "AIzaSyC9KKU9yB_otypQq7B6WdvS9TPNxrMd_1E",
@@ -41,3 +42,4 @@ function initializeFirebaseAuth(firebaseApp) {
 export const auth = initializeFirebaseAuth(app);
 export const db = getFirestore(app);
 export const functions = getFunctions(app, "europe-west1");
+export const storage = getStorage(app);

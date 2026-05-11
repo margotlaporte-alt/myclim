@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
+import { FileUpload } from "./file-upload";
 import {
   deleteNewsArticle,
   deletePressRelease,
@@ -557,10 +558,12 @@ function PressReleaseForm({ initial, onSave, onCancel }) {
             {PRESS_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
-        <div>
-          <label style={labelStyle}>PDF File URL</label>
-          <input style={inputStyle} value={data.fileUrl} onChange={(e) => set("fileUrl", e.target.value)} placeholder="https://… (direct link to PDF)" />
-        </div>
+        <FileUpload
+          label="PDF File"
+          value={data.fileUrl}
+          onChange={(url) => set("fileUrl", url)}
+          storagePath="press-releases"
+        />
         <div>
           <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
             <input type="checkbox" checked={data.published} onChange={(e) => set("published", e.target.checked)} style={{ width: 18, height: 18 }} />
