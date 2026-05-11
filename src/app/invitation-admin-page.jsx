@@ -38,7 +38,7 @@ function InviteForm({ onSaved, onCancel }) {
   const [roles, setRoles] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [sent, setSent] = useState(false);
+  const [result, setResult] = useState(null); // { activationUrl, mailSent }
 
   function toggleRole(value) {
     setRoles((prev) => prev.includes(value) ? prev.filter((r) => r !== value) : [...prev, value]);
@@ -70,19 +70,23 @@ function InviteForm({ onSaved, onCancel }) {
 
       const activationUrl = `${getAppBaseUrl()}/invite?token=${token}`;
 
-      // Send invitation email via mail function
-      const { enqueueTransactionalMail, buildInvitationMail } = await import("../services/mailQueue");
-      await enqueueTransactionalMail(buildInvitationMail({
-        email: email.trim().toLowerCase(),
-        firstName: firstName.trim(),
-        roles: roles.map((r) => ROLE_LABEL[r] || r),
-        activationUrl,
-      }));
+      let mailSent = false;
+      try {
+        const { enqueueTransactionalMail, buildInvitationMail } = await import("../services/mailQueue");
+        await enqueueTransactionalMail(buildInvitationMail({
+          email: email.trim().toLowerCase(),
+          firstName: firstName.trim(),
+          roles: roles.map((r) => ROLE_LABEL[r] || r),
+          activationUrl,
+        }));
+        mailSent = true;
+      } catch {
+        // Mail failed — invitation saved, show link for manual sharing
+      }
 
-      setSent(true);
-      setTimeout(() => { onSaved(); }, 1500);
+      setResult({ activationUrl, mailSent, toEmail: email.trim().toLowerCase() });
     } catch (e) {
-      setError(e.message || "Erreur lors de l'envoi.");
+      setError(e.message || "Erreur lors de la création de l'invitation.");
     } finally {
       setSaving(false);
     }
@@ -91,11 +95,36 @@ function InviteForm({ onSaved, onCancel }) {
   const labelStyle = { fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#546770", display: "block", marginBottom: 6 };
   const inputStyle = { width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid rgba(0,0,0,0.15)", fontSize: "0.9rem", fontFamily: "inherit", boxSizing: "border-box" };
 
-  if (sent) {
+  if (result) {
     return (
-      <div style={{ background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 16, padding: 32, textAlign: "center" }}>
-        <div style={{ fontSize: "2rem", marginBottom: 8 }}>✅</div>
-        <p style={{ fontWeight: 700, color: "#16a34a" }}>Invitation envoyée à {email}</p>
+      <div style={{ background: result.mailSent ? "#f0fdf4" : "#fffbeb", border: `1px solid ${result.mailSent ? "#86efac" : "#fcd34d"}`, borderRadius: 16, padding: 32, maxWidth: 560 }}>
+        <div style={{ fontSize: "2rem", marginBottom: 8 }}>{result.mailSent ? "✅" : "⚠️"}</div>
+        <p style={{ fontWeight: 700, color: result.mailSent ? "#16a34a" : "#92400e", marginBottom: 8 }}>
+          {result.mailSent
+            ? `Invitation envoyée à ${result.toEmail}`
+            : "Invitation créée — envoi du mail impossible"}
+        </p>
+        {!result.mailSent && (
+          <>
+            <p style={{ fontSize: "0.875rem", color: "#78350f", marginBottom: 16, lineHeight: 1.6 }}>
+              Le service mail est indisponible, mais l'invitation est bien enregistrée. Partagez ce lien directement avec la personne — il expire dans 7 jours.
+            </p>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", background: "#fff", border: "1px solid #fcd34d", borderRadius: 8, padding: "10px 14px" }}>
+              <code style={{ flex: 1, fontSize: "0.78rem", wordBreak: "break-all", color: "#1066cc" }}>
+                {result.activationUrl}
+              </code>
+              <button
+                onClick={() => { navigator.clipboard.writeText(result.activationUrl); }}
+                style={{ flexShrink: 0, padding: "6px 12px", background: "#1066cc", color: "#fff", border: "none", borderRadius: 6, fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}
+              >
+                Copier
+              </button>
+            </div>
+          </>
+        )}
+        <button onClick={onSaved} className="btn btn-ghost" style={{ marginTop: 20 }}>
+          Retour à la liste
+        </button>
       </div>
     );
   }
@@ -187,6 +216,7 @@ export function InvitationAdminPage({ Panel }) {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [actionStatus, setActionStatus] = useState("");
+  const [resendFallbackUrl, setResendFallbackUrl] = useState("");
 
   useEffect(() => {
     const q = query(collection(db, "invitations"), orderBy("createdAt", "desc"));
@@ -200,22 +230,26 @@ export function InvitationAdminPage({ Panel }) {
   async function handleResend(invitation) {
     setActionStatus("Renvoi en cours…");
     try {
-      const token = invitation.token || crypto.randomUUID();
+      const token = crypto.randomUUID();
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
       await updateDoc(doc(db, "invitations", invitation.id), { token, status: "pending", expiresAt, resentAt: serverTimestamp() });
       const activationUrl = `${getAppBaseUrl()}/invite?token=${token}`;
-      const { enqueueTransactionalMail, buildInvitationMail } = await import("../services/mailQueue");
-      await enqueueTransactionalMail(buildInvitationMail({
-        email: invitation.email,
-        firstName: invitation.firstName,
-        roles: Array.isArray(invitation.roleLabels) ? invitation.roleLabels : [],
-        activationUrl,
-      }));
-      setActionStatus("Invitation renvoyée ✓");
+      try {
+        const { enqueueTransactionalMail, buildInvitationMail } = await import("../services/mailQueue");
+        await enqueueTransactionalMail(buildInvitationMail({
+          email: invitation.email,
+          firstName: invitation.firstName,
+          roles: Array.isArray(invitation.roleLabels) ? invitation.roleLabels : [],
+          activationUrl,
+        }));
+        setActionStatus("Invitation renvoyée ✓");
+      } catch {
+        setResendFallbackUrl(activationUrl);
+        setActionStatus("Mail impossible — copiez le lien ci-dessous :");
+      }
     } catch (e) {
       setActionStatus(`Erreur : ${e.message}`);
     }
-    setTimeout(() => setActionStatus(""), 3000);
   }
 
   async function handleCancel(invitation) {
@@ -250,9 +284,22 @@ export function InvitationAdminPage({ Panel }) {
       }
     >
       {actionStatus && (
-        <p style={{ padding: "10px 16px", background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 8, color: "#16a34a", marginBottom: 16, fontSize: "0.875rem" }}>
-          {actionStatus}
-        </p>
+        <div style={{ marginBottom: 16 }}>
+          <p style={{ padding: "10px 16px", background: resendFallbackUrl ? "#fffbeb" : "#f0fdf4", border: `1px solid ${resendFallbackUrl ? "#fcd34d" : "#86efac"}`, borderRadius: 8, color: resendFallbackUrl ? "#92400e" : "#16a34a", fontSize: "0.875rem", margin: 0 }}>
+            {actionStatus}
+          </p>
+          {resendFallbackUrl && (
+            <div style={{ display: "flex", gap: 8, alignItems: "center", background: "#fff", border: "1px solid #fcd34d", borderRadius: 8, padding: "10px 14px", marginTop: 8 }}>
+              <code style={{ flex: 1, fontSize: "0.75rem", wordBreak: "break-all", color: "#1066cc" }}>{resendFallbackUrl}</code>
+              <button
+                onClick={() => { navigator.clipboard.writeText(resendFallbackUrl); setResendFallbackUrl(""); setActionStatus("Lien copié ✓"); setTimeout(() => setActionStatus(""), 2000); }}
+                style={{ flexShrink: 0, padding: "6px 12px", background: "#1066cc", color: "#fff", border: "none", borderRadius: 6, fontSize: "0.78rem", fontWeight: 700, cursor: "pointer" }}
+              >
+                Copier
+              </button>
+            </div>
+          )}
+        </div>
       )}
 
       {loading ? (
