@@ -15,7 +15,13 @@ import {
 } from "react-router-dom";
 import { AuthFormField } from "./app/form-components";
 import { LanguageProvider } from "./app/language";
-import { PublicHomePage } from "./app/public-pages";
+import { SiteLayout } from "./site/site-layout";
+import { SiteHome } from "./site/site-home";
+import { SiteEvent } from "./site/site-event";
+import { SiteStatistics } from "./site/site-statistics";
+import { SitePress } from "./site/site-press";
+import { SitePartners } from "./site/site-partners";
+import { SiteNewsListPage, SiteNewsArticlePage } from "./site/site-news";
 import { VolunteersPage as VolunteersPageScreen } from "./app/volunteers-page";
 import { AccreditationsPage as AccreditationsPageScreen } from "./app/accreditations-page";
 import { AppShell as AppShellScreen, DashboardHome as DashboardHomeScreen } from "./app/app-shell-layout";
@@ -45,8 +51,6 @@ import { getU14CategoryFromBirthDate } from "./app/utils";
 import { db } from "./services/firebase";
 import "./App.css";
 import cmcmLogo from "./assets/cmcm-logo.png";
-import volunteersHomeImage from "./assets/volunteers-home.jpg";
-import preprogrammeHomeImage from "./assets/preprogramme-home.jpg";
 
 const VOLUNTEER_SUPPORT_AVAILABILITY_OPTIONS = [
   "Avant-meeting - vendredi matin",
@@ -76,6 +80,10 @@ const AthleteRegistryPageScreen = lazyNamed(() => import("./app/athlete-portal-p
 const MeetingHistoryPageScreen = lazyNamed(() => import("./app/meeting-history-pages"), "MeetingHistoryPage");
 const MeetingRecordsPageScreen = lazyNamed(() => import("./app/meeting-history-pages"), "MeetingRecordsPage");
 const MeetingWinnersPageScreen = lazyNamed(() => import("./app/meeting-history-pages"), "MeetingWinnersPage");
+const WebsiteDashboardPageScreen = lazyNamed(() => import("./app/website-admin-pages"), "WebsiteDashboardPage");
+const WebsiteNewsPageScreen = lazyNamed(() => import("./app/website-admin-pages"), "WebsiteNewsPage");
+const WebsiteSponsorsPageScreen = lazyNamed(() => import("./app/website-admin-pages"), "WebsiteSponsorsPage");
+const WebsitePressPageScreen = lazyNamed(() => import("./app/website-admin-pages"), "WebsitePressPage");
 
 async function loadMailQueueModule() {
   if (!mailQueueModulePromise) {
@@ -129,21 +137,6 @@ function getDocumentConsultationUrl(document) {
   if (isExternalDocumentLink(document?.reference)) return document.reference;
   return "";
 }
-
-const publicPaths = [
-  {
-    to: "/benevoles",
-    titleKey: "volunteersTitle",
-    descriptionKey: "volunteersDescription",
-    image: volunteersHomeImage,
-  },
-  {
-    to: "/pre-programme",
-    titleKey: "preprogramTitle",
-    descriptionKey: "preprogramDescription",
-    image: preprogrammeHomeImage,
-  },
-];
 
 const luxCompetitionClubs = [
   "CAB",
@@ -289,6 +282,22 @@ function MeetingWinnersPage() {
   return <MeetingWinnersPageScreen Panel={Panel} />;
 }
 
+function WebsiteDashboardPage() {
+  return <WebsiteDashboardPageScreen Panel={Panel} />;
+}
+
+function WebsiteNewsPage() {
+  return <WebsiteNewsPageScreen Panel={Panel} />;
+}
+
+function WebsiteSponsorsPage() {
+  return <WebsiteSponsorsPageScreen Panel={Panel} />;
+}
+
+function WebsitePressPage() {
+  return <WebsitePressPageScreen Panel={Panel} />;
+}
+
 function AccreditationsPage() {
   return (
     <AccreditationsPageScreen
@@ -384,7 +393,18 @@ export default function App() {
       <BrowserRouter>
         <Suspense fallback={<div className="page"><section className="page-header"><div><p className="eyebrow">Chargement</p><h1>Ouverture de MyCLIM</h1><p>Nous chargeons la page demandée.</p></div></section></div>}>
         <Routes>
-          <Route path="/" element={<PublicHomePage publicPaths={publicPaths} />} />
+          {/* ── Public site ──────────────────────────────── */}
+          <Route element={<SiteLayout />}>
+            <Route path="/" element={<SiteHome />} />
+            <Route path="/event" element={<SiteEvent />} />
+            <Route path="/statistics" element={<SiteStatistics />} />
+            <Route path="/press" element={<SitePress />} />
+            <Route path="/partners" element={<SitePartners />} />
+            <Route path="/news" element={<SiteNewsListPage />} />
+            <Route path="/news/:slug" element={<SiteNewsArticlePage />} />
+          </Route>
+
+          {/* ── Auth & standalone public pages ───────────── */}
           <Route path="/benevoles" element={<VolunteerAccessPage />} />
           <Route path="/pre-programme" element={<U14AccessPage />} />
           <Route path="/vip" element={<VipAccessPage loadMailQueueModule={loadMailQueueModule} />} />
@@ -438,6 +458,14 @@ export default function App() {
                 </Route>
                 <Route element={<RequireRouteAccess allowedRoles={["admin"]} />}>
                   <Route path="settings" element={<AthletePortalSettingsPage />} />
+                </Route>
+              </Route>
+              <Route element={<RequireRouteAccess allowedRoles={["admin", "gestionnaire"]} />}>
+                <Route path="website">
+                  <Route index element={<WebsiteDashboardPage />} />
+                  <Route path="news" element={<WebsiteNewsPage />} />
+                  <Route path="sponsors" element={<WebsiteSponsorsPage />} />
+                  <Route path="press" element={<WebsitePressPage />} />
                 </Route>
               </Route>
             </Route>
