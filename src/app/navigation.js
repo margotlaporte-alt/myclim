@@ -73,6 +73,7 @@ function buildNavigationFromRoles(roles) {
         makeLink("/app/documents", "Documents", "folder"),
         makeLink("/app/accreditations", "Accreditations", "ticket"),
         makeLink("/app/vip", "VIP", "ticket"),
+        makeLink("/app/presse", "Presse", "badge"),
       ]),
       ...(moduleLinks.length ? [makeSection("Modules", moduleLinks)] : []),
       makeSection("Parametres", [
@@ -92,6 +93,7 @@ function buildNavigationFromRoles(roles) {
       makeLink("/app/documents", "Documents", "folder"),
       makeLink("/app/accreditations", "Accreditations", "ticket"),
       makeLink("/app/vip", "VIP", "ticket"),
+      makeLink("/app/presse", "Presse", "badge"),
     );
   }
 
