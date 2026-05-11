@@ -981,6 +981,37 @@ L'équipe du CMCM Luxembourg Indoor Meeting`,
   };
 }
 
+// ─── Communiqué / annonce presse ────────────────────────────────────────────
+
+export function buildPressAnnouncementMail({ email, name, subject, body }) {
+  const displayName = String(name || "").trim();
+  const greeting = displayName ? `Bonjour ${displayName},` : "Bonjour,";
+  const htmlBody = String(body || "")
+    .split(/\n\n+/)
+    .map((para) => `<p style="margin:0 0 16px 0;font-size:16px;line-height:1.7;">${para.replace(/\n/g, "<br />")}</p>`)
+    .join("");
+  const plainBody = String(body || "");
+
+  return {
+    type: "press-announcement",
+    to: email,
+    subject: String(subject || "").trim() || "CMCM Luxembourg Indoor Meeting — Information presse",
+    body: `${greeting}\n\n${plainBody}\n\nL'équipe CMCM Luxembourg Indoor Meeting`,
+    html: buildBrandedEmailShell({
+      title: String(subject || "Information presse").trim(),
+      preheader: String(body || "").slice(0, 100).replace(/\n/g, " "),
+      content: `
+        <p style="margin:0 0 18px 0;font-size:16px;line-height:1.7;">${greeting}</p>
+        ${htmlBody}
+        <p style="margin:24px 0 0 0;font-size:15px;line-height:1.7;">
+          Cordialement,<br />
+          <strong>L'équipe CMCM Luxembourg Indoor Meeting</strong>
+        </p>
+      `,
+    }),
+  };
+}
+
 // ─── Accréditation presse ────────────────────────────────────────────────────
 
 export function buildPressRegistrationConfirmationMail({ email, firstName, requestType }) {
