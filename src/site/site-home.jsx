@@ -284,6 +284,47 @@ export function SiteHome() {
       </section>
 
       {/* ════════════════════════════════════════════════
+          LIVE RESULTS
+      ════════════════════════════════════════════════ */}
+      <section className="site-section site-section--alt" id="live-results">
+        <div className="site-container">
+          <div className="site-section-header site-section-header--center" style={{ marginBottom: 40 }}>
+            <span className="site-eyebrow" style={{ color: "var(--site-red)" }}>● Live</span>
+            <h2 className="site-heading">Results &amp; Live Ranking</h2>
+            <p className="site-lead">
+              Follow the competition in real time. Results are updated live throughout the day.
+            </p>
+          </div>
+          <div style={{
+            borderRadius: "var(--site-radius-lg)",
+            overflow: "hidden",
+            border: "1px solid var(--site-border)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
+            background: "#fff",
+          }}>
+            <iframe
+              src="https://fla.laportal.net/Competitions/Details/18079"
+              title="CMCM Luxembourg Indoor Meeting 2026 — Live Results"
+              width="100%"
+              height="700"
+              style={{ display: "block", border: "none" }}
+              loading="lazy"
+            />
+          </div>
+          <div style={{ textAlign: "center", marginTop: 20 }}>
+            <a
+              href="https://fla.laportal.net/Competitions/Details/18079"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="site-btn site-btn--secondary site-btn--sm"
+            >
+              Open full results page →
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════
           AFTERMOVIE
       ════════════════════════════════════════════════ */}
       <section className="site-section site-section--dark" id="aftermovie">
