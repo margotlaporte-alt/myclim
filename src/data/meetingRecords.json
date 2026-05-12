@@ -1,7 +1,7 @@
 [
   {
     "gender": "M",
-    "discipline": "50 m",
+    "discipline": "50m",
     "mark": "5.81",
     "fullName": "YOUNG Theodore",
     "noc": "RSA",
@@ -10,7 +10,7 @@
   },
   {
     "gender": "M",
-    "discipline": "60 m",
+    "discipline": "60m",
     "mark": "6.62",
     "fullName": "CHYLA Lukasz",
     "noc": "POL",
@@ -19,7 +19,7 @@
   },
   {
     "gender": "M",
-    "discipline": "200 m",
+    "discipline": "200m",
     "mark": "20.77",
     "fullName": "KOMANSKI Albert",
     "noc": "POL",
@@ -37,7 +37,7 @@
   },
   {
     "gender": "M",
-    "discipline": "400 m",
+    "discipline": "400m",
     "mark": "45.94",
     "fullName": "BREDAU Jean Paul",
     "noc": "GER",
@@ -46,7 +46,7 @@
   },
   {
     "gender": "M",
-    "discipline": "800 m",
+    "discipline": "800m",
     "mark": "1.44.65",
     "fullName": "CANALES Elvin Josue",
     "noc": "ESP",
@@ -55,7 +55,7 @@
   },
   {
     "gender": "M",
-    "discipline": "1000 m",
+    "discipline": "1000m",
     "mark": "2.21.12",
     "fullName": "KIMUTAI Sylas",
     "noc": "KEN",
@@ -64,7 +64,7 @@
   },
   {
     "gender": "M",
-    "discipline": "1500 m",
+    "discipline": "1500m",
     "mark": "3.34.63",
     "fullName": "SISK Pieter",
     "noc": "BEL",
@@ -73,7 +73,7 @@
   },
   {
     "gender": "M",
-    "discipline": "3000 m",
+    "discipline": "3000m",
     "mark": "7.39.01",
     "fullName": "BREMM Florian",
     "noc": "GER",
@@ -82,7 +82,7 @@
   },
   {
     "gender": "M",
-    "discipline": "60 m hurdles",
+    "discipline": "60m Hurdles",
     "mark": "7.41",
     "fullName": "SZYMANSKI Jakub",
     "noc": "POL",
@@ -127,7 +127,7 @@
   },
   {
     "gender": "W",
-    "discipline": "50 m",
+    "discipline": "50m",
     "mark": "6.27",
     "fullName": "GNAFOUA Floriane",
     "noc": "FRA",
@@ -136,7 +136,7 @@
   },
   {
     "gender": "W",
-    "discipline": "400 m",
+    "discipline": "400m",
     "mark": "52.18",
     "fullName": "HEJNOVA Zuzana",
     "noc": "CZE",
@@ -145,7 +145,7 @@
   },
   {
     "gender": "W",
-    "discipline": "60 m",
+    "discipline": "60m",
     "mark": "7.07",
     "fullName": "VAN DER WEKEN Patrizia",
     "noc": "LUX",
@@ -154,7 +154,7 @@
   },
   {
     "gender": "W",
-    "discipline": "800 m",
+    "discipline": "800m",
     "mark": "2.00.83",
     "fullName": "ARENDT Fanny",
     "noc": "LUX",
@@ -163,7 +163,7 @@
   },
   {
     "gender": "W",
-    "discipline": "1500 m",
+    "discipline": "1500m",
     "mark": "4.03.59",
     "fullName": "ZENONI Marta",
     "noc": "ITA",
@@ -172,7 +172,7 @@
   },
   {
     "gender": "W",
-    "discipline": "60 m hurdles",
+    "discipline": "60m Hurdles",
     "mark": "7.91",
     "fullName": "FOURIE Marione",
     "noc": "RSA",

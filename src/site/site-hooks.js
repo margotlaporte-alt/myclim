@@ -63,14 +63,19 @@ export function useNewsArticle(slug) {
 export function useAllNews() {
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [retryKey, setRetryKey] = useState(0);
   useEffect(() => {
     const q = query(collection(db, SITE_NEWS_COL), orderBy("createdAt", "desc"));
     const unsub = onSnapshot(q, (snap) => {
       setNews(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
       setLoading(false);
-    }, () => setLoading(false));
+    }, () => {
+      setLoading(false);
+      const t = setTimeout(() => setRetryKey((k) => k + 1), 3000);
+      return () => clearTimeout(t);
+    });
     return unsub;
-  }, []);
+  }, [retryKey]);
   return { news, loading };
 }
 
@@ -104,6 +109,7 @@ export function generateSlug(title) {
 export function useSponsors(activeOnly = true) {
   const [sponsors, setSponsors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [retryKey, setRetryKey] = useState(0);
   useEffect(() => {
     const q = activeOnly
       ? query(collection(db, SITE_SPONSORS_COL), where("active", "==", true))
@@ -120,9 +126,14 @@ export function useSponsors(activeOnly = true) {
         });
       setSponsors(items);
       setLoading(false);
-    }, () => setLoading(false));
+    }, () => {
+      setLoading(false);
+      // Retry after 3s in case of a transient permission error (e.g. auth just changed)
+      const t = setTimeout(() => setRetryKey((k) => k + 1), 3000);
+      return () => clearTimeout(t);
+    });
     return unsub;
-  }, [activeOnly]);
+  }, [activeOnly, retryKey]);
   return { sponsors, loading };
 }
 
@@ -163,14 +174,19 @@ export function usePublishedPressReleases() {
 export function useAllPressReleases() {
   const [releases, setReleases] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [retryKey, setRetryKey] = useState(0);
   useEffect(() => {
     const q = query(collection(db, SITE_PRESS_RELEASES_COL), orderBy("date", "desc"));
     const unsub = onSnapshot(q, (snap) => {
       setReleases(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
       setLoading(false);
-    }, () => setLoading(false));
+    }, () => {
+      setLoading(false);
+      const t = setTimeout(() => setRetryKey((k) => k + 1), 3000);
+      return () => clearTimeout(t);
+    });
     return unsub;
-  }, []);
+  }, [retryKey]);
   return { releases, loading };
 }
 

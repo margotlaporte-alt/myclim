@@ -474,7 +474,8 @@ export function SiteStatistics() {
 
   const { records, loading: recordsLoading } = useMeetingRecords();
   const { winners, loading: winnersLoading } = useAllWinners();
-  const { editions, loading: editionsLoading } = useMeetingEditions();
+  const { editions: allEditions, loading: editionsLoading } = useMeetingEditions();
+  const editions = allEditions.filter((e) => e.visibleInStats !== false);
 
   const tabs = [
     { id: "records", label: "Meeting Records" },

@@ -67,8 +67,8 @@ export function SiteLayout() {
           <NavLink to="/" className="site-nav__logo">
             <img src={cmcmLogo} alt="CMCM Luxembourg Indoor Meeting" />
             <div className="site-nav__logo-text">
-              <span className="site-nav__logo-name">Luxembourg Indoor Meeting</span>
-              <img src={waLogo} alt="World Athletics Indoor Tour Silver" className="site-nav__wa-logo" />
+              <span className="site-nav__logo-name">CMCM Luxembourg Indoor Meeting</span>
+              <span className="site-nav__wa-text">World Athletics Indoor Tour Silver</span>
             </div>
           </NavLink>
 
@@ -143,6 +143,7 @@ export function SiteLayout() {
           <div className="site-footer__grid">
             <div className="site-footer__brand">
               <img src={cmcmLogo} alt="CMCM Luxembourg Indoor Meeting" />
+              <img src={waLogo} alt="World Athletics Indoor Tour Silver" className="site-footer__wa-logo" />
               <p>
                 Luxembourg's premier international indoor athletics event, part of the World Athletics Indoor Tour Silver circuit, held annually at Coque Luxembourg.
               </p>
