@@ -1,4 +1,14 @@
 import { NavLink } from "react-router-dom";
+import coque1 from "../assets/site-gallery/Coque2026.jpg";
+import coque2 from "../assets/site-gallery/Coque2026-2.jpg";
+import coque3 from "../assets/site-gallery/Coque2026-3.jpg";
+import coque4 from "../assets/site-gallery/Coque2026-4.jpg";
+import vip1 from "../assets/site-gallery/vip-1.jpg";
+import vip2 from "../assets/site-gallery/vip-2.jpg";
+import vip3 from "../assets/site-gallery/vip-3.jpg";
+import vip4 from "../assets/site-gallery/vip-4.jpeg";
+import vip5 from "../assets/site-gallery/vip-5.jpeg";
+import vip6 from "../assets/site-gallery/vip-6.jpeg";
 
 const TIMETABLE = [
   { time: "08:00", event: "Venue opens", detail: "Athlete check-in and warm-up area available" },
@@ -6,6 +16,7 @@ const TIMETABLE = [
   { time: "10:30", event: "Track events begin", detail: "60 m, 60 m Hurdles, 200 m heats" },
   { time: "12:00", event: "Doors open — public", detail: "Public access to Coque arena" },
   { time: "13:30", event: "Afternoon session", detail: "400 m, 800 m, 1500 m, Mile" },
+  { time: "14:15", event: "VIP Tour", detail: "Exclusive backstage or venue tour (VIP ticket holders)" },
   { time: "16:00", event: "Finals session", detail: "All sprint and hurdle finals" },
   { time: "17:30", event: "VIP reception", detail: "Partners and VIP lounge opens" },
   { time: "18:00", event: "Evening programme", detail: "Elite 60 m, 3000 m, Pole Vault final" },
@@ -73,6 +84,21 @@ export function SiteEvent() {
           </div>
         </div>
       </section>
+
+      {/* ── Venue photo strip ─────────────────────────────── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", height: 280, overflow: "hidden" }}>
+        {[coque1, coque2, coque3, coque4].map((src, i) => (
+          <div key={i} style={{ overflow: "hidden" }}>
+            <img
+              src={src}
+              alt=""
+              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform 0.4s ease" }}
+              onMouseEnter={e => e.currentTarget.style.transform = "scale(1.04)"}
+              onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+            />
+          </div>
+        ))}
+      </div>
 
       {/* ── About ────────────────────────────────────────── */}
       <section className="site-section">
@@ -168,71 +194,265 @@ export function SiteEvent() {
       <section className="site-section" id="tickets">
         <div className="site-container">
           <SectionTitle
-            eyebrow="Attend the meeting"
+            eyebrow="Ticket sale"
             title="Tickets &amp; access"
+            lead="Secure your place at the CMCM Luxembourg Indoor Meeting 2026. Tickets available from 17 November 2026 at 10:00 on ticket-regional.lu."
           />
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24 }}>
-            {[
-              {
-                label: "General admission",
-                price: "Free",
-                color: "var(--site-blue)",
-                description: "Free entry for all spectators. First-come, first-served seating in the general area.",
-                cta: null,
-                ctaLabel: null,
-              },
-              {
-                label: "VIP Experience",
-                price: "On request",
-                color: "var(--site-gold)",
-                description: "Premium seats, exclusive lounge access, catering and meet-the-athletes opportunities.",
-                cta: "/vip",
-                ctaLabel: "Discover VIP →",
-              },
-              {
-                label: "Group bookings",
-                price: "Contact us",
-                color: "var(--site-red)",
-                description: "Special arrangements for schools, clubs and corporate groups. Contact us for details.",
-                cta: "mailto:contact@luxembourg-indoor-meeting.lu",
-                ctaLabel: "Contact us →",
-              },
-            ].map((tier) => (
-              <div
-                key={tier.label}
-                className="site-card"
-                style={{ padding: 32 }}
-              >
-                <div style={{
-                  width: 48,
-                  height: 4,
-                  background: tier.color,
-                  borderRadius: 2,
-                  marginBottom: 24,
-                }} />
-                <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--site-text)", marginBottom: 6 }}>
-                  {tier.label}
-                </h3>
-                <div style={{ fontSize: "1.8rem", fontWeight: 900, color: tier.color, marginBottom: 16, lineHeight: 1 }}>
-                  {tier.price}
-                </div>
-                <p style={{ fontSize: "0.875rem", lineHeight: 1.65, marginBottom: 24 }}>
-                  {tier.description}
-                </p>
-                {tier.cta && (
-                  <a href={tier.cta} className="site-btn site-btn--secondary site-btn--sm">
-                    {tier.ctaLabel}
-                  </a>
-                )}
+          {/* Ticket tiers */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, marginBottom: 40 }}>
+            {/* Under 18 */}
+            <div className="site-card" style={{ padding: 32 }}>
+              <div style={{ width: 48, height: 4, background: "var(--site-blue)", borderRadius: 2, marginBottom: 24 }} />
+              <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--site-text)", marginBottom: 6 }}>Under 18</h3>
+              <div style={{ fontSize: "2rem", fontWeight: 900, color: "var(--site-blue)", marginBottom: 12, lineHeight: 1 }}>
+                Free
               </div>
-            ))}
+              <p style={{ fontSize: "0.875rem", lineHeight: 1.65, color: "var(--site-text-muted)", marginBottom: 24 }}>
+                Free entrance for all spectators under 18 years old.
+              </p>
+            </div>
+
+            {/* Regular */}
+            <div className="site-card" style={{ padding: 32 }}>
+              <div style={{ width: 48, height: 4, background: "var(--site-red)", borderRadius: 2, marginBottom: 24 }} />
+              <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--site-text)", marginBottom: 6 }}>Regular Ticket</h3>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 12 }}>
+                <div style={{ fontSize: "2rem", fontWeight: 900, color: "var(--site-red)", lineHeight: 1 }}>€12</div>
+                <div style={{
+                  background: "rgba(232,0,28,0.1)",
+                  color: "var(--site-red)",
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                  padding: "3px 10px",
+                  borderRadius: 20,
+                }}>
+                  Early-bird €8 until Dec 15
+                </div>
+              </div>
+              <p style={{ fontSize: "0.875rem", lineHeight: 1.65, color: "var(--site-text-muted)", marginBottom: 24 }}>
+                Enjoy an electrifying live experience from the stands, with access to both the pre-program and the main program.
+              </p>
+              <a
+                href="https://www.ticket-regional.lu/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="site-btn site-btn--secondary site-btn--sm"
+              >
+                Buy ticket →
+              </a>
+            </div>
+
+            {/* VIP */}
+            <div
+              className="site-card"
+              style={{
+                padding: 32,
+                background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)",
+                border: "1px solid rgba(255,255,255,0.1)",
+              }}
+            >
+              <div style={{ width: 48, height: 4, background: "#c9a227", borderRadius: 2, marginBottom: 24 }} />
+              <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#fff", marginBottom: 6 }}>VIP Ticket</h3>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 12 }}>
+                <div style={{ fontSize: "2rem", fontWeight: 900, color: "#c9a227", lineHeight: 1 }}>€75</div>
+                <div style={{
+                  background: "rgba(201,162,39,0.2)",
+                  color: "#c9a227",
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                  padding: "3px 10px",
+                  borderRadius: 20,
+                }}>
+                  Early-bird €50 until Dec 15
+                </div>
+              </div>
+              <p style={{ fontSize: "0.875rem", lineHeight: 1.65, color: "rgba(255,255,255,0.65)", marginBottom: 24 }}>
+                Experience the event in a premium setting, including catering and a VIP tour of the venue. Tickets are limited.
+              </p>
+              <a
+                href="https://www.ticket-regional.lu/"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  background: "#c9a227",
+                  color: "#fff",
+                  fontWeight: 700,
+                  fontSize: "0.8rem",
+                  padding: "10px 20px",
+                  borderRadius: "var(--site-radius-sm)",
+                  textDecoration: "none",
+                }}
+              >
+                Buy VIP ticket →
+              </a>
+            </div>
+          </div>
+
+          {/* What's included */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+            <div style={{
+              padding: "28px 32px",
+              background: "var(--site-card)",
+              border: "1px solid var(--site-border)",
+              borderRadius: "var(--site-radius)",
+            }}>
+              <h4 style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--site-text-muted)", marginBottom: 16 }}>
+                Regular Ticket — What's included
+              </h4>
+              {[
+                "Access to the stands for the full day",
+                "Pre-program and main competition",
+                "Live athletics atmosphere",
+              ].map((item) => (
+                <div key={item} style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 10 }}>
+                  <span style={{ color: "var(--site-red)", fontWeight: 700, marginTop: 1 }}>✓</span>
+                  <span style={{ fontSize: "0.875rem", color: "var(--site-text-muted)", lineHeight: 1.5 }}>{item}</span>
+                </div>
+              ))}
+            </div>
+
+            <div style={{
+              padding: "28px 32px",
+              background: "linear-gradient(135deg, rgba(26,26,46,0.05), rgba(201,162,39,0.06))",
+              border: "1px solid rgba(201,162,39,0.3)",
+              borderRadius: "var(--site-radius)",
+            }}>
+              <h4 style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#b08c1e", marginBottom: 16 }}>
+                VIP Ticket — What's included
+              </h4>
+              {[
+                "Unlimited high-quality food and drinks throughout the event",
+                "Premium seating in the VIP area",
+                "Exclusive 30-minute VIP tour of the venue (starting 14:15)",
+                "Choice between backstage tour or guided Coque visit",
+              ].map((item) => (
+                <div key={item} style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 10 }}>
+                  <span style={{ color: "#c9a227", fontWeight: 700, marginTop: 1 }}>✓</span>
+                  <span style={{ fontSize: "0.875rem", color: "var(--site-text-muted)", lineHeight: 1.5 }}>{item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{
+            marginTop: 32,
+            padding: "20px 28px",
+            background: "rgba(16,102,204,0.06)",
+            border: "1px solid rgba(16,102,204,0.2)",
+            borderRadius: "var(--site-radius-sm)",
+            display: "flex",
+            alignItems: "center",
+            gap: 16,
+            flexWrap: "wrap",
+          }}>
+            <span style={{ fontSize: "0.875rem", color: "var(--site-text-muted)", flex: 1 }}>
+              Tickets available from <strong style={{ color: "var(--site-text)" }}>17 November 2026 at 10:00</strong> on ticket-regional.lu
+            </span>
+            <a
+              href="https://www.ticket-regional.lu/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="site-btn site-btn--primary site-btn--sm"
+            >
+              Access ticketing →
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* ── VIP Experience ────────────────────────────────── */}
+      <section className="site-section site-section--alt" id="vip">
+        <div className="site-container">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "start" }}>
+            <div>
+              <span className="site-eyebrow" style={{ color: "#b08c1e" }}>VIP visits available!</span>
+              <h2 className="site-heading site-heading--sm">Discover the Meeting Like Never Before</h2>
+              <p style={{ color: "var(--site-text-muted)", lineHeight: 1.75, marginBottom: 24 }}>
+                Join our exclusive VIP Tour and step behind the scenes of the CMCM Luxembourg Indoor Meeting 2026. Experience the excitement from a whole new perspective — walk through the athletes' warm-up area, feel the energy trackside, and explore the heart of the event.
+              </p>
+
+              <div style={{ marginBottom: 28 }}>
+                <h4 style={{ fontSize: "0.82rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--site-text-muted)", marginBottom: 16 }}>
+                  Choose your tour
+                </h4>
+                {[
+                  { icon: "🎽", title: "Backstage tour", desc: "See where the action really happens — athlete warm-up areas, mixed zone, and behind the scenes." },
+                  { icon: "🏛️", title: "La Coque guided visit", desc: "Discover Luxembourg's iconic sports complex, home to world-class facilities and innovation in sport." },
+                ].map(({ icon, title, desc }) => (
+                  <div
+                    key={title}
+                    style={{
+                      display: "flex",
+                      gap: 16,
+                      marginBottom: 16,
+                      padding: "16px 20px",
+                      background: "var(--site-card)",
+                      border: "1px solid var(--site-border)",
+                      borderRadius: "var(--site-radius-sm)",
+                    }}
+                  >
+                    <span style={{ fontSize: "1.5rem", flexShrink: 0, marginTop: 2 }}>{icon}</span>
+                    <div>
+                      <strong style={{ fontSize: "0.9rem", display: "block", marginBottom: 4, color: "var(--site-text)" }}>{title}</strong>
+                      <span style={{ fontSize: "0.82rem", color: "var(--site-text-muted)", lineHeight: 1.5 }}>{desc}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{
+                padding: "16px 20px",
+                background: "rgba(201,162,39,0.1)",
+                border: "1px solid rgba(201,162,39,0.3)",
+                borderRadius: "var(--site-radius-sm)",
+                marginBottom: 24,
+              }}>
+                <p style={{ fontSize: "0.875rem", color: "var(--site-text-muted)", margin: 0, lineHeight: 1.6 }}>
+                  <strong style={{ color: "var(--site-text)" }}>Both tours start at 14:15</strong> in the VIP area and last approximately 30 minutes. Participation is optional. <strong style={{ color: "var(--site-text)" }}>Places are limited</strong> — don't miss your chance!
+                </p>
+              </div>
+
+              <a
+                href="mailto:communication@fla.lu"
+                className="site-btn site-btn--primary site-btn--sm"
+              >
+                Contact us for more info →
+              </a>
+            </div>
+
+            {/* VIP photo grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+              {[vip1, vip2, vip3, vip4, vip5, vip6].map((src, i) => (
+                <div
+                  key={i}
+                  style={{
+                    overflow: "hidden",
+                    borderRadius: "var(--site-radius-sm)",
+                    aspectRatio: "1",
+                    gridColumn: i === 0 ? "1 / 3" : "auto",
+                    gridRow: i === 0 ? "1 / 2" : "auto",
+                  }}
+                >
+                  <img
+                    src={src}
+                    alt=""
+                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform 0.4s ease" }}
+                    onMouseEnter={e => e.currentTarget.style.transform = "scale(1.06)"}
+                    onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
       {/* ── Livestream ────────────────────────────────────── */}
-      <section className="site-section site-section--alt" id="livestream">
+      <section className="site-section" id="livestream">
         <div className="site-container">
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "center" }}>
             <div>
@@ -280,7 +500,7 @@ export function SiteEvent() {
       </section>
 
       {/* ── Volunteer ─────────────────────────────────────── */}
-      <section className="site-section" id="volunteer">
+      <section className="site-section site-section--alt" id="volunteer">
         <div className="site-container">
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "center" }}>
             <div
@@ -315,7 +535,7 @@ export function SiteEvent() {
       </section>
 
       {/* ── Sustainability ────────────────────────────────── */}
-      <section className="site-section site-section--alt">
+      <section className="site-section">
         <div className="site-container">
           <div style={{ maxWidth: 760, margin: "0 auto", textAlign: "center" }}>
             <span className="site-eyebrow">Our commitment</span>
@@ -349,7 +569,7 @@ export function SiteEvent() {
       </section>
 
       {/* ── Contact CTA ───────────────────────────────────── */}
-      <section className="site-section">
+      <section className="site-section site-section--alt">
         <div className="site-container">
           <div style={{ textAlign: "center" }}>
             <h2 className="site-heading site-heading--sm" style={{ marginBottom: 16 }}>

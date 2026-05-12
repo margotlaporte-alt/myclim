@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink } from "react-router-dom";
-import { useMeetingEditions, useMeetingRecords } from "../app/meeting-history-hooks";
+import { useMeetingEditions, useMeetingResultsForYear, useAllWinners } from "../app/meeting-history-hooks";
 import { usePublishedNews, useSponsors } from "./site-hooks";
 import cmcmLogo from "../assets/cmcm-logo.png";
 import heroPhoto from "../assets/hero-photo.jpg";
@@ -109,18 +109,20 @@ function formatNewsDate(ts) {
 /* ── Main component ─────────────────────────────────────── */
 export function SiteHome() {
   const { editions, loading: edLoading } = useMeetingEditions();
-  const { records } = useMeetingRecords();
   const { news } = usePublishedNews(4);
   const { sponsors } = useSponsors(true);
 
   const latestEdition = editions[0] || null;
   const totalEditions = editions.length;
+  const latestYear = latestEdition ? Number(latestEdition.year || latestEdition.id) || null : null;
+
+  const { results: latestResults } = useMeetingResultsForYear(latestYear);
+  const { winners: allWinners } = useAllWinners();
 
   // Derive key stats from data
   const totalCountries = 32; // could be computed from results
   const totalAthletes = 200;
   const totalSpectators = 3500;
-  const totalRecords = records.length;
 
   // Next edition info (hardcoded for now — can be made configurable)
   const nextDate = "18 January 2026";
@@ -143,10 +145,30 @@ export function SiteHome() {
     supplier: "Suppliers & Partners",
   };
 
-  // Preview records — top 8 alternating M/W
-  const previewRecords = records
-    .sort((a, b) => String(a.discipline).localeCompare(String(b.discipline)))
-    .slice(0, 8);
+  // Winners of the latest edition — from meetingWinners collection, fallback to rank=1 from results
+  const DISCIPLINE_ORDER = [
+    "60 m", "60 m hurdles", "200 m", "400 m", "800 m", "1000 m", "1500 m", "3000 m", "5000 m",
+  ];
+  const keyOf = (d) => {
+    const i = DISCIPLINE_ORDER.indexOf(d);
+    return i !== -1 ? `0_${String(i).padStart(3, "0")}` : `1_${d}`;
+  };
+  const sortWinners = (arr) =>
+    [...arr].sort((a, b) => {
+      const dc = keyOf(a.discipline || "").localeCompare(keyOf(b.discipline || ""));
+      if (dc !== 0) return dc;
+      return (a.gender === "W" ? -1 : 1) - (b.gender === "W" ? -1 : 1);
+    });
+
+  const winnersFromCollection = latestYear
+    ? sortWinners(allWinners.filter((w) => Number(w.year) === Number(latestYear)))
+    : [];
+
+  const winnersFromResults = latestYear
+    ? sortWinners(latestResults.filter((r) => Number(r.rank) === 1)).slice(0, 10)
+    : [];
+
+  const latestWinners = (winnersFromCollection.length > 0 ? winnersFromCollection : winnersFromResults).slice(0, 12);
 
   return (
     <>
@@ -254,7 +276,7 @@ export function SiteHome() {
           </div>
           <div className="site-stat-item">
             <div className="site-stat-item__number">
-              <AnimatedNumber target={totalRecords || 42} />
+              <AnimatedNumber target={42} />
             </div>
             <div className="site-stat-item__label">Meeting Records</div>
           </div>
@@ -494,18 +516,18 @@ export function SiteHome() {
       )}
 
       {/* ════════════════════════════════════════════════
-          RECORDS PREVIEW
+          LATEST EDITION WINNERS
       ════════════════════════════════════════════════ */}
-      {previewRecords.length > 0 && (
+      {latestWinners.length > 0 && (
         <section className="site-section site-section--alt">
           <div className="site-container">
             <div className="site-section-header" style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 48, flexWrap: "wrap", gap: 16 }}>
               <div>
-                <span className="site-eyebrow">Performance excellence</span>
-                <h2 className="site-heading">Meeting records</h2>
+                <span className="site-eyebrow">Last edition · {latestYear}</span>
+                <h2 className="site-heading">Event winners</h2>
               </div>
               <NavLink to="/statistics" className="site-btn site-btn--secondary site-btn--sm">
-                Full statistics →
+                Full results →
               </NavLink>
             </div>
 
@@ -517,11 +539,10 @@ export function SiteHome() {
                     <th>Athlete</th>
                     <th>Nation</th>
                     <th>Performance</th>
-                    <th>Year</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {previewRecords.map((r, i) => (
+                  {latestWinners.map((r, i) => (
                     <tr key={r.id || i}>
                       <td>
                         <span className={`site-badge ${r.gender === "W" ? "site-badge--red" : "site-badge--blue"}`} style={{ marginRight: 8 }}>
@@ -529,12 +550,13 @@ export function SiteHome() {
                         </span>
                         {r.discipline}
                       </td>
-                      <td style={{ fontWeight: 600 }}>{r.fullName}</td>
+                      <td style={{ fontWeight: 600 }}>
+                        {r.fullName || `${r.firstName || ""} ${r.lastName || ""}`.trim()}
+                      </td>
                       <td>
                         <span className="noc">{r.noc}</span>
                       </td>
-                      <td className="mark">{r.mark}</td>
-                      <td style={{ color: "var(--site-text-muted)" }}>{r.year}</td>
+                      <td className="mark">{r.mark || r.result}</td>
                     </tr>
                   ))}
                 </tbody>
