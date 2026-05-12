@@ -14,6 +14,7 @@ import ambiance1 from "../assets/site-gallery/ambiance-1.jpg";
 import ambiance2 from "../assets/site-gallery/ambiance-2.jpg";
 import ambiance3 from "../assets/site-gallery/ambiance-3.jpg";
 import aboutVdw from "../assets/site-gallery/about-vdw.jpg";
+import coqueWide from "../assets/site-gallery/Coque2026.jpg";
 
 /* ── Animated counter ──────────────────────────────────── */
 function AnimatedNumber({ target, suffix = "", prefix = "" }) {
@@ -335,8 +336,21 @@ export function SiteHome() {
       {/* ════════════════════════════════════════════════
           AFTERMOVIE
       ════════════════════════════════════════════════ */}
-      <section className="site-section site-section--dark" id="aftermovie">
-        <div className="site-container">
+      <section className="site-section site-section--dark" id="aftermovie" style={{ position: "relative", overflow: "hidden" }}>
+        <img
+          src={coqueWide}
+          alt=""
+          aria-hidden="true"
+          style={{
+            position: "absolute", inset: 0,
+            width: "100%", height: "100%",
+            objectFit: "cover", objectPosition: "center 40%",
+            opacity: 0.15,
+            mixBlendMode: "luminosity",
+            pointerEvents: "none",
+          }}
+        />
+        <div className="site-container" style={{ position: "relative", zIndex: 1 }}>
           <div className="site-section-header site-section-header--center">
             <span className="site-eyebrow">2025 Edition</span>
             <h2 className="site-heading">Watch the aftermovie</h2>
