@@ -4,7 +4,9 @@ import { getActiveRoles } from "./navigation";
 import {
   MEETING_EDITIONS_COL,
   closeEdition,
+  deleteMeetingResult,
   seedMeetingDatabase,
+  updateMeetingResult,
   useAllWinners,
   useMeetingEditions,
   useMeetingRecords,
@@ -199,6 +201,226 @@ function AthleteNameCell({ lastName, firstName, yob, registryIdx, style }) {
   return <span style={{ ...style, fontWeight: 600 }}>{fullName}</span>;
 }
 
+// ─── All known discipline options (for the edit dropdown) ────────────────────
+const ALL_DISCIPLINES = [
+  "50 m", "60 m", "60 m hurdles",
+  "200 m", "400 m", "800 m", "1000 m", "1500 m", "3000 m", "5000 m",
+  "High Jump", "Long Jump", "Pole Vault", "Shot Put", "Triple Jump",
+];
+
+// ─── Inline-editable result row ───────────────────────────────────────────────
+function EditableResultRow({ r, onSaved, onDeleted }) {
+  const [editing, setEditing]   = useState(false);
+  const [saving,  setSaving]    = useState(false);
+  const [draft,   setDraft]     = useState({});
+
+  function startEdit() {
+    setDraft({
+      rank:       r.rank ?? "",
+      discipline: r.discipline ?? "",
+      gender:     r.gender ?? "W",
+      result:     r.result ?? "",
+      lastName:   r.lastName ?? "",
+      firstName:  r.firstName ?? "",
+      noc:        r.noc ?? "",
+      yob:        r.yob ?? "",
+    });
+    setEditing(true);
+  }
+
+  function set(key, val) {
+    setDraft((d) => ({ ...d, [key]: val }));
+  }
+
+  async function save() {
+    setSaving(true);
+    try {
+      const fields = {
+        rank:       Number(draft.rank) || 0,
+        discipline: draft.discipline,
+        gender:     draft.gender,
+        result:     draft.result,
+        lastName:   draft.lastName,
+        firstName:  draft.firstName,
+        noc:        draft.noc,
+      };
+      if (draft.yob !== "" && draft.yob != null) fields.yob = Number(draft.yob);
+      await updateMeetingResult(r.id, fields);
+      setEditing(false);
+      onSaved?.();
+    } catch (e) {
+      alert("Erreur : " + e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function remove() {
+    if (!window.confirm(`Supprimer ${r.lastName} ${r.firstName} (${r.discipline} ${r.gender}) ?`)) return;
+    setSaving(true);
+    try {
+      await deleteMeetingResult(r.id);
+      onDeleted?.();
+    } catch (e) {
+      alert("Erreur : " + e.message);
+      setSaving(false);
+    }
+  }
+
+  const cellStyle = { padding: "0.25rem 0.4rem", verticalAlign: "middle" };
+  const inputStyle = {
+    width: "100%", padding: "0.22rem 0.4rem",
+    border: "1.5px solid #93c5fd", borderRadius: 5,
+    fontSize: "0.82rem", background: "#eff6ff",
+  };
+
+  if (!editing) {
+    return (
+      <tr key={r.id}>
+        <td style={{ textAlign: "center" }}>
+          <RankBadge rank={r.rank} />
+        </td>
+        <td style={{ fontSize: "0.78rem", color: "#888" }}>{r.discipline}</td>
+        <td className="col-sticky col-sticky--last" style={{ fontWeight: 600 }}>
+          {r.lastName}{r.firstName ? ` ${r.firstName}` : ""}
+        </td>
+        <td><FlagImg noc={r.noc} />{r.noc}</td>
+        <td style={{ fontWeight: 600, fontFamily: "monospace" }}>{r.result || "—"}</td>
+        <td style={{ color: "#888", fontSize: "0.82rem" }}>{r.yob || "—"}</td>
+        <td>
+          <button
+            onClick={startEdit}
+            title="Modifier"
+            style={{
+              background: "none", border: "none", cursor: "pointer",
+              padding: "2px 6px", borderRadius: 4, fontSize: "0.85rem",
+              color: "#6b7280",
+            }}
+          >✏️</button>
+          <button
+            onClick={remove}
+            disabled={saving}
+            title="Supprimer"
+            style={{
+              background: "none", border: "none", cursor: "pointer",
+              padding: "2px 4px", borderRadius: 4, fontSize: "0.82rem",
+              color: "#ef4444", marginLeft: 2,
+            }}
+          >🗑</button>
+        </td>
+      </tr>
+    );
+  }
+
+  // Edit row — spans full width in a second <tr> to keep the layout stable
+  return (
+    <>
+      <tr key={r.id} style={{ background: "#eff6ff" }}>
+        <td style={cellStyle}>
+          <input
+            type="number" min={1} max={99}
+            value={draft.rank}
+            onChange={(e) => set("rank", e.target.value)}
+            style={{ ...inputStyle, width: 44 }}
+            title="Classement"
+          />
+        </td>
+        <td style={cellStyle}>
+          <select
+            value={draft.discipline}
+            onChange={(e) => set("discipline", e.target.value)}
+            style={{ ...inputStyle, minWidth: 100 }}
+          >
+            {ALL_DISCIPLINES.map((d) => (
+              <option key={d} value={d}>{d}</option>
+            ))}
+            {!ALL_DISCIPLINES.includes(draft.discipline) && (
+              <option value={draft.discipline}>{draft.discipline}</option>
+            )}
+          </select>
+        </td>
+        <td style={cellStyle} className="col-sticky col-sticky--last">
+          <div style={{ display: "flex", gap: "0.3rem", flexWrap: "wrap" }}>
+            <input
+              value={draft.lastName}
+              onChange={(e) => set("lastName", e.target.value)}
+              placeholder="Nom"
+              style={{ ...inputStyle, width: 90 }}
+            />
+            <input
+              value={draft.firstName}
+              onChange={(e) => set("firstName", e.target.value)}
+              placeholder="Prénom"
+              style={{ ...inputStyle, width: 80 }}
+            />
+          </div>
+        </td>
+        <td style={cellStyle}>
+          <input
+            value={draft.noc}
+            onChange={(e) => set("noc", e.target.value.toUpperCase().slice(0, 3))}
+            placeholder="NOC"
+            maxLength={3}
+            style={{ ...inputStyle, width: 48, textTransform: "uppercase" }}
+          />
+        </td>
+        <td style={cellStyle}>
+          <input
+            value={draft.result}
+            onChange={(e) => set("result", e.target.value)}
+            placeholder="Résultat"
+            style={{ ...inputStyle, width: 80 }}
+          />
+        </td>
+        <td style={cellStyle}>
+          <div style={{ display: "flex", gap: 4 }}>
+            <select
+              value={draft.gender}
+              onChange={(e) => set("gender", e.target.value)}
+              style={{ ...inputStyle, width: 56 }}
+            >
+              <option value="W">W</option>
+              <option value="M">M</option>
+            </select>
+            <input
+              type="number"
+              value={draft.yob}
+              onChange={(e) => set("yob", e.target.value)}
+              placeholder="Ann."
+              style={{ ...inputStyle, width: 60 }}
+              title="Année de naissance"
+            />
+          </div>
+        </td>
+        <td style={cellStyle}>
+          <div style={{ display: "flex", gap: 4 }}>
+            <button
+              onClick={save}
+              disabled={saving}
+              style={{
+                padding: "0.25rem 0.6rem", borderRadius: 5, border: "none",
+                background: "#1d4ed8", color: "#fff",
+                fontWeight: 700, fontSize: "0.78rem", cursor: "pointer",
+              }}
+            >{saving ? "…" : "✓"}</button>
+            <button
+              onClick={() => setEditing(false)}
+              disabled={saving}
+              style={{
+                padding: "0.25rem 0.6rem", borderRadius: 5,
+                border: "1px solid #d1d5db", background: "#fff",
+                fontSize: "0.78rem", cursor: "pointer",
+              }}
+            >✕</button>
+          </div>
+        </td>
+      </tr>
+    </>
+  );
+}
+
+// ─── Meeting History page ─────────────────────────────────────────────────────
+
 function MeetingHistoryPage({ Panel }) {
   const { userProfile } = useAuth();
   const roles = getActiveRoles(userProfile);
@@ -210,6 +432,7 @@ function MeetingHistoryPage({ Panel }) {
   const [closeStatus, setCloseStatus] = useState(null);
   const [seeding, setSeeding] = useState(false);
   const [seedLog, setSeedLog] = useState([]);
+  const [editMode, setEditMode] = useState(false);
   const registryIdx = useRegistryIndex();
 
   // Pick the most recent non-closed edition by default once loaded
@@ -375,7 +598,7 @@ function MeetingHistoryPage({ Panel }) {
           title={`Results — ${effectiveYear ?? "—"}`}
           subtitle={resultsLoading ? "Loading…" : `${results.length} entries, ${groups.length} events`}
           actions={
-            isAdmin && effectiveYear && !selectedEdition?.isClosed && results.length > 0 ? (
+            isAdmin && effectiveYear && results.length > 0 ? (
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
                 {closeStatus && (
                   <span style={{ fontSize: "0.8rem", color: "#15803d", maxWidth: 260 }}>
@@ -383,13 +606,29 @@ function MeetingHistoryPage({ Panel }) {
                   </span>
                 )}
                 <button
-                  className="btn btn--secondary"
-                  onClick={handleCloseEdition}
-                  disabled={closingYear === effectiveYear}
-                  style={{ whiteSpace: "nowrap" }}
+                  onClick={() => setEditMode((v) => !v)}
+                  style={{
+                    padding: "0.3rem 0.8rem", borderRadius: 8,
+                    border: "1.5px solid",
+                    borderColor: editMode ? "#f59e0b" : "#d1d5db",
+                    background: editMode ? "#fef3c7" : "#fff",
+                    color: editMode ? "#92400e" : "#374151",
+                    fontWeight: editMode ? 700 : 400,
+                    fontSize: "0.82rem", cursor: "pointer", whiteSpace: "nowrap",
+                  }}
                 >
-                  {closingYear === effectiveYear ? "Closing…" : "🔒 Close edition"}
+                  {editMode ? "✏️ Mode édition ON" : "✏️ Modifier les résultats"}
                 </button>
+                {!selectedEdition?.isClosed && (
+                  <button
+                    className="btn btn--secondary"
+                    onClick={handleCloseEdition}
+                    disabled={closingYear === effectiveYear}
+                    style={{ whiteSpace: "nowrap" }}
+                  >
+                    {closingYear === effectiveYear ? "Closing…" : "🔒 Close edition"}
+                  </button>
+                )}
               </div>
             ) : null
           }
@@ -407,16 +646,26 @@ function MeetingHistoryPage({ Panel }) {
             </div>
           ) : (
             <div className="table-wrap table-wrap--athletes" style={{ maxHeight: "calc(100vh - 320px)" }}>
+              {editMode && (
+                <div style={{
+                  padding: "0.5rem 0.75rem", marginBottom: "0.5rem",
+                  background: "#fef3c7", border: "1px solid #fde68a",
+                  borderRadius: 8, fontSize: "0.82rem", color: "#92400e",
+                }}>
+                  ✏️ <strong>Mode édition activé</strong> — cliquez sur ✏️ pour modifier une ligne, 🗑 pour supprimer.
+                  Les modifications sont enregistrées directement dans la base.
+                </div>
+              )}
               <table className="data-table">
                 <thead>
                   <tr>
                     <th style={{ width: 36 }}>Rk</th>
-                    <th>Event</th>
-                    <th data-sticky-col="1" className="col-sticky col-sticky--last">Athlete</th>
+                    <th>Épreuve</th>
+                    <th data-sticky-col="1" className="col-sticky col-sticky--last">Athlète</th>
                     <th>Nat.</th>
-                    <th>Result</th>
-                    <th>YOB</th>
-                    <th>Pts</th>
+                    <th>Résultat</th>
+                    <th>{editMode ? "Genre / Ann." : "Ann."}</th>
+                    <th style={{ width: editMode ? 80 : 40 }}>{editMode ? "Actions" : "Pts"}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -431,33 +680,37 @@ function MeetingHistoryPage({ Panel }) {
                       </td>
                     </tr>,
                     // Result rows
-                    ...grp.rows.map((r) => (
-                      <tr key={r.id}>
-                        <td style={{ textAlign: "center" }}>
-                          <RankBadge rank={r.rank} />
-                        </td>
-                        <td style={{ fontSize: "0.78rem", color: "#888" }}>{r.discipline}</td>
-                        <td className="col-sticky col-sticky--last">
-                          <AthleteNameCell
-                            lastName={r.lastName}
-                            firstName={r.firstName}
-                            yob={r.yob}
-                            registryIdx={registryIdx}
-                          />
-                        </td>
-                        <td>
-                          <FlagImg noc={r.noc} />
-                          {r.noc}
-                        </td>
-                        <td style={{ fontWeight: 600, fontFamily: "monospace" }}>
-                          {r.result || "—"}
-                        </td>
-                        <td style={{ color: "#888", fontSize: "0.82rem" }}>{r.yob || "—"}</td>
-                        <td style={{ color: "#888", fontSize: "0.82rem" }}>
-                          {r.points != null ? r.points : "—"}
-                        </td>
-                      </tr>
-                    )),
+                    ...grp.rows.map((r) =>
+                      editMode ? (
+                        <EditableResultRow key={r.id} r={r} />
+                      ) : (
+                        <tr key={r.id}>
+                          <td style={{ textAlign: "center" }}>
+                            <RankBadge rank={r.rank} />
+                          </td>
+                          <td style={{ fontSize: "0.78rem", color: "#888" }}>{r.discipline}</td>
+                          <td className="col-sticky col-sticky--last">
+                            <AthleteNameCell
+                              lastName={r.lastName}
+                              firstName={r.firstName}
+                              yob={r.yob}
+                              registryIdx={registryIdx}
+                            />
+                          </td>
+                          <td>
+                            <FlagImg noc={r.noc} />
+                            {r.noc}
+                          </td>
+                          <td style={{ fontWeight: 600, fontFamily: "monospace" }}>
+                            {r.result || "—"}
+                          </td>
+                          <td style={{ color: "#888", fontSize: "0.82rem" }}>{r.yob || "—"}</td>
+                          <td style={{ color: "#888", fontSize: "0.82rem" }}>
+                            {r.points != null ? r.points : "—"}
+                          </td>
+                        </tr>
+                      )
+                    ),
                   ])}
                 </tbody>
               </table>

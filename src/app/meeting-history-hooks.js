@@ -9,8 +9,8 @@
  */
 import { useEffect, useState } from "react";
 import {
-  collection, doc, getDocs, onSnapshot,
-  query, where, writeBatch, setDoc, serverTimestamp,
+  collection, deleteDoc, doc, getDocs, onSnapshot,
+  query, updateDoc, where, writeBatch, setDoc, serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../services/firebase";
 import { ATHLETE_REGISTRY_COLLECTION } from "./athlete-portal-hooks";
@@ -125,6 +125,26 @@ export function useAllWinners() {
     return unsub;
   }, []);
   return { winners, loading };
+}
+
+// ─── Edit / delete individual results ────────────────────────────────────────
+
+/**
+ * Update editable fields on a single meetingResults document.
+ * Only the supplied keys are written (patch semantics).
+ */
+export async function updateMeetingResult(docId, fields) {
+  await updateDoc(doc(db, MEETING_RESULTS_COL, docId), {
+    ...fields,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * Delete a single meetingResults document.
+ */
+export async function deleteMeetingResult(docId) {
+  await deleteDoc(doc(db, MEETING_RESULTS_COL, docId));
 }
 
 // ─── Seed historical data from JSON files ────────────────────────────────────
