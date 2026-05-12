@@ -1,7 +1,7 @@
 function getMailFunctionUrl() {
   const env = typeof import.meta !== "undefined" && import.meta.env ? import.meta.env : {};
   const configuredUrl = String(env.VITE_MAIL_FUNCTION_URL || "").trim();
-  return configuredUrl || "/.netlify/functions/send-transactional-mail-background";
+  return configuredUrl || "/.netlify/functions/send-transactional-mail";
 }
 
 function getMailRequestTimeoutMs() {

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import cmcmLogo from "../assets/cmcm-logo.png";
+import { useAuth } from "../context/auth-context";
 import "./site.css";
 
 const NAV_LINKS = [
@@ -40,6 +41,7 @@ export function SiteLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const mobileRef = useRef(null);
+  const { currentUser } = useAuth();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -86,9 +88,15 @@ export function SiteLayout() {
           </ul>
 
           <div className="site-nav__actions">
-            <NavLink to="/login" className="site-nav__login">
-              Login
-            </NavLink>
+            {currentUser ? (
+              <a href="/app" className="site-nav__login site-nav__login--myspace">
+                Mon espace →
+              </a>
+            ) : (
+              <NavLink to="/login" className="site-nav__login">
+                Login
+              </NavLink>
+            )}
             <button
               className="site-nav__burger"
               aria-label={mobileOpen ? "Close menu" : "Open menu"}
@@ -116,7 +124,11 @@ export function SiteLayout() {
             {link.label}
           </NavLink>
         ))}
-        <NavLink to="/login" className="site-nav__mobile-login">Login →</NavLink>
+        {currentUser ? (
+          <a href="/app" className="site-nav__mobile-login">Mon espace →</a>
+        ) : (
+          <NavLink to="/login" className="site-nav__mobile-login">Login →</NavLink>
+        )}
       </div>
 
       {/* ── Page content ────────────────────────────────── */}
