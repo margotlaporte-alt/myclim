@@ -140,11 +140,13 @@
   color: var(--site-text);
 }
 
-.site-nav__wa-logo {
-  height: 22px;
-  width: auto;
+.site-nav__wa-text {
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--site-text-muted);
   margin-top: 3px;
-  opacity: 0.85;
 }
 
 .site-nav__links {
@@ -298,6 +300,13 @@
 .site-footer__brand img {
   height: 48px;
   margin-bottom: 16px;
+}
+
+.site-footer__wa-logo {
+  height: auto !important;
+  width: 120px;
+  margin-bottom: 20px;
+  opacity: 0.75;
 }
 
 .site-footer__brand p {

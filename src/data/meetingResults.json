@@ -2026,9 +2026,8 @@
       "result": "7.40",
       "discipline": "60m",
       "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "round": "",
+      "year": 2004
     },
     {
       "rank": 2,
@@ -2038,9 +2037,8 @@
       "result": "7.64",
       "discipline": "60m",
       "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "round": "",
+      "year": 2004
     },
     {
       "rank": 3,
@@ -2050,9 +2048,8 @@
       "result": "7.79",
       "discipline": "60m",
       "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "round": "",
+      "year": 2004
     },
     {
       "rank": 4,
@@ -2062,9 +2059,8 @@
       "result": "7.82",
       "discipline": "60m",
       "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "round": "",
+      "year": 2004
     },
     {
       "rank": 5,
@@ -2074,9 +2070,8 @@
       "result": "7.85",
       "discipline": "60m",
       "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "round": "",
+      "year": 2004
     },
     {
       "rank": 6,
@@ -2086,9 +2081,8 @@
       "result": "8.01",
       "discipline": "60m",
       "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "round": "",
+      "year": 2004
     },
     {
       "rank": 7,
@@ -2098,9 +2092,8 @@
       "result": "8.03",
       "discipline": "60m",
       "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "round": "",
+      "year": 2004
     },
     {
       "rank": 8,
@@ -2110,9 +2103,8 @@
       "result": "8.11",
       "discipline": "60m",
       "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "round": "",
+      "year": 2004
     },
     {
       "rank": 1,
@@ -2122,9 +2114,8 @@
       "result": "6.75",
       "discipline": "60m",
       "gender": "M",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "round": "",
+      "year": 2004
     },
     {
       "rank": 2,
@@ -2134,9 +2125,8 @@
       "result": "6.83",
       "discipline": "60m",
       "gender": "M",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "round": "",
+      "year": 2004
     },
     {
       "rank": 3,
@@ -2146,9 +2136,8 @@
       "result": "6.97",
       "discipline": "60m",
       "gender": "M",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "round": "",
+      "year": 2004
     },
     {
       "rank": 4,
@@ -2158,9 +2147,8 @@
       "result": "7.01",
       "discipline": "60m",
       "gender": "M",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "round": "",
+      "year": 2004
     },
     {
       "rank": 5,
@@ -2170,9 +2158,8 @@
       "result": "7.14",
       "discipline": "60m",
       "gender": "M",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "round": "",
+      "year": 2004
     },
     {
       "rank": 6,
@@ -2182,69 +2169,474 @@
       "result": "7.40",
       "discipline": "60m",
       "gender": "M",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "round": "",
+      "year": 2004
     },
     {
       "rank": 1,
-      "lastName": "NOTEBAERT",
-      "firstName": "Antony",
+      "lastName": "BUJAK",
+      "firstName": "Joanna",
       "noc": "FRA",
-      "result": "49.84",
-      "discipline": "60m",
-      "gender": "M",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "result": "8.21",
+      "discipline": "60m Hurdles",
+      "gender": "W",
+      "round": "",
+      "year": 2004
     },
     {
       "rank": 2,
-      "lastName": "BEFRECHEL",
-      "firstName": "Morgan",
-      "noc": "FRA",
-      "result": "50.67",
-      "discipline": "60m",
-      "gender": "M",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "lastName": "MARTINCOVA",
+      "firstName": "Lucie",
+      "noc": "CZE",
+      "result": "8.24",
+      "discipline": "60m Hurdles",
+      "gender": "W",
+      "round": "",
+      "year": 2004
     },
     {
       "rank": 3,
-      "lastName": "STEHLIN",
-      "firstName": "Guillaume",
+      "lastName": "DECAUX",
+      "firstName": "Alice",
       "noc": "FRA",
-      "result": "51.00",
-      "discipline": "60m",
-      "gender": "M",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "result": "8.75",
+      "discipline": "60m Hurdles",
+      "gender": "W",
+      "round": "",
+      "year": 2004
     },
     {
       "rank": 4,
-      "lastName": "GORNIK",
-      "firstName": "Raphael",
+      "lastName": "FORTES",
+      "firstName": "Aurelie",
       "noc": "FRA",
-      "result": "51.92",
-      "discipline": "60m",
-      "gender": "M",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "result": "8.79",
+      "discipline": "60m Hurdles",
+      "gender": "W",
+      "round": "",
+      "year": 2004
     },
     {
       "rank": 5,
-      "lastName": "GAMEL",
-      "firstName": "Loic",
+      "lastName": "SALL-SERIEYS",
+      "firstName": "Virginie",
       "noc": "FRA",
-      "result": "52.20",
-      "discipline": "60m",
+      "result": "8.84",
+      "discipline": "60m Hurdles",
+      "gender": "W",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 6,
+      "lastName": "REULAND",
+      "firstName": "Kim",
+      "noc": "LUX",
+      "result": "9.00",
+      "discipline": "60m Hurdles",
+      "gender": "W",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 7,
+      "lastName": "FEDAU",
+      "firstName": "Amandine",
+      "noc": "FRA",
+      "result": "9.10",
+      "discipline": "60m Hurdles",
+      "gender": "W",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 8,
+      "lastName": "LANDMANN",
+      "firstName": "Celine",
+      "noc": "FRA",
+      "result": "9.25",
+      "discipline": "60m Hurdles",
+      "gender": "W",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 1,
+      "lastName": "DENIS",
+      "firstName": "Sebastien",
+      "noc": "FRA",
+      "result": "7.68",
+      "discipline": "60m Hurdles",
       "gender": "M",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 2,
+      "lastName": "HUDEC",
+      "firstName": "Leonard",
+      "noc": "AUT",
+      "result": "7.94",
+      "discipline": "60m Hurdles",
+      "gender": "M",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 3,
+      "lastName": "GODART",
+      "firstName": "Claude",
+      "noc": "LUX",
+      "result": "8.13",
+      "discipline": "60m Hurdles",
+      "gender": "M",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 4,
+      "lastName": "LAVANNE",
+      "firstName": "Cedric",
+      "noc": "FRA",
+      "result": "8.33",
+      "discipline": "60m Hurdles",
+      "gender": "M",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 5,
+      "lastName": "GRANGENOIS",
+      "firstName": "Jimmy",
+      "noc": "FRA",
+      "result": "8.47",
+      "discipline": "60m Hurdles",
+      "gender": "M",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 6,
+      "lastName": "CHOFFART",
+      "firstName": "Julien",
+      "noc": "FRA",
+      "result": "9.15",
+      "discipline": "60m Hurdles",
+      "gender": "M",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 1,
+      "lastName": "HESS",
+      "firstName": "Myriam",
+      "noc": "LUX",
+      "result": "24.81",
+      "discipline": "200m",
+      "gender": "W",
+      "round": "Heats combines",
       "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "heat": "S1"
+    },
+    {
+      "rank": 2,
+      "lastName": "FETAUD",
+      "firstName": "Amandine",
+      "noc": "FRA",
+      "result": "24.99",
+      "discipline": "200m",
+      "gender": "W",
+      "round": "Heats combines",
+      "year": 2004,
+      "heat": "S2"
+    },
+    {
+      "rank": 3,
+      "lastName": "LANDMANN",
+      "firstName": "Celine",
+      "noc": "FRA",
+      "result": "25.82",
+      "discipline": "200m",
+      "gender": "W",
+      "round": "Heats combines",
+      "year": 2004,
+      "heat": "S2"
+    },
+    {
+      "rank": 4,
+      "lastName": "FRISCH",
+      "firstName": "Sandra",
+      "noc": "LUX",
+      "result": "25.92",
+      "discipline": "200m",
+      "gender": "W",
+      "round": "Heats combines",
+      "year": 2004,
+      "heat": "S1"
+    },
+    {
+      "rank": 5,
+      "lastName": "KLEIN",
+      "firstName": "Laurence",
+      "noc": "FRA",
+      "result": "26.37",
+      "discipline": "200m",
+      "gender": "W",
+      "round": "Heats combines",
+      "year": 2004,
+      "heat": "S2"
+    },
+    {
+      "rank": 6,
+      "lastName": "LECOANET",
+      "firstName": "Violaine",
+      "noc": "FRA",
+      "result": "26.49",
+      "discipline": "200m",
+      "gender": "W",
+      "round": "Heats combines",
+      "year": 2004,
+      "heat": "S2"
+    },
+    {
+      "rank": 7,
+      "lastName": "LAVAL",
+      "firstName": "Elodie",
+      "noc": "FRA",
+      "result": "26.71",
+      "discipline": "200m",
+      "gender": "W",
+      "round": "Heats combines",
+      "year": 2004,
+      "heat": "S1"
+    },
+    {
+      "rank": 8,
+      "lastName": "SITTLER",
+      "firstName": "Marion",
+      "noc": "FRA",
+      "result": "27.24",
+      "discipline": "200m",
+      "gender": "W",
+      "round": "Heats combines",
+      "year": 2004,
+      "heat": "S1"
+    },
+    {
+      "rank": 1,
+      "lastName": "URBAS",
+      "firstName": "Marcine",
+      "noc": "POL",
+      "result": "20.97",
+      "discipline": "200m",
+      "gender": "M",
+      "round": "Heats combines",
+      "year": 2004,
+      "heat": "S1"
+    },
+    {
+      "rank": 2,
+      "lastName": "ABENZOAR",
+      "firstName": "Daniel",
+      "noc": "LUX",
+      "result": "21.27",
+      "discipline": "200m",
+      "gender": "M",
+      "round": "Heats combines",
+      "year": 2004,
+      "heat": "S1"
+    },
+    {
+      "rank": 3,
+      "lastName": "NOWAK",
+      "firstName": "Marcin",
+      "noc": "POL",
+      "result": "21.35",
+      "discipline": "200m",
+      "gender": "M",
+      "round": "Heats combines",
+      "year": 2004,
+      "heat": "S2"
+    },
+    {
+      "rank": 4,
+      "lastName": "BALERCAK",
+      "firstName": "Piotr",
+      "noc": "POL",
+      "result": "21.81",
+      "discipline": "200m",
+      "gender": "M",
+      "round": "Heats combines",
+      "year": 2004,
+      "heat": "S1"
+    },
+    {
+      "rank": 5,
+      "lastName": "DOMERG",
+      "firstName": "Michael",
+      "noc": "FRA",
+      "result": "21.85",
+      "discipline": "200m",
+      "gender": "M",
+      "round": "Heats combines",
+      "year": 2004,
+      "heat": "S1"
+    },
+    {
+      "rank": 6,
+      "lastName": "MAZZON",
+      "firstName": "David",
+      "noc": "FRA",
+      "result": "21.94",
+      "discipline": "200m",
+      "gender": "M",
+      "round": "Heats combines",
+      "year": 2004,
+      "heat": "S2"
+    },
+    {
+      "rank": 7,
+      "lastName": "ATTINA",
+      "firstName": "Sebastien",
+      "noc": "FRA",
+      "result": "22.26",
+      "discipline": "200m",
+      "gender": "M",
+      "round": "Heats combines",
+      "year": 2004,
+      "heat": "S2"
+    },
+    {
+      "rank": 8,
+      "lastName": "REUTER",
+      "firstName": "Jeff",
+      "noc": "LUX",
+      "result": "22.28",
+      "discipline": "200m",
+      "gender": "M",
+      "round": "Heats combines",
+      "year": 2004,
+      "heat": "S3"
+    },
+    {
+      "rank": 9,
+      "lastName": "FORTES",
+      "firstName": "Didier",
+      "noc": "FRA",
+      "result": "22.47",
+      "discipline": "200m",
+      "gender": "M",
+      "round": "Heats combines",
+      "year": 2004,
+      "heat": "S3"
+    },
+    {
+      "rank": 10,
+      "lastName": "MOTTEZ",
+      "firstName": "Yoann",
+      "noc": "FRA",
+      "result": "22.69",
+      "discipline": "200m",
+      "gender": "M",
+      "round": "Heats combines",
+      "year": 2004,
+      "heat": "S3"
+    },
+    {
+      "rank": 11,
+      "lastName": "OFFERLE",
+      "firstName": "Pierre-Edouard",
+      "noc": "FRA",
+      "result": "22.82",
+      "discipline": "200m",
+      "gender": "M",
+      "round": "Heats combines",
+      "year": 2004,
+      "heat": "S4"
+    },
+    {
+      "rank": 12,
+      "lastName": "HERTZOG",
+      "firstName": "Maxime",
+      "noc": "FRA",
+      "result": "22.84",
+      "discipline": "200m",
+      "gender": "M",
+      "round": "Heats combines",
+      "year": 2004,
+      "heat": "S4"
+    },
+    {
+      "rank": 13,
+      "lastName": "GAUB",
+      "firstName": "Nicolas",
+      "noc": "FRA",
+      "result": "23.01",
+      "discipline": "200m",
+      "gender": "M",
+      "round": "Heats combines",
+      "year": 2004,
+      "heat": "S2"
+    },
+    {
+      "rank": 14,
+      "lastName": "DILGER",
+      "firstName": "Steffen",
+      "noc": "GER",
+      "result": "23.04",
+      "discipline": "200m",
+      "gender": "M",
+      "round": "Heats combines",
+      "year": 2004,
+      "heat": "S3"
+    },
+    {
+      "rank": 15,
+      "lastName": "LABORDE",
+      "firstName": "Jean-Robert",
+      "noc": "FRA",
+      "result": "23.05",
+      "discipline": "200m",
+      "gender": "M",
+      "round": "Heats combines",
+      "year": 2004,
+      "heat": "S3"
+    },
+    {
+      "rank": 16,
+      "lastName": "LABORDE",
+      "firstName": "Jean-Francois",
+      "noc": "FRA",
+      "result": "23.30",
+      "discipline": "200m",
+      "gender": "M",
+      "round": "Heats combines",
+      "year": 2004,
+      "heat": "S4"
+    },
+    {
+      "rank": 17,
+      "lastName": "STEFFEN",
+      "firstName": "Jeff",
+      "noc": "LUX",
+      "result": "23.48",
+      "discipline": "200m",
+      "gender": "M",
+      "round": "Heats combines",
+      "year": 2004,
+      "heat": "S4"
+    },
+    {
+      "rank": 18,
+      "lastName": "SISTY",
+      "firstName": "Gerald",
+      "noc": "FRA",
+      "result": "23.59",
+      "discipline": "200m",
+      "gender": "M",
+      "round": "Heats combines",
+      "year": 2004,
+      "heat": "S4"
     },
     {
       "rank": 1,
@@ -2254,33 +2646,30 @@
       "result": "48.16",
       "discipline": "400m",
       "gender": "M",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "round": "Final A",
+      "year": 2004
     },
     {
       "rank": 2,
       "lastName": "MICHEL",
-      "firstName": "Sébastien",
+      "firstName": "Sebastien",
       "noc": "FRA",
       "result": "49.27",
       "discipline": "400m",
       "gender": "M",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "round": "Final A",
+      "year": 2004
     },
     {
       "rank": 3,
       "lastName": "RIERNY",
-      "firstName": "Gaël",
+      "firstName": "Gael",
       "noc": "FRA",
       "result": "50.42",
       "discipline": "400m",
       "gender": "M",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "round": "Final A",
+      "year": 2004
     },
     {
       "rank": 4,
@@ -2290,765 +2679,734 @@
       "result": "51.14",
       "discipline": "400m",
       "gender": "M",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "round": "Final A",
+      "year": 2004
+    },
+    {
+      "rank": 1,
+      "lastName": "NOTEBAERT",
+      "firstName": "Antony",
+      "noc": "FRA",
+      "result": "49.84",
+      "discipline": "400m",
+      "gender": "M",
+      "round": "Final B",
+      "year": 2004
+    },
+    {
+      "rank": 2,
+      "lastName": "BEFRECHEL",
+      "firstName": "Morgan",
+      "noc": "FRA",
+      "result": "50.67",
+      "discipline": "400m",
+      "gender": "M",
+      "round": "Final B",
+      "year": 2004
+    },
+    {
+      "rank": 3,
+      "lastName": "STEHLIN",
+      "firstName": "Guillaume",
+      "noc": "FRA",
+      "result": "51.00",
+      "discipline": "400m",
+      "gender": "M",
+      "round": "Final B",
+      "year": 2004
+    },
+    {
+      "rank": 4,
+      "lastName": "GORNIK",
+      "firstName": "Raphael",
+      "noc": "FRA",
+      "result": "51.92",
+      "discipline": "400m",
+      "gender": "M",
+      "round": "Final B",
+      "year": 2004
+    },
+    {
+      "rank": 5,
+      "lastName": "GAMEL",
+      "firstName": "Loic",
+      "noc": "FRA",
+      "result": "52.20",
+      "discipline": "400m",
+      "gender": "M",
+      "round": "Final B",
+      "year": 2004
     },
     {
       "rank": 1,
       "lastName": "VISSCHERS",
       "firstName": "Lotte",
       "noc": "NED",
-      "result": "2'04''81",
+      "result": "2:04.81",
       "discipline": "800m",
       "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "round": "",
+      "year": 2004
     },
     {
       "rank": 2,
       "lastName": "JONGMANS",
       "firstName": "Stella",
       "noc": "NED",
-      "result": "2'07''99",
+      "result": "2:07.99",
       "discipline": "800m",
       "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "round": "",
+      "year": 2004
     },
     {
       "rank": 3,
       "lastName": "SCHUURMAN",
       "firstName": "Femke",
       "noc": "NED",
-      "result": "2'08''30",
+      "result": "2:08.30",
       "discipline": "800m",
       "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "round": "",
+      "year": 2004
     },
     {
       "rank": 4,
       "lastName": "MURER",
       "firstName": "Eliane",
       "noc": "SUI",
-      "result": "2'08''51",
+      "result": "2:08.51",
       "discipline": "800m",
       "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "round": "",
+      "year": 2004
     },
     {
       "rank": 5,
       "lastName": "NOBILI",
       "firstName": "Martine",
       "noc": "LUX",
-      "result": "2'11''16",
+      "result": "2:11.16",
       "discipline": "800m",
       "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "round": "",
+      "year": 2004
     },
     {
       "rank": 6,
       "lastName": "RAFTAKI",
       "firstName": "Aggelika",
       "noc": "GRE",
-      "result": "2'11''62",
+      "result": "2:11.62",
       "discipline": "800m",
       "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "round": "",
+      "year": 2004
     },
     {
       "rank": 7,
       "lastName": "STERVINON",
       "firstName": "Caroline",
       "noc": "FRA",
-      "result": "2'28''31",
+      "result": "2:28.31",
       "discipline": "800m",
       "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "round": "",
+      "year": 2004
     },
     {
       "rank": 8,
       "lastName": "BELVAL",
       "firstName": "Emelie",
       "noc": "FRA",
-      "result": "2'28''95",
+      "result": "2:28.95",
       "discipline": "800m",
       "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "round": "",
+      "year": 2004
     },
     {
       "rank": 9,
       "lastName": "DEKEISTER",
       "firstName": "Jacqueline",
       "noc": "FRA",
-      "result": "2'35''80",
+      "result": "2:35.80",
       "discipline": "800m",
       "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 1,
-      "lastName": "DENIS",
-      "firstName": "Sébastien",
-      "noc": "FRA",
-      "result": "7.68",
-      "discipline": "60m",
-      "gender": "M",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 2,
-      "lastName": "HUDEC",
-      "firstName": "Léonard",
-      "noc": "AUT",
-      "result": "7.94",
-      "discipline": "60m",
-      "gender": "M",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 3,
-      "lastName": "GODART",
-      "firstName": "Claude",
-      "noc": "LUX",
-      "result": "8.13",
-      "discipline": "60m",
-      "gender": "M",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 4,
-      "lastName": "LAVANNE",
-      "firstName": "Cédric",
-      "noc": "FRA",
-      "result": "8.33",
-      "discipline": "60m",
-      "gender": "M",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 5,
-      "lastName": "GRANGENOIS",
-      "firstName": "Jimmy",
-      "noc": "FRA",
-      "result": "8.47",
-      "discipline": "60m",
-      "gender": "M",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 6,
-      "lastName": "CHOFFART",
-      "firstName": "Julien",
-      "noc": "FRA",
-      "result": "9.15",
-      "discipline": "60m",
-      "gender": "M",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 1,
-      "lastName": "BUJAK",
-      "firstName": "Joanna",
-      "noc": "FRA",
-      "result": "8.21",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 2,
-      "lastName": "MARTINCOVA",
-      "firstName": "Lucie",
-      "noc": "CZE",
-      "result": "8.24",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 3,
-      "lastName": "DECAUX",
-      "firstName": "Alice",
-      "noc": "FRA",
-      "result": "8.75",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 4,
-      "lastName": "FORTES",
-      "firstName": "Aurélie",
-      "noc": "FRA",
-      "result": "8.79",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 6,
-      "lastName": "REULAND",
-      "firstName": "Kim",
-      "noc": "LUX",
-      "result": "9.00",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 7,
-      "lastName": "FEDAU",
-      "firstName": "Amandine",
-      "noc": "FRA",
-      "result": "9.10",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 8,
-      "lastName": "LANDMANN",
-      "firstName": "Céline",
-      "noc": "FRA",
-      "result": "9.25",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 1,
-      "lastName": "HESS",
-      "firstName": "Myriam",
-      "noc": "LUX",
-      "result": "24.81",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 2,
-      "lastName": "FRISCH",
-      "firstName": "Sandra",
-      "noc": "LUX",
-      "result": "25.92",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 3,
-      "lastName": "LAVAL",
-      "firstName": "Elodie",
-      "noc": "FRA",
-      "result": "26.71",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 4,
-      "lastName": "SITTLER",
-      "firstName": "Marion",
-      "noc": "FRA",
-      "result": "27.24",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 1,
-      "lastName": "FETAUD",
-      "firstName": "Amandine",
-      "noc": "FRA",
-      "result": "24.99",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 2,
-      "lastName": "LANDMANN",
-      "firstName": "Céline",
-      "noc": "FRA",
-      "result": "25.82",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 3,
-      "lastName": "KLEIN",
-      "firstName": "Laurence",
-      "noc": "FRA",
-      "result": "26.37",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 4,
-      "lastName": "LECONANET",
-      "firstName": "Violaine",
-      "noc": "FRA",
-      "result": "26.49",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 1,
-      "lastName": "URBAS",
-      "firstName": "Marcine",
-      "noc": "POL",
-      "result": "20.97",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 2,
-      "lastName": "ABENZOAR",
-      "firstName": "Daniel",
-      "noc": "LUX",
-      "result": "21.27",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 3,
-      "lastName": "BALERCAK",
-      "firstName": "Piotr",
-      "noc": "POL",
-      "result": "21.81",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 4,
-      "lastName": "DOMERG",
-      "firstName": "Michael",
-      "noc": "FRA",
-      "result": "21.85",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 1,
-      "lastName": "NOWAK",
-      "firstName": "Marcin",
-      "noc": "POL",
-      "result": "21.35",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 2,
-      "lastName": "MAZZON",
-      "firstName": "David",
-      "noc": "FRA",
-      "result": "21.94",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 3,
-      "lastName": "ATTINA",
-      "firstName": "Sébastien",
-      "noc": "FRA",
-      "result": "22.26",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 4,
-      "lastName": "GAUB",
-      "firstName": "Nicolas",
-      "noc": "FRA",
-      "result": "23.01",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 1,
-      "lastName": "REUTER",
-      "firstName": "Jeff",
-      "noc": "LUX",
-      "result": "22.28",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 2,
-      "lastName": "FORTES",
-      "firstName": "Didier",
-      "noc": "FRA",
-      "result": "22.47",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 3,
-      "lastName": "MOTTEZ",
-      "firstName": "Yoann",
-      "noc": "FRA",
-      "result": "22.69",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 4,
-      "lastName": "DILGER",
-      "firstName": "Steffen",
-      "noc": "GER",
-      "result": "23.04",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 5,
-      "lastName": "LABORDE",
-      "firstName": "Jean-Robert",
-      "noc": "FRA",
-      "result": "23.05",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 1,
-      "lastName": "OFFERLE",
-      "firstName": "Pierre-Edouard",
-      "noc": "FRA",
-      "result": "22.82",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 2,
-      "lastName": "HERTZOG",
-      "firstName": "Maxime",
-      "noc": "FRA",
-      "result": "22.84",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 3,
-      "lastName": "LABORDE",
-      "firstName": "Jean-François",
-      "noc": "FRA",
-      "result": "23.30",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 4,
-      "lastName": "STEFFEN",
-      "firstName": "Jeff",
-      "noc": "LUX",
-      "result": "23.48",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
-    },
-    {
-      "rank": 5,
-      "lastName": "SISTY",
-      "firstName": "Gérald",
-      "noc": "FRA",
-      "result": "23.59",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "round": "",
+      "year": 2004
     },
     {
       "rank": 1,
       "lastName": "KIMUTAI",
       "firstName": "Sylas",
       "noc": "KEN",
-      "result": "2'21''12",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "result": "2:21.12",
+      "discipline": "1000m",
+      "gender": "M",
+      "round": "Final A",
+      "year": 2004
     },
     {
       "rank": 2,
       "lastName": "TOO",
       "firstName": "Mike",
       "noc": "KEN",
-      "result": "2'21''38",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "result": "2:21.38",
+      "discipline": "1000m",
+      "gender": "M",
+      "round": "Final A",
+      "year": 2004
     },
     {
       "rank": 3,
       "lastName": "DUBE",
       "firstName": "Glody",
       "noc": "BOT",
-      "result": "2'21''70",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "result": "2:21.70",
+      "discipline": "1000m",
+      "gender": "M",
+      "round": "Final A",
+      "year": 2004
     },
     {
       "rank": 4,
       "lastName": "FIEGEN",
       "firstName": "David",
       "noc": "LUX",
-      "result": "2'22''12",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "result": "2:22.12",
+      "discipline": "1000m",
+      "gender": "M",
+      "round": "Final A",
+      "year": 2004
     },
     {
       "rank": 5,
       "lastName": "LOMBA",
       "firstName": "Jimmy",
       "noc": "FRA",
-      "result": "2'22''22",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "result": "2:22.22",
+      "discipline": "1000m",
+      "gender": "M",
+      "round": "Final A",
+      "year": 2004
     },
     {
       "rank": 6,
       "lastName": "LOESCHNER",
       "firstName": "Michiel",
       "noc": "NED",
-      "result": "2'23''23",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "result": "2:23.23",
+      "discipline": "1000m",
+      "gender": "M",
+      "round": "Final A",
+      "year": 2004
     },
     {
       "rank": 7,
       "lastName": "MERDJA",
       "firstName": "Karim",
       "noc": "FRA",
-      "result": "2'23''26",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "result": "2:23.26",
+      "discipline": "1000m",
+      "gender": "M",
+      "round": "Final A",
+      "year": 2004
     },
     {
       "rank": 8,
       "lastName": "OWOR",
       "firstName": "Paskar",
       "noc": "UGA",
-      "result": "2'24''26",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "result": "2:24.26",
+      "discipline": "1000m",
+      "gender": "M",
+      "round": "Final A",
+      "year": 2004
     },
     {
       "rank": 9,
       "lastName": "KUEHN",
       "firstName": "Thorsten",
       "noc": "GER",
-      "result": "2'24''50",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "result": "2:24.50",
+      "discipline": "1000m",
+      "gender": "M",
+      "round": "Final A",
+      "year": 2004
     },
     {
       "rank": 1,
       "lastName": "EEFTING",
       "firstName": "Bas",
       "noc": "NED",
-      "result": "2'27''10",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "result": "2:27.10",
+      "discipline": "1000m",
+      "gender": "M",
+      "round": "Final B",
+      "year": 2004
     },
     {
       "rank": 2,
       "lastName": "WEBER",
       "firstName": "Dominique",
       "noc": "SUI",
-      "result": "2'28''58",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "result": "2:28.58",
+      "discipline": "1000m",
+      "gender": "M",
+      "round": "Final B",
+      "year": 2004
     },
     {
       "rank": 3,
       "lastName": "HOEVINK",
       "firstName": "Arno",
       "noc": "NED",
-      "result": "2'30''02",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "result": "2:30.02",
+      "discipline": "1000m",
+      "gender": "M",
+      "round": "Final B",
+      "year": 2004
     },
     {
       "rank": 4,
-      "lastName": "VAN",
-      "firstName": "DE WALL Michel",
+      "lastName": "VAN DE WALL",
+      "firstName": "Michel",
       "noc": "NED",
-      "result": "2'31''06",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "result": "2:31.06",
+      "discipline": "1000m",
+      "gender": "M",
+      "round": "Final B",
+      "year": 2004
     },
     {
       "rank": 5,
       "lastName": "ENJOLRAS",
       "firstName": "Frank",
       "noc": "FRA",
-      "result": "2'31''66",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "result": "2:31.66",
+      "discipline": "1000m",
+      "gender": "M",
+      "round": "Final B",
+      "year": 2004
     },
     {
       "rank": 6,
       "lastName": "KAYSER",
       "firstName": "Roland",
       "noc": "LUX",
-      "result": "2'46''07",
-      "discipline": "60m",
+      "result": "2:46.07",
+      "discipline": "1000m",
+      "gender": "M",
+      "round": "Final B",
+      "year": 2004
+    },
+    {
+      "rank": 1,
+      "lastName": "PECHSTEIN",
+      "firstName": "Petra",
+      "noc": "SUI",
+      "result": "3.85m",
+      "discipline": "Pole Vault",
       "gender": "W",
-      "year": 2004,
-      "date": "2004-01-24",
-      "notes": ""
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 2,
+      "lastName": "LAMIRAL",
+      "firstName": "Delphine",
+      "noc": "FRA",
+      "result": "3.65m",
+      "discipline": "Pole Vault",
+      "gender": "W",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 3,
+      "lastName": "SIMON",
+      "firstName": "Camille",
+      "noc": "FRA",
+      "result": "3.55m",
+      "discipline": "Pole Vault",
+      "gender": "W",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 4,
+      "lastName": "SCHEER",
+      "firstName": "Joelle",
+      "noc": "LUX",
+      "result": "3.45m",
+      "discipline": "Pole Vault",
+      "gender": "W",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 5,
+      "lastName": "NIEDERER",
+      "firstName": "Iris",
+      "noc": "SUI",
+      "result": "3.35m",
+      "discipline": "Pole Vault",
+      "gender": "W",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 6,
+      "lastName": "VIEILLEVOYE",
+      "firstName": "Stephanie",
+      "noc": "LUX",
+      "result": "3.25m",
+      "discipline": "Pole Vault",
+      "gender": "W",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 1,
+      "lastName": "BONCOEUR",
+      "firstName": "Eugenie",
+      "noc": "FRA",
+      "result": "5.99m",
+      "discipline": "Long Jump",
+      "gender": "W",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 2,
+      "lastName": "BICIKOVA",
+      "firstName": "Suzana",
+      "noc": "CZE",
+      "result": "5.87m",
+      "discipline": "Long Jump",
+      "gender": "W",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 3,
+      "lastName": "BLAISE",
+      "firstName": "Anne-Cecile",
+      "noc": "FRA",
+      "result": "5.66m",
+      "discipline": "Long Jump",
+      "gender": "W",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 4,
+      "lastName": "THELEN",
+      "firstName": "Sophie",
+      "noc": "BEL",
+      "result": "5.63m",
+      "discipline": "Long Jump",
+      "gender": "W",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 5,
+      "lastName": "FORTES",
+      "firstName": "Aurelie",
+      "noc": "FRA",
+      "result": "5.49m",
+      "discipline": "Long Jump",
+      "gender": "W",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 6,
+      "lastName": "GIERES",
+      "firstName": "Nathalie",
+      "noc": "LUX",
+      "result": "5.44m",
+      "discipline": "Long Jump",
+      "gender": "W",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 7,
+      "lastName": "BALDELLI",
+      "firstName": "Steffi",
+      "noc": "LUX",
+      "result": "5.21m",
+      "discipline": "Long Jump",
+      "gender": "W",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 8,
+      "lastName": "HERR",
+      "firstName": "Benedicte",
+      "noc": "LUX",
+      "result": "5.02m",
+      "discipline": "Long Jump",
+      "gender": "W",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 9,
+      "lastName": "FEUERSTEIN",
+      "firstName": "Carole",
+      "noc": "FRA",
+      "result": "4.45m",
+      "discipline": "Long Jump",
+      "gender": "W",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 1,
+      "lastName": "KAEHLER",
+      "firstName": "Birgit",
+      "noc": "GER",
+      "result": "1.85m",
+      "discipline": "High Jump",
+      "gender": "W",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 2,
+      "lastName": "JANKU",
+      "firstName": "Ingard",
+      "noc": "CZE",
+      "result": "1.82m",
+      "discipline": "High Jump",
+      "gender": "W",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 3,
+      "lastName": "JAMBOR",
+      "firstName": "Anett",
+      "noc": "GER",
+      "result": "1.73m",
+      "discipline": "High Jump",
+      "gender": "W",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 4,
+      "lastName": "IMAN",
+      "firstName": "Hafida",
+      "noc": "GER",
+      "result": "1.70m",
+      "discipline": "High Jump",
+      "gender": "W",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 5,
+      "lastName": "KIEFFER",
+      "firstName": "Carole",
+      "noc": "LUX",
+      "result": "1.67m",
+      "discipline": "High Jump",
+      "gender": "W",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 6,
+      "lastName": "KUFFER",
+      "firstName": "Liz",
+      "noc": "LUX",
+      "result": "1.58m",
+      "discipline": "High Jump",
+      "gender": "W",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 7,
+      "lastName": "KIEFFER",
+      "firstName": "Tammy",
+      "noc": "LUX",
+      "result": "1.55m",
+      "discipline": "High Jump",
+      "gender": "W",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 8,
+      "lastName": "TAHRAHOUI",
+      "firstName": "Claudine",
+      "noc": "FRA",
+      "result": "1.55m",
+      "discipline": "High Jump",
+      "gender": "W",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 1,
+      "lastName": "FREY",
+      "firstName": "Oliver",
+      "noc": "SUI",
+      "result": "5.00m",
+      "discipline": "Pole Vault",
+      "gender": "M",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 2,
+      "lastName": "TROMP",
+      "firstName": "Xavier",
+      "noc": "FRA",
+      "result": "4.80m",
+      "discipline": "Pole Vault",
+      "gender": "M",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 3,
+      "lastName": "EL-IDRISSI",
+      "firstName": "Dany",
+      "noc": "SUI",
+      "result": "4.70m",
+      "discipline": "Pole Vault",
+      "gender": "M",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 3,
+      "lastName": "TACCONI",
+      "firstName": "Renato",
+      "noc": "SUI",
+      "result": "4.70m",
+      "discipline": "Pole Vault",
+      "gender": "M",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 5,
+      "lastName": "HENRIOT",
+      "firstName": "Jean-Baptiste",
+      "noc": "FRA",
+      "result": "4.60m",
+      "discipline": "Pole Vault",
+      "gender": "M",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 6,
+      "lastName": "CHALLEMEL",
+      "firstName": "Clement",
+      "noc": "FRA",
+      "result": "4.60m",
+      "discipline": "Pole Vault",
+      "gender": "M",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 7,
+      "lastName": "CHOFFARD",
+      "firstName": "Julien",
+      "noc": "FRA",
+      "result": "4.40m",
+      "discipline": "Pole Vault",
+      "gender": "M",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 8,
+      "lastName": "PATER",
+      "firstName": "Laurent",
+      "noc": "LUX",
+      "result": "4.40m",
+      "discipline": "Pole Vault",
+      "gender": "M",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 9,
+      "lastName": "GIRA",
+      "firstName": "Mike",
+      "noc": "LUX",
+      "result": "4.20m",
+      "discipline": "Pole Vault",
+      "gender": "M",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 1,
+      "lastName": "MIKHALKEVITSCH",
+      "firstName": "Andrei",
+      "noc": "BLR",
+      "result": "7.69m",
+      "discipline": "Long Jump",
+      "gender": "M",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 2,
+      "lastName": "SYLLA",
+      "firstName": "Mamadou",
+      "noc": "FRA",
+      "result": "7.25m",
+      "discipline": "Long Jump",
+      "gender": "M",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 3,
+      "lastName": "HANSEN",
+      "firstName": "Patrick",
+      "noc": "LUX",
+      "result": "7.02m",
+      "discipline": "Long Jump",
+      "gender": "M",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 4,
+      "lastName": "TRIERWEILER",
+      "firstName": "Charel",
+      "noc": "LUX",
+      "result": "6.80m",
+      "discipline": "Long Jump",
+      "gender": "M",
+      "round": "",
+      "year": 2004
+    },
+    {
+      "rank": 5,
+      "lastName": "AYI",
+      "firstName": "Nii",
+      "noc": "FRA",
+      "result": "6.77m",
+      "discipline": "Long Jump",
+      "gender": "M",
+      "round": "",
+      "year": 2004
     }
   ],
   "2005": [
@@ -24975,7 +25333,7 @@
       "noc": "ALG",
       "result": "3:41.75",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -24988,7 +25346,7 @@
       "noc": "CZE",
       "result": "3:41.96",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25001,7 +25359,7 @@
       "noc": "BEL",
       "result": "3:42.08",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25014,7 +25372,7 @@
       "noc": "LTU",
       "result": "3:42.83",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25027,7 +25385,7 @@
       "noc": "POL",
       "result": "3:43.19",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25040,7 +25398,7 @@
       "noc": "LUX",
       "result": "3:43.27",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25053,7 +25411,7 @@
       "noc": "MAR",
       "result": "3:44.51",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25066,7 +25424,7 @@
       "noc": "POR",
       "result": "3:45.86",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25079,7 +25437,7 @@
       "noc": "ESP",
       "result": "3:47.81",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25092,7 +25450,7 @@
       "noc": "FRA",
       "result": "3:48.85",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25105,7 +25463,7 @@
       "noc": "LUX",
       "result": "3:49.32",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25118,7 +25476,7 @@
       "noc": "NED",
       "result": "3:49.39",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25131,7 +25489,7 @@
       "noc": "BEL",
       "result": "3:50.06",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25144,7 +25502,7 @@
       "noc": "UAE",
       "result": "3:57.68",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25157,7 +25515,7 @@
       "noc": "LUX",
       "result": "4:17.65",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25170,7 +25528,7 @@
       "noc": "LUX",
       "result": "4:17.78",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25183,7 +25541,7 @@
       "noc": "FRA",
       "result": "4:18.47",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25196,7 +25554,7 @@
       "noc": "ITA",
       "result": "4:18.89",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25209,7 +25567,7 @@
       "noc": "AUT",
       "result": "4:19.91",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25222,7 +25580,7 @@
       "noc": "ITA",
       "result": "4:20.27",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25235,7 +25593,7 @@
       "noc": "ITA",
       "result": "4:21.65",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25248,7 +25606,7 @@
       "noc": "FRA",
       "result": "4:22.35",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25261,7 +25619,7 @@
       "noc": "FRA",
       "result": "4:22.89",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25274,7 +25632,7 @@
       "noc": "FRA",
       "result": "4:34.47",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25287,7 +25645,7 @@
       "noc": "NED",
       "result": "47.17",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25300,7 +25658,7 @@
       "noc": "LAT",
       "result": "47.77",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25313,7 +25671,7 @@
       "noc": "BEL",
       "result": "48.12",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25326,7 +25684,7 @@
       "noc": "LUX",
       "result": "48.64",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25339,7 +25697,7 @@
       "noc": "LAT",
       "result": "49.24",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25352,7 +25710,7 @@
       "noc": "GER",
       "result": "52.97",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25365,7 +25723,7 @@
       "noc": "LUX",
       "result": "2:20.72",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25378,7 +25736,7 @@
       "noc": "GER",
       "result": "53.19",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25391,7 +25749,7 @@
       "noc": "LUX",
       "result": "2:53.41",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25404,7 +25762,7 @@
       "noc": "GER",
       "result": "54.81",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25417,7 +25775,7 @@
       "noc": "GER",
       "result": "2:57.30",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25430,7 +25788,7 @@
       "noc": "FRA",
       "result": "54.92",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25443,7 +25801,7 @@
       "noc": "LUX",
       "result": "2:57.59",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25456,7 +25814,7 @@
       "noc": "FRA",
       "result": "57.39",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25469,7 +25827,7 @@
       "noc": "LUX",
       "result": "3:00.54",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25482,7 +25840,7 @@
       "noc": "RSA",
       "result": "5.83",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25495,7 +25853,7 @@
       "noc": "GBR",
       "result": "5.93",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25508,7 +25866,7 @@
       "noc": "FRA",
       "result": "5.95",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25521,7 +25879,7 @@
       "noc": "BEL",
       "result": "5.98",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25534,7 +25892,7 @@
       "noc": "GER",
       "result": "6.00",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25547,7 +25905,7 @@
       "noc": "FRA",
       "result": "6.01",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25560,7 +25918,7 @@
       "noc": "BEL",
       "result": "6.05",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25573,7 +25931,7 @@
       "noc": "BEL",
       "result": "6.06",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25586,7 +25944,7 @@
       "noc": "LUX",
       "result": "6.37",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25599,7 +25957,7 @@
       "noc": "RSA",
       "result": "6.73",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25612,7 +25970,7 @@
       "noc": "GBR",
       "result": "6.88",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25625,7 +25983,7 @@
       "noc": "FRA",
       "result": "6.90",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25638,7 +25996,7 @@
       "noc": "BEL",
       "result": "6.93",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25651,7 +26009,7 @@
       "noc": "GER",
       "result": "6.94",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25664,7 +26022,7 @@
       "noc": "FRA",
       "result": "6.97",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25677,7 +26035,7 @@
       "noc": "BEL",
       "result": "7.00",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25690,7 +26048,7 @@
       "noc": "BEL",
       "result": "7.01",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25703,7 +26061,7 @@
       "noc": "LUX",
       "result": "7.39",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25716,7 +26074,7 @@
       "noc": "FRA",
       "result": "8.17",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25729,7 +26087,7 @@
       "noc": "GBR",
       "result": "7.42",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25742,7 +26100,7 @@
       "noc": "NED",
       "result": "8.49",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25755,7 +26113,7 @@
       "noc": "NED",
       "result": "7.44",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25768,7 +26126,7 @@
       "noc": "LUX",
       "result": "8.73",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25781,7 +26139,7 @@
       "noc": "POL",
       "result": "7.46",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25794,7 +26152,7 @@
       "noc": "CZE",
       "result": "8.80",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25807,7 +26165,7 @@
       "noc": "FRA",
       "result": "7.52",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25820,7 +26178,7 @@
       "noc": "BEL",
       "result": "8.88",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25833,7 +26191,7 @@
       "noc": "LUX",
       "result": "7.58",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25846,7 +26204,7 @@
       "noc": "BEL",
       "result": "8.89",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25859,7 +26217,7 @@
       "noc": "BEL",
       "result": "7.65",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25872,7 +26230,7 @@
       "noc": "FRA",
       "result": "8.99",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25885,7 +26243,7 @@
       "noc": "BEL",
       "result": "7.67",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25898,7 +26256,7 @@
       "noc": "LUX",
       "result": "9.44",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -25911,7 +26269,7 @@
       "noc": "FRA",
       "result": "1:50.44",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25924,7 +26282,7 @@
       "noc": "FRA",
       "result": "1:50.47",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25937,7 +26295,7 @@
       "noc": "NED",
       "result": "1:51.50",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25950,7 +26308,7 @@
       "noc": "NED",
       "result": "1:51.53",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25963,7 +26321,7 @@
       "noc": "BEL",
       "result": "1:51.72",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25976,7 +26334,7 @@
       "noc": "LUX",
       "result": "1:52.93",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -25989,7 +26347,7 @@
       "noc": "ITA",
       "result": "1:54.57",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "M",
       "year": 2019,
       "date": "2019-02-02"
@@ -26002,7 +26360,7 @@
       "noc": "CZE",
       "result": "2:10.02",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -26015,7 +26373,7 @@
       "noc": "LUX",
       "result": "3:08.23",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -26028,7 +26386,7 @@
       "noc": "LUX",
       "result": "2:10.64",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -26041,7 +26399,7 @@
       "noc": "LUX",
       "result": "3:08.25",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -26054,7 +26412,7 @@
       "noc": "LUX",
       "result": "3:10.21",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -26067,7 +26425,7 @@
       "noc": "BEL",
       "result": "3:21.21",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -26080,7 +26438,7 @@
       "noc": "LUX",
       "result": "3:32.56",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -26093,7 +26451,7 @@
       "noc": "BEL",
       "result": "3:39.21",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2019,
       "date": "2019-02-02"
@@ -26108,7 +26466,7 @@
       "noc": "KEN",
       "result": "3:42.57",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26121,7 +26479,7 @@
       "noc": "BRA",
       "result": "3:43.02",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26134,7 +26492,7 @@
       "noc": "POL",
       "result": "3:43.47",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26147,7 +26505,7 @@
       "noc": "NZL",
       "result": "3:44.20",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26160,7 +26518,7 @@
       "noc": "QAT",
       "result": "3:44.85",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26173,7 +26531,7 @@
       "noc": "ESP",
       "result": "3:45.70",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26186,7 +26544,7 @@
       "noc": "QAT",
       "result": "3:47.30",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26199,7 +26557,7 @@
       "noc": "CZE",
       "result": "3:47.88",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26212,7 +26570,7 @@
       "noc": "FRA",
       "result": "3:47.96",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26225,7 +26583,7 @@
       "noc": "LUX",
       "result": "3:48.83",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26238,7 +26596,7 @@
       "noc": "BEL",
       "result": "3:49.86",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26251,7 +26609,7 @@
       "noc": "BEL",
       "result": "3:50.26",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26264,7 +26622,7 @@
       "noc": "BEL",
       "result": "3:50.93",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26277,7 +26635,7 @@
       "noc": "GER",
       "result": "3:51.20",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26290,7 +26648,7 @@
       "noc": "CZE",
       "result": "3:51.44",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26303,7 +26661,7 @@
       "noc": "MAR",
       "result": "3:53.36",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26316,7 +26674,7 @@
       "noc": "POL",
       "result": "3:54.12",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26329,7 +26687,7 @@
       "noc": "ALG",
       "result": "3:57.09",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26342,7 +26700,7 @@
       "noc": "BEL",
       "result": "3:58.43",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26355,7 +26713,7 @@
       "noc": "LUX",
       "result": "4:01.35",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26368,7 +26726,7 @@
       "noc": "LUX",
       "result": "4:01.43",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26381,7 +26739,7 @@
       "noc": "ITA",
       "result": "4:18.27",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -26394,7 +26752,7 @@
       "noc": "FRA",
       "result": "4:19.14",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -26407,7 +26765,7 @@
       "noc": "LUX",
       "result": "4:19.35",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -26420,7 +26778,7 @@
       "noc": "BEL",
       "result": "4:20.97",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -26433,7 +26791,7 @@
       "noc": "ITA",
       "result": "4:23.73",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -26446,7 +26804,7 @@
       "noc": "ITA",
       "result": "4:23.96",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -26459,7 +26817,7 @@
       "noc": "FRA",
       "result": "4:29.65",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -26472,7 +26830,7 @@
       "noc": "FRA",
       "result": "4:32.61",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -26485,7 +26843,7 @@
       "noc": "LUX",
       "result": "4:37.37",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -26498,7 +26856,7 @@
       "noc": "NED",
       "result": "47.14",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26511,7 +26869,7 @@
       "noc": "BEL",
       "result": "48.22",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26524,7 +26882,7 @@
       "noc": "POR",
       "result": "48.30",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26537,7 +26895,7 @@
       "noc": "SEN",
       "result": "48.32",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26550,7 +26908,7 @@
       "noc": "FRA",
       "result": "48.46",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26563,7 +26921,7 @@
       "noc": "GER",
       "result": "48.71",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26576,7 +26934,7 @@
       "noc": "BEL",
       "result": "48.85",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26589,7 +26947,7 @@
       "noc": "FRA",
       "result": "49.29",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26602,7 +26960,7 @@
       "noc": "FRA",
       "result": "49.47",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26615,7 +26973,7 @@
       "noc": "LUX",
       "result": "49.48",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26628,7 +26986,7 @@
       "noc": "LUX",
       "result": "50.03",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26641,7 +26999,7 @@
       "noc": "LUX",
       "result": "50.97",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26654,7 +27012,7 @@
       "noc": "TOG",
       "result": "5.90",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26667,7 +27025,7 @@
       "noc": "RSA",
       "result": "5.82",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26680,7 +27038,7 @@
       "noc": "RSA",
       "result": "6.00",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26693,7 +27051,7 @@
       "noc": "POR",
       "result": "5.88",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26706,7 +27064,7 @@
       "noc": "GER",
       "result": "6.00",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26719,7 +27077,7 @@
       "noc": "GER",
       "result": "6.00",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26732,7 +27090,7 @@
       "noc": "LUX",
       "result": "6.12",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26745,7 +27103,7 @@
       "noc": "GER",
       "result": "6.01",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26758,7 +27116,7 @@
       "noc": "GER",
       "result": "6.18",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26771,7 +27129,7 @@
       "noc": "LUX",
       "result": "6.06",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26784,7 +27142,7 @@
       "noc": "LUX",
       "result": "6.31",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26797,7 +27155,7 @@
       "noc": "LUX",
       "result": "6.20",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26810,7 +27168,7 @@
       "noc": "LUX",
       "result": "6.33",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26823,7 +27181,7 @@
       "noc": "LUX",
       "result": "6.38",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26836,7 +27194,7 @@
       "noc": "LUX",
       "result": "6.50",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -26849,7 +27207,7 @@
       "noc": "POL",
       "result": "6.34",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -26862,7 +27220,7 @@
       "noc": "ROU",
       "result": "6.63",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -26875,7 +27233,7 @@
       "noc": "BEL",
       "result": "6.37",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -26888,7 +27246,7 @@
       "noc": "BEL",
       "result": "6.75",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -26901,7 +27259,7 @@
       "noc": "LUX",
       "result": "6.63",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -26914,7 +27272,7 @@
       "noc": "BEL",
       "result": "6.83",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -26927,7 +27285,7 @@
       "noc": "LUX",
       "result": "6.70",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -26940,7 +27298,7 @@
       "noc": "BEL",
       "result": "6.85",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -26953,7 +27311,7 @@
       "noc": "LUX",
       "result": "7.09",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -26966,7 +27324,7 @@
       "noc": "LUX",
       "result": "7.13",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -26979,7 +27337,7 @@
       "noc": "LUX",
       "result": "7.20",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -26992,7 +27350,7 @@
       "noc": "LUX",
       "result": "7.17",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -27005,7 +27363,7 @@
       "noc": "TOG",
       "result": "6.86",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -27018,7 +27376,7 @@
       "noc": "RSA",
       "result": "6.75",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -27031,7 +27389,7 @@
       "noc": "NED",
       "result": "7.95",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -27044,7 +27402,7 @@
       "noc": "RSA",
       "result": "6.95",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -27057,7 +27415,7 @@
       "noc": "POR",
       "result": "6.80",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -27070,7 +27428,7 @@
       "noc": "BEL",
       "result": "8.08",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -27083,7 +27441,7 @@
       "noc": "GER",
       "result": "6.95",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -27096,7 +27454,7 @@
       "noc": "GER",
       "result": "6.96",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -27109,7 +27467,7 @@
       "noc": "GER",
       "result": "6.96",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -27122,7 +27480,7 @@
       "noc": "BEL",
       "result": "8.15",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -27135,7 +27493,7 @@
       "noc": "LUX",
       "result": "7.12",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -27148,7 +27506,7 @@
       "noc": "NED",
       "result": "8.41",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -27161,7 +27519,7 @@
       "noc": "GER",
       "result": "7.16",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -27174,7 +27532,7 @@
       "noc": "LUX",
       "result": "7.03",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -27187,7 +27545,7 @@
       "noc": "FRA",
       "result": "8.53",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -27200,7 +27558,7 @@
       "noc": "LUX",
       "result": "7.32",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -27213,7 +27571,7 @@
       "noc": "LUX",
       "result": "7.19",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -27226,7 +27584,7 @@
       "noc": "GER",
       "result": "8.75",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -27239,7 +27597,7 @@
       "noc": "LUX",
       "result": "7.35",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -27252,7 +27610,7 @@
       "noc": "LUX",
       "result": "7.39",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -27265,7 +27623,7 @@
       "noc": "LUX",
       "result": "8.90",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2020,
       "date": "2020-02-01"
@@ -27278,7 +27636,7 @@
       "noc": "POL",
       "result": "7.35",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -27291,7 +27649,7 @@
       "noc": "ROU",
       "result": "7.73",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -27304,7 +27662,7 @@
       "noc": "BEL",
       "result": "7.42",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -27317,7 +27675,7 @@
       "noc": "BEL",
       "result": "7.86",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -27330,7 +27688,7 @@
       "noc": "LUX",
       "result": "7.70",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -27343,7 +27701,7 @@
       "noc": "BEL",
       "result": "7.95",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -27356,7 +27714,7 @@
       "noc": "LUX",
       "result": "7.79",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -27369,7 +27727,7 @@
       "noc": "BEL",
       "result": "7.96",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -27382,7 +27740,7 @@
       "noc": "LUX",
       "result": "8.30",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -27395,7 +27753,7 @@
       "noc": "LUX",
       "result": "8.32",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -27408,7 +27766,7 @@
       "noc": "LUX",
       "result": "8.42",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -27421,7 +27779,7 @@
       "noc": "LUX",
       "result": "8.36",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -27434,7 +27792,7 @@
       "noc": "IRL",
       "result": "2:05.62",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -27447,7 +27805,7 @@
       "noc": "GER",
       "result": "04",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -27460,7 +27818,7 @@
       "noc": "GER",
       "result": "2:06.71",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -27473,7 +27831,7 @@
       "noc": "MAR",
       "result": "2:07.96",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -27486,7 +27844,7 @@
       "noc": "FRA",
       "result": "2:10.20",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -27499,7 +27857,7 @@
       "noc": "LUX",
       "result": "2:10.33",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -27512,7 +27870,7 @@
       "noc": "MAR",
       "result": "2:10.90",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -27525,7 +27883,7 @@
       "noc": "FRA",
       "result": "2:13.04",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -27538,7 +27896,7 @@
       "noc": "LUX",
       "result": "2:14.90",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -27551,7 +27909,7 @@
       "noc": "GER",
       "result": "2:15.99",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2020,
       "date": "2020-02-01"
@@ -27761,7 +28119,7 @@
       "noc": "LUX",
       "result": "3:38.65",
       "notes": "SB",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2021,
       "date": "2021-02-13"
@@ -27774,7 +28132,7 @@
       "noc": "KEN",
       "result": "3:38.91",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2021,
       "date": "2021-02-13"
@@ -27787,7 +28145,7 @@
       "noc": "BEL",
       "result": "3:40.61",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2021,
       "date": "2021-02-13"
@@ -27800,7 +28158,7 @@
       "noc": "GER",
       "result": "3:40.88",
       "notes": "SB",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2021,
       "date": "2021-02-13"
@@ -27813,7 +28171,7 @@
       "noc": "POL",
       "result": "3:41.20",
       "notes": "SB",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2021,
       "date": "2021-02-13"
@@ -27826,7 +28184,7 @@
       "noc": "DEN",
       "result": "3:41.34",
       "notes": "PB",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2021,
       "date": "2021-02-13"
@@ -27839,7 +28197,7 @@
       "noc": "NED",
       "result": "3:42.22",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2021,
       "date": "2021-02-13"
@@ -27852,7 +28210,7 @@
       "noc": "AUS",
       "result": "3:43.12",
       "notes": "SB",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2021,
       "date": "2021-02-13"
@@ -27865,7 +28223,7 @@
       "noc": "LUX",
       "result": "3:43.89",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2021,
       "date": "2021-02-13"
@@ -27878,7 +28236,7 @@
       "noc": "KEN",
       "result": "4:09.40",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -27891,7 +28249,7 @@
       "noc": "KEN",
       "result": "4:09.46",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -27904,7 +28262,7 @@
       "noc": "POL",
       "result": "4:11.55",
       "notes": "SB",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -27917,7 +28275,7 @@
       "noc": "GER",
       "result": "4:11.68",
       "notes": "SB",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -27930,7 +28288,7 @@
       "noc": "FRA",
       "result": "4:14.17",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -27943,7 +28301,7 @@
       "noc": "LUX",
       "result": "4:14.86",
       "notes": "PB",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -27956,7 +28314,7 @@
       "noc": "BEL",
       "result": "4:15.44",
       "notes": "SB",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -27969,7 +28327,7 @@
       "noc": "ITA",
       "result": "4:18.02",
       "notes": "SB",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -27982,7 +28340,7 @@
       "noc": "ITA",
       "result": "4:25.64",
       "notes": "SB",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -27995,7 +28353,7 @@
       "noc": "GER",
       "result": "4:32.13",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -28008,7 +28366,7 @@
       "noc": "GER",
       "result": "6.34",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -28021,7 +28379,7 @@
       "noc": "GER",
       "result": "6.42",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -28034,7 +28392,7 @@
       "noc": "FRA",
       "result": "6.49",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -28047,7 +28405,7 @@
       "noc": "LUX",
       "result": "6.70",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -28060,7 +28418,7 @@
       "noc": "GER",
       "result": "6.51",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -28073,7 +28431,7 @@
       "noc": "GER",
       "result": "6.77",
       "notes": "",
-      "discipline": "50",
+      "discipline": "50m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -28086,7 +28444,7 @@
       "noc": "ITA",
       "result": "7.67",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2021,
       "date": "2021-02-13"
@@ -28099,7 +28457,7 @@
       "noc": "GBR",
       "result": "7.57",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2021,
       "date": "2021-02-13"
@@ -28112,7 +28470,7 @@
       "noc": "NED",
       "result": "7.79",
       "notes": "SB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2021,
       "date": "2021-02-13"
@@ -28125,7 +28483,7 @@
       "noc": "NOR",
       "result": "7.73",
       "notes": "SB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2021,
       "date": "2021-02-13"
@@ -28138,7 +28496,7 @@
       "noc": "GER",
       "result": "7.90",
       "notes": "SB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2021,
       "date": "2021-02-13"
@@ -28151,7 +28509,7 @@
       "noc": "ITA",
       "result": "7.86",
       "notes": "SB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2021,
       "date": "2021-02-13"
@@ -28164,7 +28522,7 @@
       "noc": "GER",
       "result": "8.08",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2021,
       "date": "2021-02-13"
@@ -28177,7 +28535,7 @@
       "noc": "GER",
       "result": "7.33",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -28190,7 +28548,7 @@
       "noc": "GER",
       "result": "8.26",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -28203,7 +28561,7 @@
       "noc": "GER",
       "result": "7.42",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -28216,7 +28574,7 @@
       "noc": "FRA",
       "result": "8.29",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -28229,7 +28587,7 @@
       "noc": "FRA",
       "result": "7.54",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -28242,7 +28600,7 @@
       "noc": "GER",
       "result": "8.35",
       "notes": "SB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -28255,7 +28613,7 @@
       "noc": "FRA",
       "result": "8.41",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -28268,7 +28626,7 @@
       "noc": "LUX",
       "result": "7.78",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -28281,7 +28639,7 @@
       "noc": "GER",
       "result": "7.59",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -28294,7 +28652,7 @@
       "noc": "FRA",
       "result": "8.52",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -28307,7 +28665,7 @@
       "noc": "LUX",
       "result": "8.49",
       "notes": "PB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -28320,7 +28678,7 @@
       "noc": "GER",
       "result": "7.84",
       "notes": "PB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -28333,7 +28691,7 @@
       "noc": "GER",
       "result": "8.62",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -28346,7 +28704,7 @@
       "noc": "KEN",
       "result": "1:46.83",
       "notes": "SB",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "M",
       "year": 2021,
       "date": "2021-02-13"
@@ -28359,7 +28717,7 @@
       "noc": "ESP",
       "result": "1:46.86",
       "notes": "SB",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "M",
       "year": 2021,
       "date": "2021-02-13"
@@ -28372,7 +28730,7 @@
       "noc": "FRA",
       "result": "1:47.96",
       "notes": "PB",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "M",
       "year": 2021,
       "date": "2021-02-13"
@@ -28385,7 +28743,7 @@
       "noc": "NED",
       "result": "1:48.48",
       "notes": "SB",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "M",
       "year": 2021,
       "date": "2021-02-13"
@@ -28398,7 +28756,7 @@
       "noc": "BEL",
       "result": "1:48.56",
       "notes": "PB",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "M",
       "year": 2021,
       "date": "2021-02-13"
@@ -28411,7 +28769,7 @@
       "noc": "AUT",
       "result": "1:49.39",
       "notes": "SB",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "M",
       "year": 2021,
       "date": "2021-02-13"
@@ -28424,7 +28782,7 @@
       "noc": "BEL",
       "result": "1:49.53",
       "notes": "SB",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "M",
       "year": 2021,
       "date": "2021-02-13"
@@ -28437,7 +28795,7 @@
       "noc": "GER",
       "result": "2:03.17",
       "notes": "SB",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -28450,7 +28808,7 @@
       "noc": "KEN",
       "result": "2:03.20",
       "notes": "SB",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -28463,7 +28821,7 @@
       "noc": "BEL",
       "result": "2:03.61",
       "notes": "SB",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -28476,7 +28834,7 @@
       "noc": "GER",
       "result": "2:03.65",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -28489,7 +28847,7 @@
       "noc": "GER",
       "result": "2:04.46",
       "notes": "PB",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -28502,7 +28860,7 @@
       "noc": "KEN",
       "result": "2:05.85",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -28515,7 +28873,7 @@
       "noc": "LUX",
       "result": "2:07.81",
       "notes": "PB",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2021,
       "date": "2021-02-13"
@@ -28725,7 +29083,7 @@
       "noc": "KEN",
       "result": "4:11.46",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2023,
       "date": "2023-01-22"
@@ -28738,7 +29096,7 @@
       "noc": "CZE",
       "result": "4:12.51",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2023,
       "date": "2023-01-22"
@@ -28751,7 +29109,7 @@
       "noc": "LUX",
       "result": "4:12.52",
       "notes": "SB",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2023,
       "date": "2023-01-22"
@@ -28764,7 +29122,7 @@
       "noc": "NED",
       "result": "4:13.60",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2023,
       "date": "2023-01-22"
@@ -28777,7 +29135,7 @@
       "noc": "GER",
       "result": "4:14.07",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2023,
       "date": "2023-01-22"
@@ -28790,7 +29148,7 @@
       "noc": "NED",
       "result": "4:14.81",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2023,
       "date": "2023-01-22"
@@ -28803,7 +29161,7 @@
       "noc": "IRL",
       "result": "4:18.85",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2023,
       "date": "2023-01-22"
@@ -28816,7 +29174,7 @@
       "noc": "FRA",
       "result": "4:22.24",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2023,
       "date": "2023-01-22"
@@ -28829,7 +29187,7 @@
       "noc": "FRA",
       "result": "4:22.40",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2023,
       "date": "2023-01-22"
@@ -28842,7 +29200,7 @@
       "noc": "FRA",
       "result": "7:52.09",
       "notes": "MR",
-      "discipline": "3000",
+      "discipline": "3000m",
       "gender": "M",
       "year": 2023,
       "date": "2023-01-22"
@@ -28855,7 +29213,7 @@
       "noc": "CZE",
       "result": "7:54.31",
       "notes": "",
-      "discipline": "3000",
+      "discipline": "3000m",
       "gender": "M",
       "year": 2023,
       "date": "2023-01-22"
@@ -28868,7 +29226,7 @@
       "noc": "NED",
       "result": "7:55.51",
       "notes": "SB",
-      "discipline": "3000",
+      "discipline": "3000m",
       "gender": "M",
       "year": 2023,
       "date": "2023-01-22"
@@ -28881,7 +29239,7 @@
       "noc": "CZE",
       "result": "7:55.94",
       "notes": "PB",
-      "discipline": "3000",
+      "discipline": "3000m",
       "gender": "M",
       "year": 2023,
       "date": "2023-01-22"
@@ -28894,7 +29252,7 @@
       "noc": "FIN",
       "result": "7:56.12",
       "notes": "PB",
-      "discipline": "3000",
+      "discipline": "3000m",
       "gender": "M",
       "year": 2023,
       "date": "2023-01-22"
@@ -28907,7 +29265,7 @@
       "noc": "FRA",
       "result": "8:07.94",
       "notes": "PB",
-      "discipline": "3000",
+      "discipline": "3000m",
       "gender": "M",
       "year": 2023,
       "date": "2023-01-22"
@@ -28920,7 +29278,7 @@
       "noc": "FRA",
       "result": "8:11.16",
       "notes": "",
-      "discipline": "3000",
+      "discipline": "3000m",
       "gender": "M",
       "year": 2023,
       "date": "2023-01-22"
@@ -28933,7 +29291,7 @@
       "noc": "LUX",
       "result": "8:12.26",
       "notes": "SB",
-      "discipline": "3000",
+      "discipline": "3000m",
       "gender": "M",
       "year": 2023,
       "date": "2023-01-22"
@@ -28946,7 +29304,7 @@
       "noc": "LUX",
       "result": "8:38.19",
       "notes": "",
-      "discipline": "3000",
+      "discipline": "3000m",
       "gender": "M",
       "year": 2023,
       "date": "2023-01-22"
@@ -28959,7 +29317,7 @@
       "noc": "ESP",
       "result": "7.65",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2023,
       "date": "2023-01-22"
@@ -28972,7 +29330,7 @@
       "noc": "NED",
       "result": "7.78",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2023,
       "date": "2023-01-22"
@@ -28985,7 +29343,7 @@
       "noc": "GER",
       "result": "7.84",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2023,
       "date": "2023-01-22"
@@ -28998,7 +29356,7 @@
       "noc": "POR",
       "result": "7.93",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2023,
       "date": "2023-01-22"
@@ -29011,7 +29369,7 @@
       "noc": "BEL",
       "result": "7.94",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2023,
       "date": "2023-01-22"
@@ -29024,7 +29382,7 @@
       "noc": "NED",
       "result": "7.96",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2023,
       "date": "2023-01-22"
@@ -29037,7 +29395,7 @@
       "noc": "FRA",
       "result": "8.49",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2023,
       "date": "2023-01-22"
@@ -29050,7 +29408,7 @@
       "noc": "CYP",
       "result": "7.92",
       "notes": "MR",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2023,
       "date": "2023-01-22"
@@ -29063,7 +29421,7 @@
       "noc": "LUX",
       "result": "7.26",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2023,
       "date": "2023-01-22"
@@ -29076,7 +29434,7 @@
       "noc": "NED",
       "result": "8.00",
       "notes": "PB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2023,
       "date": "2023-01-22"
@@ -29089,7 +29447,7 @@
       "noc": "GER",
       "result": "7.31",
       "notes": "SB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2023,
       "date": "2023-01-22"
@@ -29102,7 +29460,7 @@
       "noc": "LUX",
       "result": "8.18",
       "notes": "PB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2023,
       "date": "2023-01-22"
@@ -29115,7 +29473,7 @@
       "noc": "NED",
       "result": "7.36",
       "notes": "PB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2023,
       "date": "2023-01-22"
@@ -29128,7 +29486,7 @@
       "noc": "ROU",
       "result": "8.20",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2023,
       "date": "2023-01-22"
@@ -29141,7 +29499,7 @@
       "noc": "SLO",
       "result": "8.20",
       "notes": "PB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2023,
       "date": "2023-01-22"
@@ -29154,7 +29512,7 @@
       "noc": "GER",
       "result": "7.41",
       "notes": "SB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2023,
       "date": "2023-01-22"
@@ -29167,7 +29525,7 @@
       "noc": "FRA",
       "result": "7.42",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2023,
       "date": "2023-01-22"
@@ -29180,7 +29538,7 @@
       "noc": "FRA",
       "result": "8.21",
       "notes": "SB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2023,
       "date": "2023-01-22"
@@ -29193,7 +29551,7 @@
       "noc": "SRB",
       "result": "7.50",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2023,
       "date": "2023-01-22"
@@ -29206,7 +29564,7 @@
       "noc": "GRE",
       "result": "8.23",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2023,
       "date": "2023-01-22"
@@ -29219,7 +29577,7 @@
       "noc": "BUR",
       "result": "8.25",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2023,
       "date": "2023-01-22"
@@ -29232,7 +29590,7 @@
       "noc": "BEL",
       "result": "1:45.04",
       "notes": "MR",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "M",
       "year": 2023,
       "date": "2023-01-22"
@@ -29245,7 +29603,7 @@
       "noc": "KEN",
       "result": "1:45.89",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "M",
       "year": 2023,
       "date": "2023-01-22"
@@ -29258,7 +29616,7 @@
       "noc": "NED",
       "result": "1:46.98",
       "notes": "PB",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "M",
       "year": 2023,
       "date": "2023-01-22"
@@ -29271,7 +29629,7 @@
       "noc": "CZE",
       "result": "1:48.24",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "M",
       "year": 2023,
       "date": "2023-01-22"
@@ -29284,7 +29642,7 @@
       "noc": "FRA",
       "result": "1:48.64",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "M",
       "year": 2023,
       "date": "2023-01-22"
@@ -29297,7 +29655,7 @@
       "noc": "CZE",
       "result": "1:48.93",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "M",
       "year": 2023,
       "date": "2023-01-22"
@@ -29310,7 +29668,7 @@
       "noc": "LUX",
       "result": "1:50.03",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "M",
       "year": 2023,
       "date": "2023-01-22"
@@ -29323,7 +29681,7 @@
       "noc": "KEN",
       "result": "2:02.37",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2023,
       "date": "2023-01-22"
@@ -29336,7 +29694,7 @@
       "noc": "FRA",
       "result": "2:03.72",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2023,
       "date": "2023-01-22"
@@ -29349,7 +29707,7 @@
       "noc": "FRA",
       "result": "2:04.59",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2023,
       "date": "2023-01-22"
@@ -29362,7 +29720,7 @@
       "noc": "SLO",
       "result": "2:06.51",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2023,
       "date": "2023-01-22"
@@ -29375,7 +29733,7 @@
       "noc": "SUI",
       "result": "2:06.90",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2023,
       "date": "2023-01-22"
@@ -29388,7 +29746,7 @@
       "noc": "BEL",
       "result": "2:07.98",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2023,
       "date": "2023-01-22"
@@ -29401,7 +29759,7 @@
       "noc": "GRE",
       "result": "2:08.60",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2023,
       "date": "2023-01-22"
@@ -29676,7 +30034,7 @@
       "noc": "POR",
       "result": "3:37.80",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2024,
       "date": "2024-01-21"
@@ -29689,7 +30047,7 @@
       "noc": "BEL",
       "result": "3:38.90",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2024,
       "date": "2024-01-21"
@@ -29702,7 +30060,7 @@
       "noc": "FRA",
       "result": "3:39.72",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2024,
       "date": "2024-01-21"
@@ -29715,7 +30073,7 @@
       "noc": "POL",
       "result": "3:41.03",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2024,
       "date": "2024-01-21"
@@ -29728,7 +30086,7 @@
       "noc": "LUX",
       "result": "3:43.20",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2024,
       "date": "2024-01-21"
@@ -29741,7 +30099,7 @@
       "noc": "NED",
       "result": "3:43.45",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2024,
       "date": "2024-01-21"
@@ -29754,7 +30112,7 @@
       "noc": "AUT",
       "result": "3:43.61",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2024,
       "date": "2024-01-21"
@@ -29767,7 +30125,7 @@
       "noc": "FRA",
       "result": "3:43.95",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2024,
       "date": "2024-01-21"
@@ -29780,7 +30138,7 @@
       "noc": "FRA",
       "result": "3:45.35",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2024,
       "date": "2024-01-21"
@@ -29793,7 +30151,7 @@
       "noc": "ESP",
       "result": "3:45.42",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2024,
       "date": "2024-01-21"
@@ -29806,7 +30164,7 @@
       "noc": "BEL",
       "result": "4:07.03",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -29819,7 +30177,7 @@
       "noc": "POR",
       "result": "4:07.25",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -29832,7 +30190,7 @@
       "noc": "ITA",
       "result": "4:07.32",
       "notes": "PB",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -29845,7 +30203,7 @@
       "noc": "POL",
       "result": "4:09.24",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -29858,7 +30216,7 @@
       "noc": "FRA",
       "result": "4:09.24",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -29871,7 +30229,7 @@
       "noc": "NOR",
       "result": "4:14.66",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -29884,7 +30242,7 @@
       "noc": "FRA",
       "result": "4:16.44",
       "notes": "PB",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -29897,7 +30255,7 @@
       "noc": "BEL",
       "result": "4:17.72",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -29910,7 +30268,7 @@
       "noc": "CAN",
       "result": "4:19.09",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -29923,7 +30281,7 @@
       "noc": "NED",
       "result": "7:47.32",
       "notes": "",
-      "discipline": "3000",
+      "discipline": "3000m",
       "gender": "M",
       "year": 2024,
       "date": "2024-01-21"
@@ -29936,7 +30294,7 @@
       "noc": "FRA",
       "result": "7:47.80",
       "notes": "",
-      "discipline": "3000",
+      "discipline": "3000m",
       "gender": "M",
       "year": 2024,
       "date": "2024-01-21"
@@ -29949,7 +30307,7 @@
       "noc": "CZE",
       "result": "7:51.81",
       "notes": "PB",
-      "discipline": "3000",
+      "discipline": "3000m",
       "gender": "M",
       "year": 2024,
       "date": "2024-01-21"
@@ -29962,7 +30320,7 @@
       "noc": "FIN",
       "result": "7:52.12",
       "notes": "",
-      "discipline": "3000",
+      "discipline": "3000m",
       "gender": "M",
       "year": 2024,
       "date": "2024-01-21"
@@ -29975,7 +30333,7 @@
       "noc": "FRA",
       "result": "7:53.24",
       "notes": "",
-      "discipline": "3000",
+      "discipline": "3000m",
       "gender": "M",
       "year": 2024,
       "date": "2024-01-21"
@@ -29988,7 +30346,7 @@
       "noc": "GER",
       "result": "7:53.25",
       "notes": "PB",
-      "discipline": "3000",
+      "discipline": "3000m",
       "gender": "M",
       "year": 2024,
       "date": "2024-01-21"
@@ -30001,7 +30359,7 @@
       "noc": "SUI",
       "result": "7:57.90",
       "notes": "",
-      "discipline": "3000",
+      "discipline": "3000m",
       "gender": "M",
       "year": 2024,
       "date": "2024-01-21"
@@ -30014,7 +30372,7 @@
       "noc": "CZE",
       "result": "8:04.72",
       "notes": "",
-      "discipline": "3000",
+      "discipline": "3000m",
       "gender": "M",
       "year": 2024,
       "date": "2024-01-21"
@@ -30027,7 +30385,7 @@
       "noc": "DEN",
       "result": "8:08.12",
       "notes": "",
-      "discipline": "3000",
+      "discipline": "3000m",
       "gender": "M",
       "year": 2024,
       "date": "2024-01-21"
@@ -30040,7 +30398,7 @@
       "noc": "LUX",
       "result": "8:22.53",
       "notes": "",
-      "discipline": "3000",
+      "discipline": "3000m",
       "gender": "M",
       "year": 2024,
       "date": "2024-01-21"
@@ -30053,7 +30411,7 @@
       "noc": "LUX",
       "result": "8:27.12",
       "notes": "PB",
-      "discipline": "3000",
+      "discipline": "3000m",
       "gender": "M",
       "year": 2024,
       "date": "2024-01-21"
@@ -30066,7 +30424,7 @@
       "noc": "LUX",
       "result": "49.10",
       "notes": "SB",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "M",
       "year": 2024,
       "date": "2024-01-21"
@@ -30079,7 +30437,7 @@
       "noc": "LUX",
       "result": "49.90",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "M",
       "year": 2024,
       "date": "2024-01-21"
@@ -30092,7 +30450,7 @@
       "noc": "LUX",
       "result": "51.42",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "M",
       "year": 2024,
       "date": "2024-01-21"
@@ -30105,7 +30463,7 @@
       "noc": "LUX",
       "result": "52.37",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "M",
       "year": 2024,
       "date": "2024-01-21"
@@ -30118,7 +30476,7 @@
       "noc": "BEL",
       "result": "7.62",
       "notes": "PB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2024,
       "date": "2024-01-21"
@@ -30131,7 +30489,7 @@
       "noc": "POL",
       "result": "7.66",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2024,
       "date": "2024-01-21"
@@ -30144,7 +30502,7 @@
       "noc": "SLO",
       "result": "7.77",
       "notes": "SB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2024,
       "date": "2024-01-21"
@@ -30157,7 +30515,7 @@
       "noc": "GER",
       "result": "7.77",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2024,
       "date": "2024-01-21"
@@ -30170,7 +30528,7 @@
       "noc": "FRA",
       "result": "7.79",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2024,
       "date": "2024-01-21"
@@ -30183,7 +30541,7 @@
       "noc": "POR",
       "result": "7.80",
       "notes": "SB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2024,
       "date": "2024-01-21"
@@ -30196,7 +30554,7 @@
       "noc": "GER",
       "result": "7.92",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2024,
       "date": "2024-01-21"
@@ -30209,7 +30567,7 @@
       "noc": "USA",
       "result": "7.96",
       "notes": "PB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30222,7 +30580,7 @@
       "noc": "LUX",
       "result": "7.09",
       "notes": "PB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30235,7 +30593,7 @@
       "noc": "LUX",
       "result": "7.10",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30248,7 +30606,7 @@
       "noc": "LUX",
       "result": "1:51.37",
       "notes": "PB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30261,7 +30619,7 @@
       "noc": "LUX",
       "result": "2:15.25",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30274,7 +30632,7 @@
       "noc": "USA",
       "result": "8.02",
       "notes": "PB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30287,7 +30645,7 @@
       "noc": "FRA",
       "result": "7.17",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30300,7 +30658,7 @@
       "noc": "LUX",
       "result": "8.03",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30313,7 +30671,7 @@
       "noc": "LUX",
       "result": "26.06",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30326,7 +30684,7 @@
       "noc": "FRA",
       "result": "7.11",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30339,7 +30697,7 @@
       "noc": "LUX",
       "result": "1:52.47",
       "notes": "PB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30352,7 +30710,7 @@
       "noc": "LUX",
       "result": "2:15.51",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30365,7 +30723,7 @@
       "noc": "FRA",
       "result": "8.09",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30378,7 +30736,7 @@
       "noc": "POL",
       "result": "7.21",
       "notes": "PB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30391,7 +30749,7 @@
       "noc": "LUX",
       "result": "8.05",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30404,7 +30762,7 @@
       "noc": "LUX",
       "result": "7.13",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30417,7 +30775,7 @@
       "noc": "BEL",
       "result": "1:53.58",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30430,7 +30788,7 @@
       "noc": "LUX",
       "result": "2:17.70",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30443,7 +30801,7 @@
       "noc": "NED",
       "result": "8.15",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30456,7 +30814,7 @@
       "noc": "JAM",
       "result": "7.28",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30469,7 +30827,7 @@
       "noc": "LUX",
       "result": "26.91",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30482,7 +30840,7 @@
       "noc": "LUX",
       "result": "7.20",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30495,7 +30853,7 @@
       "noc": "LUX",
       "result": "2:17.81",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30508,7 +30866,7 @@
       "noc": "LUX",
       "result": "8.16",
       "notes": "PB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30521,7 +30879,7 @@
       "noc": "SUI",
       "result": "7.29",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30534,7 +30892,7 @@
       "noc": "BEL",
       "result": "7.21",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30547,7 +30905,7 @@
       "noc": "LUX",
       "result": "2:18.98",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30560,7 +30918,7 @@
       "noc": "GER",
       "result": "8.18",
       "notes": "PB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30573,7 +30931,7 @@
       "noc": "FIN",
       "result": "7.34",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30586,7 +30944,7 @@
       "noc": "LUX",
       "result": "8.20",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30599,7 +30957,7 @@
       "noc": "LUX",
       "result": "27.88",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30612,7 +30970,7 @@
       "noc": "LUX",
       "result": "7.50",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30625,7 +30983,7 @@
       "noc": "LUX",
       "result": "2:22.47",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30638,7 +30996,7 @@
       "noc": "ROU",
       "result": "8.25",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30651,7 +31009,7 @@
       "noc": "ITA",
       "result": "7.41",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30664,7 +31022,7 @@
       "noc": "LUX",
       "result": "2:26.00",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30677,7 +31035,7 @@
       "noc": "FRA",
       "result": "7.48",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30690,7 +31048,7 @@
       "noc": "KEN",
       "result": "2:02.79",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30703,7 +31061,7 @@
       "noc": "SUI",
       "result": "2:02.82",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30716,7 +31074,7 @@
       "noc": "FRA",
       "result": "2:03.71",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30729,7 +31087,7 @@
       "noc": "LUX",
       "result": "2:03.80",
       "notes": "PB",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30742,7 +31100,7 @@
       "noc": "AUT",
       "result": "2:03.87",
       "notes": "PB",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30755,7 +31113,7 @@
       "noc": "ESP",
       "result": "2:03.92",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30768,7 +31126,7 @@
       "noc": "NOR",
       "result": "2:05.93",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -30781,7 +31139,7 @@
       "noc": "FRA",
       "result": "2:07.99",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "W",
       "year": 2024,
       "date": "2024-01-21"
@@ -31173,7 +31531,7 @@
       "noc": "BEL",
       "result": "3:36.71",
       "notes": "PB",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31186,7 +31544,7 @@
       "noc": "GER",
       "result": "3:39.01",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31199,7 +31557,7 @@
       "noc": "FRA",
       "result": "3:39.10",
       "notes": "PB",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31212,7 +31570,7 @@
       "noc": "ESP",
       "result": "3:39.75",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31225,7 +31583,7 @@
       "noc": "LUX",
       "result": "3:39.96",
       "notes": "PB",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31238,7 +31596,7 @@
       "noc": "LUX",
       "result": "3:40.46",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31251,7 +31609,7 @@
       "noc": "POR",
       "result": "3:42.57",
       "notes": "PB",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31264,7 +31622,7 @@
       "noc": "ITA",
       "result": "4:03.59",
       "notes": "PB",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -31277,7 +31635,7 @@
       "noc": "ESP",
       "result": "4:09.80",
       "notes": "PB",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -31290,7 +31648,7 @@
       "noc": "SUI",
       "result": "4:10.20",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -31303,7 +31661,7 @@
       "noc": "ITA",
       "result": "4:10.72",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -31316,7 +31674,7 @@
       "noc": "FIN",
       "result": "4:11.22",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -31329,7 +31687,7 @@
       "noc": "GER",
       "result": "4:14.93",
       "notes": "SB",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -31342,7 +31700,7 @@
       "noc": "BEL",
       "result": "4:15.64",
       "notes": "PB",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -31355,7 +31713,7 @@
       "noc": "BEL",
       "result": "4:21.02",
       "notes": "PB",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -31368,7 +31726,7 @@
       "noc": "FRA",
       "result": "4:25.04",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -31381,7 +31739,7 @@
       "noc": "LUX",
       "result": "4:26.16",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -31394,7 +31752,7 @@
       "noc": "BEL",
       "result": "4:31.02",
       "notes": "",
-      "discipline": "1500",
+      "discipline": "1500m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -31407,7 +31765,7 @@
       "noc": "GER",
       "result": "22.84",
       "notes": "PB",
-      "discipline": "200",
+      "discipline": "200m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -31420,7 +31778,7 @@
       "noc": "LUX",
       "result": "23.17",
       "notes": "PB",
-      "discipline": "200",
+      "discipline": "200m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -31433,7 +31791,7 @@
       "noc": "SUI",
       "result": "23.29",
       "notes": "PB",
-      "discipline": "200",
+      "discipline": "200m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -31446,7 +31804,7 @@
       "noc": "BEL",
       "result": "23.43",
       "notes": "SB",
-      "discipline": "200",
+      "discipline": "200m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -31459,7 +31817,7 @@
       "noc": "POL",
       "result": "23.47",
       "notes": "",
-      "discipline": "200",
+      "discipline": "200m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -31472,7 +31830,7 @@
       "noc": "BEL",
       "result": "23.48",
       "notes": "PB",
-      "discipline": "200",
+      "discipline": "200m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -31485,7 +31843,7 @@
       "noc": "SWE",
       "result": "23.53",
       "notes": "",
-      "discipline": "200",
+      "discipline": "200m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -31498,7 +31856,7 @@
       "noc": "HUN",
       "result": "23.75",
       "notes": "",
-      "discipline": "200",
+      "discipline": "200m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -31511,7 +31869,7 @@
       "noc": "ITA",
       "result": "24.04",
       "notes": "",
-      "discipline": "200",
+      "discipline": "200m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -31524,7 +31882,7 @@
       "noc": "GUY",
       "result": "24.71",
       "notes": "PB",
-      "discipline": "200",
+      "discipline": "200m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -31537,7 +31895,7 @@
       "noc": "GER",
       "result": "7:39.01",
       "notes": "PB",
-      "discipline": "3000",
+      "discipline": "3000m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31550,7 +31908,7 @@
       "noc": "BEL",
       "result": "7:39.90",
       "notes": "",
-      "discipline": "3000",
+      "discipline": "3000m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31563,7 +31921,7 @@
       "noc": "KEN",
       "result": "7:40.29",
       "notes": "",
-      "discipline": "3000",
+      "discipline": "3000m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31576,7 +31934,7 @@
       "noc": "FRA",
       "result": "7:40.39",
       "notes": "PB",
-      "discipline": "3000",
+      "discipline": "3000m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31589,7 +31947,7 @@
       "noc": "NED",
       "result": "7:40.99",
       "notes": "PB",
-      "discipline": "3000",
+      "discipline": "3000m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31602,7 +31960,7 @@
       "noc": "POR",
       "result": "7:41.56",
       "notes": "PB",
-      "discipline": "3000",
+      "discipline": "3000m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31615,7 +31973,7 @@
       "noc": "FRA",
       "result": "7:45.37",
       "notes": "",
-      "discipline": "3000",
+      "discipline": "3000m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31628,7 +31986,7 @@
       "noc": "GER",
       "result": "7:53.92",
       "notes": "PB",
-      "discipline": "3000",
+      "discipline": "3000m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31641,7 +31999,7 @@
       "noc": "HUN",
       "result": "7:54.44",
       "notes": "PB",
-      "discipline": "3000",
+      "discipline": "3000m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31654,7 +32012,7 @@
       "noc": "FRA",
       "result": "8:03.25",
       "notes": "PB",
-      "discipline": "3000",
+      "discipline": "3000m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31667,7 +32025,7 @@
       "noc": "FIN",
       "result": "8:05.77",
       "notes": "",
-      "discipline": "3000",
+      "discipline": "3000m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31680,7 +32038,7 @@
       "noc": "CZE",
       "result": "8:22.30",
       "notes": "",
-      "discipline": "3000",
+      "discipline": "3000m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31693,7 +32051,7 @@
       "noc": "POL",
       "result": "46.51",
       "notes": "PB",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31706,7 +32064,7 @@
       "noc": "HUN",
       "result": "46.54",
       "notes": "PB",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31719,7 +32077,7 @@
       "noc": "FRA",
       "result": "46.67",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31732,7 +32090,7 @@
       "noc": "ESP",
       "result": "46.73",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31745,7 +32103,7 @@
       "noc": "GBR",
       "result": "46.84",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31758,7 +32116,7 @@
       "noc": "POR",
       "result": "47.12",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31771,7 +32129,7 @@
       "noc": "GER",
       "result": "47.65",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31784,7 +32142,7 @@
       "noc": "AUT",
       "result": "48.01",
       "notes": "PB",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31797,7 +32155,7 @@
       "noc": "SVK",
       "result": "49.05",
       "notes": "",
-      "discipline": "400",
+      "discipline": "400m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31810,7 +32168,7 @@
       "noc": "POL",
       "result": "7.41",
       "notes": "PB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31823,7 +32181,7 @@
       "noc": "MLI",
       "result": "7.08",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31836,7 +32194,7 @@
       "noc": "LUX",
       "result": "0.01",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31849,7 +32207,7 @@
       "noc": "LUX",
       "result": "0.01",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31862,7 +32220,7 @@
       "noc": "BEL",
       "result": "7.55",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31875,7 +32233,7 @@
       "noc": "LUX",
       "result": "7.18",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31888,7 +32246,7 @@
       "noc": "LUX",
       "result": "0.02",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31901,7 +32259,7 @@
       "noc": "LUX",
       "result": "0.02",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31914,7 +32272,7 @@
       "noc": "POL",
       "result": "7.60",
       "notes": "SB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31927,7 +32285,7 @@
       "noc": "LUX",
       "result": "7.27",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31940,7 +32298,7 @@
       "noc": "LUX",
       "result": "0.03",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31953,7 +32311,7 @@
       "noc": "LUX",
       "result": "0.03",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31966,7 +32324,7 @@
       "noc": "GER",
       "result": "7.61",
       "notes": "PB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31979,7 +32337,7 @@
       "noc": "LUX",
       "result": "0.04",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -31992,7 +32350,7 @@
       "noc": "LUX",
       "result": "0.04",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -32005,7 +32363,7 @@
       "noc": "KAZ",
       "result": "7.65",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -32018,7 +32376,7 @@
       "noc": "IND",
       "result": "7.65",
       "notes": "PB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -32031,7 +32389,7 @@
       "noc": "FIN",
       "result": "7.68",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -32044,7 +32402,7 @@
       "noc": "POL",
       "result": "7.73",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -32057,7 +32415,7 @@
       "noc": "LUX",
       "result": "7.07",
       "notes": "PB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -32070,7 +32428,7 @@
       "noc": "RSA",
       "result": "7.98",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -32083,7 +32441,7 @@
       "noc": "LUX",
       "result": "7.76",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -32096,7 +32454,7 @@
       "noc": "FRA",
       "result": "7.18",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -32109,7 +32467,7 @@
       "noc": "ITA",
       "result": "8.00",
       "notes": "PB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -32122,7 +32480,7 @@
       "noc": "LUX",
       "result": "7.97",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -32135,7 +32493,7 @@
       "noc": "GRE",
       "result": "7.27",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -32148,7 +32506,7 @@
       "noc": "GER",
       "result": "8.01",
       "notes": "PB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -32161,7 +32519,7 @@
       "noc": "LUX",
       "result": "8.10",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -32174,7 +32532,7 @@
       "noc": "BEL",
       "result": "7.31",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -32187,7 +32545,7 @@
       "noc": "FIN",
       "result": "8.03",
       "notes": "PB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -32200,7 +32558,7 @@
       "noc": "LUX",
       "result": "8.15",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -32213,7 +32571,7 @@
       "noc": "BEL",
       "result": "7.34",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -32226,7 +32584,7 @@
       "noc": "CHI",
       "result": "7.34",
       "notes": "PB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -32239,7 +32597,7 @@
       "noc": "EST",
       "result": "8.06",
       "notes": "PB",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -32252,7 +32610,7 @@
       "noc": "FIN",
       "result": "8.07",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -32265,7 +32623,7 @@
       "noc": "POR",
       "result": "7.40",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -32278,7 +32636,7 @@
       "noc": "GER",
       "result": "8.11",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -32291,7 +32649,7 @@
       "noc": "USA",
       "result": "7.43",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -32304,7 +32662,7 @@
       "noc": "FRA",
       "result": "8.12",
       "notes": "",
-      "discipline": "60",
+      "discipline": "60m",
       "gender": "W",
       "year": 2025,
       "date": "2025-01-19"
@@ -32317,7 +32675,7 @@
       "noc": "ESP",
       "result": "1:44.65",
       "notes": "PB",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -32330,7 +32688,7 @@
       "noc": "POL",
       "result": "1:45.75",
       "notes": "PB",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -32343,7 +32701,7 @@
       "noc": "KEN",
       "result": "1:46.71",
       "notes": "SB",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -32356,7 +32714,7 @@
       "noc": "CZE",
       "result": "1:46.82",
       "notes": "SB",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -32369,7 +32727,7 @@
       "noc": "EST",
       "result": "1:46.84",
       "notes": "",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -32382,7 +32740,7 @@
       "noc": "LUX",
       "result": "1:47.95",
       "notes": "PB",
-      "discipline": "800",
+      "discipline": "800m",
       "gender": "M",
       "year": 2025,
       "date": "2025-01-19"
@@ -32651,1257 +33009,7 @@
   "2026": [
     {
       "rank": 1,
-      "lastName": "VAN DER WEKEN",
-      "firstName": "Elisa",
-      "yob": 2002,
-      "noc": "LUX",
-      "result": "7.19",
-      "notes": "",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 2,
-      "lastName": "SEYFRIED",
-      "firstName": "Gina",
-      "yob": 2003,
-      "noc": "GER",
-      "result": "7.22",
-      "notes": "",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 3,
-      "lastName": "BUCHHOLZ",
-      "firstName": "Leonie",
-      "yob": 2000,
-      "noc": "GER",
-      "result": "7.27",
-      "notes": "",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 4,
-      "lastName": "HAUKE",
-      "firstName": "Alica",
-      "yob": 2004,
-      "noc": "GER",
-      "result": "7.28",
-      "notes": "",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 5,
-      "lastName": "EZENWA",
-      "firstName": "Imaobong Uko",
-      "yob": 2005,
-      "noc": "NGR",
-      "result": "7.32",
-      "notes": "",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 6,
-      "lastName": "ALOZIE",
-      "firstName": "Gloria",
-      "yob": 2002,
-      "noc": "ESP",
-      "result": "7.38",
-      "notes": "",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 7,
-      "lastName": "PICHLER",
-      "firstName": "Katrin",
-      "yob": 2001,
-      "noc": "AUT",
-      "result": "7.43",
-      "notes": "",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 8,
-      "lastName": "NZINGA",
-      "firstName": "Micheline",
-      "yob": 2000,
-      "noc": "BEL",
-      "result": "7.47",
-      "notes": "",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 1,
-      "lastName": "SEVILLA",
-      "firstName": "Sandra",
-      "yob": 2000,
-      "noc": "ESP",
-      "result": "23.32",
-      "notes": "",
-      "discipline": "200m",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 2,
-      "lastName": "GOMES",
-      "firstName": "Cynthia",
-      "yob": 2001,
-      "noc": "FRA",
-      "result": "23.54",
-      "notes": "",
-      "discipline": "200m",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 3,
-      "lastName": "MISCHLER",
-      "firstName": "Laura",
-      "yob": 1999,
-      "noc": "FRA",
-      "result": "23.68",
-      "notes": "",
-      "discipline": "200m",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 4,
-      "lastName": "DUPONT",
-      "firstName": "Axelle",
-      "yob": 2002,
-      "noc": "BEL",
-      "result": "23.81",
-      "notes": "",
-      "discipline": "200m",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 5,
-      "lastName": "EZENWA",
-      "firstName": "Imaobong Uko",
-      "yob": 2005,
-      "noc": "NGR",
-      "result": "24.02",
-      "notes": "",
-      "discipline": "200m",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 6,
-      "lastName": "BUCHHOLZ",
-      "firstName": "Leonie",
-      "yob": 2000,
-      "noc": "GER",
-      "result": "24.11",
-      "notes": "",
-      "discipline": "200m",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 7,
-      "lastName": "SEYFRIED",
-      "firstName": "Gina",
-      "yob": 2003,
-      "noc": "GER",
-      "result": "24.23",
-      "notes": "",
-      "discipline": "200m",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 8,
-      "lastName": "LECLERCQ",
-      "firstName": "Camille",
-      "yob": 2001,
-      "noc": "FRA",
-      "result": "24.45",
-      "notes": "",
-      "discipline": "200m",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 1,
-      "lastName": "ARENDT",
-      "firstName": "Vera",
-      "yob": 1999,
-      "noc": "LUX",
-      "result": "2:03.54",
-      "notes": "",
-      "discipline": "800m",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 2,
-      "lastName": "BARROS",
-      "firstName": "Lara",
-      "yob": 2000,
-      "noc": "POR",
-      "result": "2:04.21",
-      "notes": "",
-      "discipline": "800m",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 3,
-      "lastName": "HOFFMANN",
-      "firstName": "Mia",
-      "yob": 2001,
-      "noc": "GER",
-      "result": "2:04.87",
-      "notes": "",
-      "discipline": "800m",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 4,
-      "lastName": "KLEIN",
-      "firstName": "Sophie",
-      "yob": 2000,
-      "noc": "GER",
-      "result": "2:05.12",
-      "notes": "",
-      "discipline": "800m",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 5,
-      "lastName": "DUBOIS",
-      "firstName": "Manon",
-      "yob": 2002,
-      "noc": "FRA",
-      "result": "2:05.98",
-      "notes": "",
-      "discipline": "800m",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 6,
-      "lastName": "GARCIA",
-      "firstName": "Ana",
-      "yob": 1998,
-      "noc": "ESP",
-      "result": "2:06.44",
-      "notes": "",
-      "discipline": "800m",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 7,
-      "lastName": "MÜLLER",
-      "firstName": "Lisa",
-      "yob": 2001,
-      "noc": "AUT",
-      "result": "2:07.33",
-      "notes": "",
-      "discipline": "800m",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 8,
-      "lastName": "WEBER",
-      "firstName": "Jana",
-      "yob": 2000,
-      "noc": "GER",
-      "result": "2:08.01",
-      "notes": "",
-      "discipline": "800m",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 1,
-      "lastName": "MULUGETA",
-      "firstName": "Dawit",
-      "yob": 1996,
-      "noc": "ETH",
-      "result": "4:10.23",
-      "notes": "",
-      "discipline": "1500m",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 2,
-      "lastName": "DEBUES-STAFFORD",
-      "firstName": "Gabriela",
-      "yob": 1995,
-      "noc": "CAN",
-      "result": "4:11.45",
-      "notes": "",
-      "discipline": "1500m",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 3,
-      "lastName": "KERR",
-      "firstName": "Laura",
-      "yob": 1997,
-      "noc": "GBR",
-      "result": "4:12.78",
-      "notes": "",
-      "discipline": "1500m",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 4,
-      "lastName": "MEIER",
-      "firstName": "Anna",
-      "yob": 1998,
-      "noc": "GER",
-      "result": "4:13.55",
-      "notes": "",
-      "discipline": "1500m",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 5,
-      "lastName": "SCHMIDT",
-      "firstName": "Eva",
-      "yob": 1999,
-      "noc": "GER",
-      "result": "4:15.02",
-      "notes": "",
-      "discipline": "1500m",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 6,
-      "lastName": "MARTIN",
-      "firstName": "Sophie",
-      "yob": 2000,
-      "noc": "FRA",
-      "result": "4:16.34",
-      "notes": "",
-      "discipline": "1500m",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 7,
-      "lastName": "BECKER",
-      "firstName": "Julia",
-      "yob": 1997,
-      "noc": "GER",
-      "result": "4:17.89",
-      "notes": "",
-      "discipline": "1500m",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 8,
-      "lastName": "RAMOS",
-      "firstName": "Elena",
-      "yob": 1999,
-      "noc": "ESP",
-      "result": "4:19.12",
-      "notes": "",
-      "discipline": "1500m",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 1,
-      "lastName": "ALESSANDRINI",
-      "firstName": "Laura",
-      "yob": 2001,
-      "noc": "ITA",
-      "result": "7.94",
-      "notes": "",
-      "discipline": "60m Hurdles",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 2,
-      "lastName": "SAMBA-MAYELA",
-      "firstName": "Cyrena",
-      "yob": 2003,
-      "noc": "FRA",
-      "result": "7.97",
-      "notes": "",
-      "discipline": "60m Hurdles",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 3,
-      "lastName": "ABUQIRQ",
-      "firstName": "Layla",
-      "yob": 2002,
-      "noc": "GER",
-      "result": "8.03",
-      "notes": "",
-      "discipline": "60m Hurdles",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 4,
-      "lastName": "LAUTERBACH",
-      "firstName": "Nadine",
-      "yob": 2000,
-      "noc": "GER",
-      "result": "8.11",
-      "notes": "",
-      "discipline": "60m Hurdles",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 5,
-      "lastName": "NKECHIKA",
-      "firstName": "Sandra",
-      "yob": 2001,
-      "noc": "NGR",
-      "result": "8.18",
-      "notes": "",
-      "discipline": "60m Hurdles",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 6,
-      "lastName": "DUPUIS",
-      "firstName": "Alice",
-      "yob": 2002,
-      "noc": "BEL",
-      "result": "8.24",
-      "notes": "",
-      "discipline": "60m Hurdles",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 7,
-      "lastName": "TORRES",
-      "firstName": "Carmen",
-      "yob": 1999,
-      "noc": "ESP",
-      "result": "8.31",
-      "notes": "",
-      "discipline": "60m Hurdles",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 8,
-      "lastName": "OLSSON",
-      "firstName": "Emma",
-      "yob": 2001,
-      "noc": "SWE",
-      "result": "8.38",
-      "notes": "",
-      "discipline": "60m Hurdles",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 1,
-      "lastName": "PETIT",
-      "firstName": "Ninon",
-      "yob": 1998,
-      "noc": "FRA",
-      "result": "4.55",
-      "notes": "",
-      "discipline": "Pole Vault",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 2,
-      "lastName": "GRUBER",
-      "firstName": "Silke",
-      "yob": 2000,
-      "noc": "AUT",
-      "result": "4.45",
-      "notes": "",
-      "discipline": "Pole Vault",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 3,
-      "lastName": "BRAUN",
-      "firstName": "Lena",
-      "yob": 2001,
-      "noc": "GER",
-      "result": "4.35",
-      "notes": "",
-      "discipline": "Pole Vault",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 4,
-      "lastName": "VANHOOF",
-      "firstName": "Fien",
-      "yob": 2000,
-      "noc": "BEL",
-      "result": "4.30",
-      "notes": "",
-      "discipline": "Pole Vault",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 5,
-      "lastName": "SIMONOVA",
-      "firstName": "Petra",
-      "yob": 1999,
-      "noc": "CZE",
-      "result": "4.25",
-      "notes": "",
-      "discipline": "Pole Vault",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 6,
-      "lastName": "GILLET",
-      "firstName": "Marie",
-      "yob": 2001,
-      "noc": "FRA",
-      "result": "4.20",
-      "notes": "",
-      "discipline": "Pole Vault",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 7,
-      "lastName": "HERNANDEZ",
-      "firstName": "Lucia",
-      "yob": 2000,
-      "noc": "ESP",
-      "result": "4.15",
-      "notes": "",
-      "discipline": "Pole Vault",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 8,
-      "lastName": "KOWALSKI",
-      "firstName": "Karolina",
-      "yob": 2001,
-      "noc": "POL",
-      "result": "4.10",
-      "notes": "",
-      "discipline": "Pole Vault",
-      "gender": "W",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 1,
-      "lastName": "BREDAU",
-      "firstName": "Joshua",
-      "yob": 2000,
-      "noc": "GER",
-      "result": "45.81",
-      "notes": "",
       "discipline": "400m",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 2,
-      "lastName": "LAVILLENIE",
-      "firstName": "Quentin",
-      "yob": 2000,
-      "noc": "FRA",
-      "result": "46.12",
-      "notes": "",
-      "discipline": "400m",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 3,
-      "lastName": "SCOTTI",
-      "firstName": "Edoardo",
-      "yob": 2000,
-      "noc": "ITA",
-      "result": "46.45",
-      "notes": "",
-      "discipline": "400m",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 4,
-      "lastName": "SILVA",
-      "firstName": "Ricardo",
-      "yob": 2001,
-      "noc": "POR",
-      "result": "46.78",
-      "notes": "",
-      "discipline": "400m",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 5,
-      "lastName": "KRAMER",
-      "firstName": "Luca",
-      "yob": 1999,
-      "noc": "GER",
-      "result": "47.02",
-      "notes": "",
-      "discipline": "400m",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 6,
-      "lastName": "BENGTSSON",
-      "firstName": "Erik",
-      "yob": 2001,
-      "noc": "SWE",
-      "result": "47.34",
-      "notes": "",
-      "discipline": "400m",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 7,
-      "lastName": "DELHEZ",
-      "firstName": "Camille",
-      "yob": 2000,
-      "noc": "BEL",
-      "result": "47.56",
-      "notes": "",
-      "discipline": "400m",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 8,
-      "lastName": "NAGY",
-      "firstName": "Balazs",
-      "yob": 2000,
-      "noc": "HUN",
-      "result": "47.89",
-      "notes": "",
-      "discipline": "400m",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 1,
-      "lastName": "ENGLISH",
-      "firstName": "Mark",
-      "yob": 1993,
-      "noc": "IRL",
-      "result": "1:46.23",
-      "notes": "",
-      "discipline": "800m",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 2,
-      "lastName": "TUAL",
-      "firstName": "Gabriel",
-      "yob": 1999,
-      "noc": "FRA",
-      "result": "1:46.89",
-      "notes": "",
-      "discipline": "800m",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 3,
-      "lastName": "SCHNEIDER",
-      "firstName": "Felix",
-      "yob": 2001,
-      "noc": "GER",
-      "result": "1:47.45",
-      "notes": "",
-      "discipline": "800m",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 4,
-      "lastName": "PESSOA",
-      "firstName": "Diogo",
-      "yob": 2000,
-      "noc": "POR",
-      "result": "1:47.88",
-      "notes": "",
-      "discipline": "800m",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 5,
-      "lastName": "BOULAMA",
-      "firstName": "Abdu",
-      "yob": 2000,
-      "noc": "NIG",
-      "result": "1:48.12",
-      "notes": "",
-      "discipline": "800m",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 6,
-      "lastName": "PLETCHER",
-      "firstName": "Todd",
-      "yob": 1994,
-      "noc": "USA",
-      "result": "1:48.67",
-      "notes": "",
-      "discipline": "800m",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 7,
-      "lastName": "OOMEN",
-      "firstName": "Nick",
-      "yob": 2001,
-      "noc": "NED",
-      "result": "1:49.01",
-      "notes": "",
-      "discipline": "800m",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 8,
-      "lastName": "ROWDEN",
-      "firstName": "Kyle",
-      "yob": 1997,
-      "noc": "GBR",
-      "result": "1:49.45",
-      "notes": "",
-      "discipline": "800m",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 1,
-      "lastName": "SISK",
-      "firstName": "Luke",
-      "yob": 1997,
-      "noc": "IRL",
-      "result": "3:36.78",
-      "notes": "",
-      "discipline": "1500m",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 2,
-      "lastName": "GOURLEY",
-      "firstName": "Neil",
-      "yob": 1995,
-      "noc": "GBR",
-      "result": "3:37.23",
-      "notes": "",
-      "discipline": "1500m",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 3,
-      "lastName": "STONIER",
-      "firstName": "Patrick",
-      "yob": 1998,
-      "noc": "AUS",
-      "result": "3:37.89",
-      "notes": "",
-      "discipline": "1500m",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 4,
-      "lastName": "WANDERS",
-      "firstName": "Julien",
-      "yob": 1996,
-      "noc": "SUI",
-      "result": "3:38.34",
-      "notes": "",
-      "discipline": "1500m",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 5,
-      "lastName": "BIWOTT",
-      "firstName": "Kipyegon",
-      "yob": 1999,
-      "noc": "KEN",
-      "result": "3:39.01",
-      "notes": "",
-      "discipline": "1500m",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 6,
-      "lastName": "TANNER",
-      "firstName": "Ben",
-      "yob": 2000,
-      "noc": "GBR",
-      "result": "3:39.67",
-      "notes": "",
-      "discipline": "1500m",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 7,
-      "lastName": "FAUSTINO",
-      "firstName": "Diego",
-      "yob": 2001,
-      "noc": "ESP",
-      "result": "3:40.12",
-      "notes": "",
-      "discipline": "1500m",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 8,
-      "lastName": "LEMAIRE",
-      "firstName": "Clément",
-      "yob": 2000,
-      "noc": "FRA",
-      "result": "3:40.89",
-      "notes": "",
-      "discipline": "1500m",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 1,
-      "lastName": "VERHEYDEN",
-      "firstName": "Pieter",
-      "yob": 1999,
-      "noc": "BEL",
-      "result": "7:41.23",
-      "notes": "",
-      "discipline": "3000m",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 2,
-      "lastName": "GELMISA",
-      "firstName": "Getnet",
-      "yob": 2000,
-      "noc": "ETH",
-      "result": "7:42.11",
-      "notes": "",
-      "discipline": "3000m",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 3,
-      "lastName": "KIPCHUMBA",
-      "firstName": "Hillary",
-      "yob": 2001,
-      "noc": "KEN",
-      "result": "7:43.45",
-      "notes": "",
-      "discipline": "3000m",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 4,
-      "lastName": "MARTENS",
-      "firstName": "Yannick",
-      "yob": 1998,
-      "noc": "BEL",
-      "result": "7:45.12",
-      "notes": "",
-      "discipline": "3000m",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 5,
-      "lastName": "MANCINI",
-      "firstName": "Davide",
-      "yob": 1997,
-      "noc": "ITA",
-      "result": "7:46.78",
-      "notes": "",
-      "discipline": "3000m",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 6,
-      "lastName": "SCHMIDT",
-      "firstName": "Karl",
-      "yob": 2000,
-      "noc": "GER",
-      "result": "7:48.01",
-      "notes": "",
-      "discipline": "3000m",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 7,
-      "lastName": "JOHANSSON",
-      "firstName": "Erik",
-      "yob": 1999,
-      "noc": "SWE",
-      "result": "7:49.34",
-      "notes": "",
-      "discipline": "3000m",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 8,
-      "lastName": "LEROY",
-      "firstName": "Baptiste",
-      "yob": 2000,
-      "noc": "FRA",
-      "result": "7:50.67",
-      "notes": "",
-      "discipline": "3000m",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 1,
-      "lastName": "SZYMANSKI",
-      "firstName": "Damian",
-      "yob": 1998,
-      "noc": "POL",
-      "result": "7.57",
-      "notes": "",
-      "discipline": "60m Hurdles",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 2,
-      "lastName": "BELOCIAN",
-      "firstName": "Wilhem",
-      "yob": 1995,
-      "noc": "FRA",
-      "result": "7.62",
-      "notes": "",
-      "discipline": "60m Hurdles",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 3,
-      "lastName": "MARTINOT-LAGARDE",
-      "firstName": "Thomas",
-      "yob": 1991,
-      "noc": "FRA",
-      "result": "7.68",
-      "notes": "",
-      "discipline": "60m Hurdles",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 4,
-      "lastName": "BÄUMLER",
-      "firstName": "Gregor",
-      "yob": 2001,
-      "noc": "GER",
-      "result": "7.71",
-      "notes": "",
-      "discipline": "60m Hurdles",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 5,
-      "lastName": "OSEI-BONSU",
-      "firstName": "Emmanuel",
-      "yob": 1999,
-      "noc": "GER",
-      "result": "7.78",
-      "notes": "",
-      "discipline": "60m Hurdles",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 6,
-      "lastName": "WALKER",
-      "firstName": "Damion",
-      "yob": 2000,
-      "noc": "JAM",
-      "result": "7.83",
-      "notes": "",
-      "discipline": "60m Hurdles",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 7,
-      "lastName": "ANDERSEN",
-      "firstName": "Magnus",
-      "yob": 2001,
-      "noc": "DEN",
-      "result": "7.89",
-      "notes": "",
-      "discipline": "60m Hurdles",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 8,
-      "lastName": "DE VOLDER",
-      "firstName": "Baptiste",
-      "yob": 2000,
-      "noc": "BEL",
-      "result": "7.92",
-      "notes": "",
-      "discipline": "60m Hurdles",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 1,
-      "lastName": "GUERRA",
-      "firstName": "Maykel Massó",
-      "yob": 1999,
-      "noc": "CUB",
-      "result": "8.22",
-      "notes": "",
-      "discipline": "Long Jump",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 2,
-      "lastName": "ECHEVARRIA",
-      "firstName": "Juan Miguel",
-      "yob": 1998,
-      "noc": "CUB",
-      "result": "8.15",
-      "notes": "",
-      "discipline": "Long Jump",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 3,
-      "lastName": "TENTOGLOU",
-      "firstName": "Miltiadis",
-      "yob": 1998,
-      "noc": "GRE",
-      "result": "8.09",
-      "notes": "",
-      "discipline": "Long Jump",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 4,
-      "lastName": "WILLIAMS",
-      "firstName": "Wayne",
-      "yob": 2001,
-      "noc": "GBR",
-      "result": "7.98",
-      "notes": "",
-      "discipline": "Long Jump",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 5,
-      "lastName": "BICHLER",
-      "firstName": "Simon",
-      "yob": 2000,
-      "noc": "GER",
-      "result": "7.89",
-      "notes": "",
-      "discipline": "Long Jump",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 6,
-      "lastName": "MANCINI",
-      "firstName": "Davide",
-      "yob": 2000,
-      "noc": "ITA",
-      "result": "7.81",
-      "notes": "",
-      "discipline": "Long Jump",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 7,
-      "lastName": "THOMAS",
-      "firstName": "Jason",
-      "yob": 1999,
-      "noc": "AUS",
-      "result": "7.74",
-      "notes": "",
-      "discipline": "Long Jump",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    },
-    {
-      "rank": 8,
-      "lastName": "BROEDERS",
-      "firstName": "Ben",
-      "yob": 1995,
-      "noc": "BEL",
-      "result": "7.67",
-      "notes": "",
-      "discipline": "Long Jump",
-      "gender": "M",
-      "year": 2026,
-      "date": "2026-01-18"
-    }
-  ],
-  "2026": [
-    {
-      "rank": 1,
-      "discipline": "400 m",
       "gender": "M",
       "lastName": "BREDAU",
       "firstName": "Jean Paul",
@@ -33911,7 +33019,7 @@
     },
     {
       "rank": 2,
-      "discipline": "400 m",
+      "discipline": "400m",
       "gender": "M",
       "lastName": "FERNANDEZ",
       "firstName": "Markel",
@@ -33921,7 +33029,7 @@
     },
     {
       "rank": 3,
-      "discipline": "400 m",
+      "discipline": "400m",
       "gender": "M",
       "lastName": "OKEZIE",
       "firstName": "Chidi",
@@ -33931,7 +33039,7 @@
     },
     {
       "rank": 4,
-      "discipline": "400 m",
+      "discipline": "400m",
       "gender": "M",
       "lastName": "IGUACEL",
       "firstName": "Christian",
@@ -33941,7 +33049,7 @@
     },
     {
       "rank": 5,
-      "discipline": "400 m",
+      "discipline": "400m",
       "gender": "M",
       "lastName": "DÖMÖTÖR",
       "firstName": "Patrik",
@@ -33951,7 +33059,7 @@
     },
     {
       "rank": 6,
-      "discipline": "400 m",
+      "discipline": "400m",
       "gender": "M",
       "lastName": "DAMMERMANN",
       "firstName": "Fabian",
@@ -33961,7 +33069,7 @@
     },
     {
       "rank": 6,
-      "discipline": "400 m",
+      "discipline": "400m",
       "gender": "M",
       "lastName": "KJANOVIC",
       "firstName": "Bosko",
@@ -33971,7 +33079,7 @@
     },
     {
       "rank": 8,
-      "discipline": "400 m",
+      "discipline": "400m",
       "gender": "M",
       "lastName": "BEX",
       "firstName": "Wout",
@@ -33981,7 +33089,7 @@
     },
     {
       "rank": 9,
-      "discipline": "400 m",
+      "discipline": "400m",
       "gender": "M",
       "lastName": "LASSINE",
       "firstName": "Glenn",
@@ -33991,7 +33099,7 @@
     },
     {
       "rank": 1,
-      "discipline": "800 m",
+      "discipline": "800m",
       "gender": "M",
       "lastName": "ENGLISH",
       "firstName": "Mark",
@@ -34001,7 +33109,7 @@
     },
     {
       "rank": 2,
-      "discipline": "800 m",
+      "discipline": "800m",
       "gender": "M",
       "lastName": "WYDERKA",
       "firstName": "Maciej",
@@ -34011,7 +33119,7 @@
     },
     {
       "rank": 3,
-      "discipline": "800 m",
+      "discipline": "800m",
       "gender": "M",
       "lastName": "SIERADZKI",
       "firstName": "Patryk",
@@ -34021,7 +33129,7 @@
     },
     {
       "rank": 4,
-      "discipline": "800 m",
+      "discipline": "800m",
       "gender": "M",
       "lastName": "DE SMET",
       "firstName": "Tibo",
@@ -34031,7 +33139,7 @@
     },
     {
       "rank": 5,
-      "discipline": "800 m",
+      "discipline": "800m",
       "gender": "M",
       "lastName": "VAN DIEPEN",
       "firstName": "Tony",
@@ -34041,7 +33149,7 @@
     },
     {
       "rank": 6,
-      "discipline": "800 m",
+      "discipline": "800m",
       "gender": "M",
       "lastName": "ROTICH",
       "firstName": "Ferguson Cheruiyot",
@@ -34051,7 +33159,7 @@
     },
     {
       "rank": 7,
-      "discipline": "800 m",
+      "discipline": "800m",
       "gender": "M",
       "lastName": "SUBTIL",
       "firstName": "Louison",
@@ -34061,7 +33169,7 @@
     },
     {
       "rank": 8,
-      "discipline": "800 m",
+      "discipline": "800m",
       "gender": "M",
       "lastName": "DE ARRIBA",
       "firstName": "Alvaro",
@@ -34071,7 +33179,7 @@
     },
     {
       "rank": 9,
-      "discipline": "800 m",
+      "discipline": "800m",
       "gender": "M",
       "lastName": "TEIXEIRA",
       "firstName": "Jory",
@@ -34081,7 +33189,7 @@
     },
     {
       "rank": 1,
-      "discipline": "1500 m",
+      "discipline": "1500m",
       "gender": "M",
       "lastName": "SISK",
       "firstName": "Pieter",
@@ -34091,7 +33199,7 @@
     },
     {
       "rank": 2,
-      "discipline": "1500 m",
+      "discipline": "1500m",
       "gender": "M",
       "lastName": "SAEZ",
       "firstName": "Carlos",
@@ -34101,7 +33209,7 @@
     },
     {
       "rank": 3,
-      "discipline": "1500 m",
+      "discipline": "1500m",
       "gender": "M",
       "lastName": "GARCIA",
       "firstName": "Mariano",
@@ -34111,7 +33219,7 @@
     },
     {
       "rank": 4,
-      "discipline": "1500 m",
+      "discipline": "1500m",
       "gender": "M",
       "lastName": "ENGELS",
       "firstName": "Craig",
@@ -34121,7 +33229,7 @@
     },
     {
       "rank": 5,
-      "discipline": "1500 m",
+      "discipline": "1500m",
       "gender": "M",
       "lastName": "MOYA",
       "firstName": "Pol",
@@ -34131,7 +33239,7 @@
     },
     {
       "rank": 6,
-      "discipline": "1500 m",
+      "discipline": "1500m",
       "gender": "M",
       "lastName": "MOUJAHID",
       "firstName": "Elhassane",
@@ -34141,7 +33249,7 @@
     },
     {
       "rank": 7,
-      "discipline": "1500 m",
+      "discipline": "1500m",
       "gender": "M",
       "lastName": "SASINEK",
       "firstName": "Filip",
@@ -34151,7 +33259,7 @@
     },
     {
       "rank": 8,
-      "discipline": "1500 m",
+      "discipline": "1500m",
       "gender": "M",
       "lastName": "DABOS",
       "firstName": "Teo",
@@ -34161,7 +33269,7 @@
     },
     {
       "rank": 9,
-      "discipline": "1500 m",
+      "discipline": "1500m",
       "gender": "M",
       "lastName": "GUZMAN",
       "firstName": "Eric",
@@ -34171,7 +33279,7 @@
     },
     {
       "rank": 10,
-      "discipline": "1500 m",
+      "discipline": "1500m",
       "gender": "M",
       "lastName": "HEYMANS",
       "firstName": "John",
@@ -34181,7 +33289,7 @@
     },
     {
       "rank": 11,
-      "discipline": "1500 m",
+      "discipline": "1500m",
       "gender": "M",
       "lastName": "VALDUGA",
       "firstName": "Simone",
@@ -34191,7 +33299,7 @@
     },
     {
       "rank": 1,
-      "discipline": "3000 m",
+      "discipline": "3000m",
       "gender": "M",
       "lastName": "VERHEYDEN",
       "firstName": "Ruben",
@@ -34201,7 +33309,7 @@
     },
     {
       "rank": 2,
-      "discipline": "3000 m",
+      "discipline": "3000m",
       "gender": "M",
       "lastName": "QUERINJEAN",
       "firstName": "Ruben",
@@ -34211,7 +33319,7 @@
     },
     {
       "rank": 3,
-      "discipline": "3000 m",
+      "discipline": "3000m",
       "gender": "M",
       "lastName": "SZOGI",
       "firstName": "Istvan",
@@ -34221,7 +33329,7 @@
     },
     {
       "rank": 4,
-      "discipline": "3000 m",
+      "discipline": "3000m",
       "gender": "M",
       "lastName": "PALKOVITS",
       "firstName": "Istvan",
@@ -34231,7 +33339,7 @@
     },
     {
       "rank": 5,
-      "discipline": "3000 m",
+      "discipline": "3000m",
       "gender": "M",
       "lastName": "MARSMAN",
       "firstName": "Nick",
@@ -34241,7 +33349,7 @@
     },
     {
       "rank": 6,
-      "discipline": "3000 m",
+      "discipline": "3000m",
       "gender": "M",
       "lastName": "URIBE",
       "firstName": "Diego Ignacio",
@@ -34251,7 +33359,7 @@
     },
     {
       "rank": 7,
-      "discipline": "3000 m",
+      "discipline": "3000m",
       "gender": "M",
       "lastName": "BJÖRNSEN",
       "firstName": "Andreas",
@@ -34261,7 +33369,7 @@
     },
     {
       "rank": 8,
-      "discipline": "3000 m",
+      "discipline": "3000m",
       "gender": "M",
       "lastName": "WEIZINGER",
       "firstName": "Johannes",
@@ -34271,7 +33379,7 @@
     },
     {
       "rank": 9,
-      "discipline": "3000 m",
+      "discipline": "3000m",
       "gender": "M",
       "lastName": "DIETERICH",
       "firstName": "Max",
@@ -34281,7 +33389,7 @@
     },
     {
       "rank": 10,
-      "discipline": "3000 m",
+      "discipline": "3000m",
       "gender": "M",
       "lastName": "PARMANTIER",
       "firstName": "Loic",
@@ -34291,7 +33399,7 @@
     },
     {
       "rank": 1,
-      "discipline": "60 m hurdles",
+      "discipline": "60m Hurdles",
       "gender": "M",
       "lastName": "SZYMANSKI",
       "firstName": "Jakub",
@@ -34301,7 +33409,7 @@
     },
     {
       "rank": 2,
-      "discipline": "60 m hurdles",
+      "discipline": "60m Hurdles",
       "gender": "M",
       "lastName": "BACARI",
       "firstName": "Elie",
@@ -34311,7 +33419,7 @@
     },
     {
       "rank": 3,
-      "discipline": "60 m hurdles",
+      "discipline": "60m Hurdles",
       "gender": "M",
       "lastName": "LLOPIS",
       "firstName": "Enrique",
@@ -34321,7 +33429,7 @@
     },
     {
       "rank": 4,
-      "discipline": "60 m hurdles",
+      "discipline": "60m Hurdles",
       "gender": "M",
       "lastName": "CZYKIER",
       "firstName": "Damian",
@@ -34331,7 +33439,7 @@
     },
     {
       "rank": 5,
-      "discipline": "60 m hurdles",
+      "discipline": "60m Hurdles",
       "gender": "M",
       "lastName": "MARTINEZ",
       "firstName": "Asier",
@@ -34341,7 +33449,7 @@
     },
     {
       "rank": 6,
-      "discipline": "60 m hurdles",
+      "discipline": "60m Hurdles",
       "gender": "M",
       "lastName": "LARARAUDEUSE",
       "firstName": "Jeremie",
@@ -34351,7 +33459,7 @@
     },
     {
       "rank": 7,
-      "discipline": "60 m hurdles",
+      "discipline": "60m Hurdles",
       "gender": "M",
       "lastName": "ROBERTS",
       "firstName": "Giano",
@@ -34361,7 +33469,7 @@
     },
     {
       "rank": 8,
-      "discipline": "60 m hurdles",
+      "discipline": "60m Hurdles",
       "gender": "M",
       "lastName": "DIAZ",
       "firstName": "Angel",
@@ -34451,7 +33559,7 @@
     },
     {
       "rank": 1,
-      "discipline": "60 m",
+      "discipline": "60m",
       "gender": "W",
       "lastName": "VAN DER WEKEN",
       "firstName": "Patrizia",
@@ -34461,7 +33569,7 @@
     },
     {
       "rank": 2,
-      "discipline": "60 m",
+      "discipline": "60m",
       "gender": "W",
       "lastName": "BESTUE",
       "firstName": "Jael",
@@ -34471,7 +33579,7 @@
     },
     {
       "rank": 3,
-      "discipline": "60 m",
+      "discipline": "60m",
       "gender": "W",
       "lastName": "PINTO",
       "firstName": "Tatjana",
@@ -34481,7 +33589,7 @@
     },
     {
       "rank": 4,
-      "discipline": "60 m",
+      "discipline": "60m",
       "gender": "W",
       "lastName": "EZE",
       "firstName": "Joy",
@@ -34491,7 +33599,7 @@
     },
     {
       "rank": 5,
-      "discipline": "60 m",
+      "discipline": "60m",
       "gender": "W",
       "lastName": "BAZOLO",
       "firstName": "Lorene",
@@ -34501,7 +33609,7 @@
     },
     {
       "rank": 6,
-      "discipline": "60 m",
+      "discipline": "60m",
       "gender": "W",
       "lastName": "STEFANOWICZ",
       "firstName": "Magdalena",
@@ -34511,7 +33619,7 @@
     },
     {
       "rank": 7,
-      "discipline": "60 m",
+      "discipline": "60m",
       "gender": "W",
       "lastName": "NKANSA",
       "firstName": "Delphine",
@@ -34521,7 +33629,7 @@
     },
     {
       "rank": 7,
-      "discipline": "60 m",
+      "discipline": "60m",
       "gender": "W",
       "lastName": "SPANOUDAKI-CHATZIRIGA",
       "firstName": "Rafailia",
@@ -34531,7 +33639,7 @@
     },
     {
       "rank": 1,
-      "discipline": "200 m",
+      "discipline": "200m",
       "gender": "W",
       "lastName": "SEVILLA",
       "firstName": "Paula",
@@ -34541,7 +33649,7 @@
     },
     {
       "rank": 2,
-      "discipline": "200 m",
+      "discipline": "200m",
       "gender": "W",
       "lastName": "LINDAHL",
       "firstName": "Nora",
@@ -34551,7 +33659,7 @@
     },
     {
       "rank": 3,
-      "discipline": "200 m",
+      "discipline": "200m",
       "gender": "W",
       "lastName": "WESSOLLY",
       "firstName": "Jessica-Bianca",
@@ -34561,7 +33669,7 @@
     },
     {
       "rank": 4,
-      "discipline": "200 m",
+      "discipline": "200m",
       "gender": "W",
       "lastName": "VAN DER WEKEN",
       "firstName": "Patrizia",
@@ -34571,7 +33679,7 @@
     },
     {
       "rank": 5,
-      "discipline": "200 m",
+      "discipline": "200m",
       "gender": "W",
       "lastName": "NKANSA",
       "firstName": "Delphine",
@@ -34581,7 +33689,7 @@
     },
     {
       "rank": 6,
-      "discipline": "200 m",
+      "discipline": "200m",
       "gender": "W",
       "lastName": "CLADERA",
       "firstName": "Esperanca",
@@ -34591,7 +33699,7 @@
     },
     {
       "rank": 7,
-      "discipline": "200 m",
+      "discipline": "200m",
       "gender": "W",
       "lastName": "KIVIKAS",
       "firstName": "Ann Marii",
@@ -34601,7 +33709,7 @@
     },
     {
       "rank": 8,
-      "discipline": "200 m",
+      "discipline": "200m",
       "gender": "W",
       "lastName": "WIELAND",
       "firstName": "Louise",
@@ -34611,7 +33719,7 @@
     },
     {
       "rank": 9,
-      "discipline": "200 m",
+      "discipline": "200m",
       "gender": "W",
       "lastName": "DARIUS",
       "firstName": "Symone",
@@ -34621,7 +33729,7 @@
     },
     {
       "rank": 10,
-      "discipline": "200 m",
+      "discipline": "200m",
       "gender": "W",
       "lastName": "HRIBAR",
       "firstName": "Lina",
@@ -34631,7 +33739,7 @@
     },
     {
       "rank": 1,
-      "discipline": "800 m",
+      "discipline": "800m",
       "gender": "W",
       "lastName": "ARENDT",
       "firstName": "Fanny",
@@ -34641,7 +33749,7 @@
     },
     {
       "rank": 2,
-      "discipline": "800 m",
+      "discipline": "800m",
       "gender": "W",
       "lastName": "MOORE",
       "firstName": "Emma",
@@ -34651,7 +33759,7 @@
     },
     {
       "rank": 3,
-      "discipline": "800 m",
+      "discipline": "800m",
       "gender": "W",
       "lastName": "KOCZANOWA",
       "firstName": "Margarita",
@@ -34661,7 +33769,7 @@
     },
     {
       "rank": 4,
-      "discipline": "800 m",
+      "discipline": "800m",
       "gender": "W",
       "lastName": "IBARZABAL",
       "firstName": "Lorea",
@@ -34671,7 +33779,7 @@
     },
     {
       "rank": 5,
-      "discipline": "800 m",
+      "discipline": "800m",
       "gender": "W",
       "lastName": "BILO",
       "firstName": "Laure",
@@ -34681,7 +33789,7 @@
     },
     {
       "rank": 6,
-      "discipline": "800 m",
+      "discipline": "800m",
       "gender": "W",
       "lastName": "FICENEC",
       "firstName": "Kimberle",
@@ -34691,7 +33799,7 @@
     },
     {
       "rank": 7,
-      "discipline": "800 m",
+      "discipline": "800m",
       "gender": "W",
       "lastName": "BELSHAW",
       "firstName": "Lyla",
@@ -34701,7 +33809,7 @@
     },
     {
       "rank": 8,
-      "discipline": "800 m",
+      "discipline": "800m",
       "gender": "W",
       "lastName": "SPILL",
       "firstName": "Tanja",
@@ -34711,7 +33819,7 @@
     },
     {
       "rank": 1,
-      "discipline": "1500 m",
+      "discipline": "1500m",
       "gender": "W",
       "lastName": "MULUGETA",
       "firstName": "Samrawit",
@@ -34721,7 +33829,7 @@
     },
     {
       "rank": 2,
-      "discipline": "1500 m",
+      "discipline": "1500m",
       "gender": "W",
       "lastName": "GAY",
       "firstName": "Adele",
@@ -34731,7 +33839,7 @@
     },
     {
       "rank": 3,
-      "discipline": "1500 m",
+      "discipline": "1500m",
       "gender": "W",
       "lastName": "SILVA",
       "firstName": "Patricia",
@@ -34741,7 +33849,7 @@
     },
     {
       "rank": 4,
-      "discipline": "1500 m",
+      "discipline": "1500m",
       "gender": "W",
       "lastName": "TSEHAYE",
       "firstName": "Ageze Saida",
@@ -34751,7 +33859,7 @@
     },
     {
       "rank": 5,
-      "discipline": "1500 m",
+      "discipline": "1500m",
       "gender": "W",
       "lastName": "PAREWYCK",
       "firstName": "Mariska",
@@ -34761,7 +33869,7 @@
     },
     {
       "rank": 6,
-      "discipline": "1500 m",
+      "discipline": "1500m",
       "gender": "W",
       "lastName": "NIELSEN",
       "firstName": "Julia",
@@ -34771,7 +33879,7 @@
     },
     {
       "rank": 7,
-      "discipline": "1500 m",
+      "discipline": "1500m",
       "gender": "W",
       "lastName": "HOFFMANN",
       "firstName": "Lore",
@@ -34781,7 +33889,7 @@
     },
     {
       "rank": 8,
-      "discipline": "1500 m",
+      "discipline": "1500m",
       "gender": "W",
       "lastName": "JAGUSCIK",
       "firstName": "Julia",
@@ -34791,7 +33899,7 @@
     },
     {
       "rank": 9,
-      "discipline": "1500 m",
+      "discipline": "1500m",
       "gender": "W",
       "lastName": "COUTELLIER",
       "firstName": "Vera",
@@ -34801,7 +33909,7 @@
     },
     {
       "rank": 10,
-      "discipline": "1500 m",
+      "discipline": "1500m",
       "gender": "W",
       "lastName": "FRACASSINI",
       "firstName": "Melissa",
@@ -34811,7 +33919,7 @@
     },
     {
       "rank": 11,
-      "discipline": "1500 m",
+      "discipline": "1500m",
       "gender": "W",
       "lastName": "BUDDE",
       "firstName": "Adia",
@@ -34821,7 +33929,7 @@
     },
     {
       "rank": 12,
-      "discipline": "1500 m",
+      "discipline": "1500m",
       "gender": "W",
       "lastName": "VANOPSTAL",
       "firstName": "Nel",
@@ -34831,7 +33939,7 @@
     },
     {
       "rank": 13,
-      "discipline": "1500 m",
+      "discipline": "1500m",
       "gender": "W",
       "lastName": "KROMBACH",
       "firstName": "Linda",
@@ -34841,7 +33949,7 @@
     },
     {
       "rank": 1,
-      "discipline": "60 m hurdles",
+      "discipline": "60m Hurdles",
       "gender": "W",
       "lastName": "ALESSANDRINI",
       "firstName": "Sacha",
@@ -34851,7 +33959,7 @@
     },
     {
       "rank": 2,
-      "discipline": "60 m hurdles",
+      "discipline": "60m Hurdles",
       "gender": "W",
       "lastName": "KESKITALO",
       "firstName": "Saara",
@@ -34861,7 +33969,7 @@
     },
     {
       "rank": 3,
-      "discipline": "60 m hurdles",
+      "discipline": "60m Hurdles",
       "gender": "W",
       "lastName": "JIRANOVA",
       "firstName": "Helena",
@@ -34871,7 +33979,7 @@
     },
     {
       "rank": 4,
-      "discipline": "60 m hurdles",
+      "discipline": "60m Hurdles",
       "gender": "W",
       "lastName": "SCHUSTER",
       "firstName": "Franziska",
@@ -34881,7 +33989,7 @@
     },
     {
       "rank": 4,
-      "discipline": "60 m hurdles",
+      "discipline": "60m Hurdles",
       "gender": "W",
       "lastName": "BRITTON",
       "firstName": "Evonne",
@@ -34891,7 +33999,7 @@
     },
     {
       "rank": 6,
-      "discipline": "60 m hurdles",
+      "discipline": "60m Hurdles",
       "gender": "W",
       "lastName": "GROOT",
       "firstName": "Mira",
@@ -34901,7 +34009,7 @@
     },
     {
       "rank": 7,
-      "discipline": "60 m hurdles",
+      "discipline": "60m Hurdles",
       "gender": "W",
       "lastName": "RAUSCH",
       "firstName": "Victoria",
@@ -34911,7 +34019,7 @@
     },
     {
       "rank": 8,
-      "discipline": "60 m hurdles",
+      "discipline": "60m Hurdles",
       "gender": "W",
       "lastName": "SCHNEIDER",
       "firstName": "Rosina",

@@ -3,10 +3,12 @@ import { useAuth } from "../context/auth-context";
 import { getActiveRoles } from "./navigation";
 import {
   MEETING_EDITIONS_COL,
+  clearResultsForYear,
   closeEdition,
-  deleteMeetingResult,
+  deleteResult,
+  saveResult,
   seedMeetingDatabase,
-  updateMeetingResult,
+  setEditionVisibility,
   useAllWinners,
   useMeetingEditions,
   useMeetingRecords,
@@ -151,6 +153,95 @@ function SeedButton({ onSeed, seeding, seedLog }) {
   );
 }
 
+// ─── Result form ──────────────────────────────────────────────────────────────
+
+const EMPTY_RESULT = { discipline: "", gender: "M", round: "", heat: "", rank: 1, lastName: "", firstName: "", noc: "", result: "", yob: "", points: "" };
+
+function ResultForm({ year, initial, onSave, onCancel }) {
+  const [data, setData] = useState({ ...EMPTY_RESULT, year: Number(year), ...initial });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const set = (field, value) => setData((p) => ({ ...p, [field]: value }));
+
+  async function handleSave() {
+    if (!data.discipline.trim()) { setError("Discipline requise."); return; }
+    if (!data.lastName.trim()) { setError("Nom requis."); return; }
+    setSaving(true); setError("");
+    try {
+      await onSave({ ...data, year: Number(year), rank: Number(data.rank) || 1, yob: data.yob ? Number(data.yob) : null, points: data.points !== "" ? Number(data.points) : null });
+    } catch (e) {
+      setError(e.message || "Erreur lors de la sauvegarde.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const inp = { padding: "7px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: "0.875rem", fontFamily: "inherit", width: "100%" };
+
+  return (
+    <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 12, padding: 20, marginTop: 12 }}>
+      <p style={{ fontWeight: 700, marginBottom: 14, fontSize: "0.9rem" }}>{initial?.id ? "Modifier un résultat" : "Ajouter un résultat"} — {year}</p>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 10 }}>
+        <div>
+          <label style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", display: "block", marginBottom: 4 }}>Discipline *</label>
+          <input style={inp} value={data.discipline} onChange={(e) => set("discipline", e.target.value)} placeholder="ex: 60m" />
+        </div>
+        <div>
+          <label style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", display: "block", marginBottom: 4 }}>Genre</label>
+          <select style={inp} value={data.gender} onChange={(e) => set("gender", e.target.value)}>
+            <option value="M">Hommes (M)</option>
+            <option value="W">Femmes (W)</option>
+          </select>
+        </div>
+        <div>
+          <label style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", display: "block", marginBottom: 4 }}>Round</label>
+          <input style={inp} value={data.round} onChange={(e) => set("round", e.target.value)} placeholder="Final A / Final B / Heats combines…" />
+        </div>
+        <div>
+          <label style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", display: "block", marginBottom: 4 }}>Série</label>
+          <input style={inp} value={data.heat} onChange={(e) => set("heat", e.target.value)} placeholder="S1 / S2 / S3…" />
+        </div>
+        <div>
+          <label style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", display: "block", marginBottom: 4 }}>Rang *</label>
+          <input type="number" style={inp} value={data.rank} onChange={(e) => set("rank", e.target.value)} min={1} />
+        </div>
+        <div>
+          <label style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", display: "block", marginBottom: 4 }}>Nom *</label>
+          <input style={inp} value={data.lastName} onChange={(e) => set("lastName", e.target.value)} placeholder="NOM" />
+        </div>
+        <div>
+          <label style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", display: "block", marginBottom: 4 }}>Prénom</label>
+          <input style={inp} value={data.firstName} onChange={(e) => set("firstName", e.target.value)} placeholder="Prénom" />
+        </div>
+        <div>
+          <label style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", display: "block", marginBottom: 4 }}>NOC</label>
+          <input style={inp} value={data.noc} onChange={(e) => set("noc", e.target.value.toUpperCase())} placeholder="FRA" maxLength={3} />
+        </div>
+        <div>
+          <label style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", display: "block", marginBottom: 4 }}>Résultat</label>
+          <input style={inp} value={data.result} onChange={(e) => set("result", e.target.value)} placeholder="6.58" />
+        </div>
+        <div>
+          <label style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", display: "block", marginBottom: 4 }}>Année naissance</label>
+          <input type="number" style={inp} value={data.yob} onChange={(e) => set("yob", e.target.value)} placeholder="1998" />
+        </div>
+        <div>
+          <label style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", display: "block", marginBottom: 4 }}>Points</label>
+          <input type="number" style={inp} value={data.points} onChange={(e) => set("points", e.target.value)} placeholder="—" />
+        </div>
+      </div>
+      {error && <p style={{ color: "#dc2626", fontSize: "0.8rem", marginTop: 8 }}>{error}</p>}
+      <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+        <button className="btn btn--primary" onClick={handleSave} disabled={saving} style={{ fontSize: "0.85rem" }}>
+          {saving ? "Enregistrement…" : "Enregistrer"}
+        </button>
+        <button className="btn" onClick={onCancel} style={{ fontSize: "0.85rem" }}>Annuler</button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Meeting History page ─────────────────────────────────────────────────────
 
 // Build a lookup index from athlete registry: "lastname_yob" → registry entry
@@ -245,7 +336,7 @@ function EditableResultRow({ r, onSaved, onDeleted }) {
         noc:        draft.noc,
       };
       if (draft.yob !== "" && draft.yob != null) fields.yob = Number(draft.yob);
-      await updateMeetingResult(r.id, fields);
+      await saveResult(r.id, fields);
       setEditing(false);
       onSaved?.();
     } catch (e) {
@@ -259,7 +350,7 @@ function EditableResultRow({ r, onSaved, onDeleted }) {
     if (!window.confirm(`Supprimer ${r.lastName} ${r.firstName} (${r.discipline} ${r.gender}) ?`)) return;
     setSaving(true);
     try {
-      await deleteMeetingResult(r.id);
+      await deleteResult(r.id);
       onDeleted?.();
     } catch (e) {
       alert("Erreur : " + e.message);
@@ -432,6 +523,8 @@ function MeetingHistoryPage({ Panel }) {
   const [closeStatus, setCloseStatus] = useState(null);
   const [seeding, setSeeding] = useState(false);
   const [seedLog, setSeedLog] = useState([]);
+  const [addingResult, setAddingResult] = useState(false);
+  const [editingResult, setEditingResult] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const registryIdx = useRegistryIndex();
 
@@ -443,12 +536,12 @@ function MeetingHistoryPage({ Panel }) {
 
   const { results, loading: resultsLoading } = useMeetingResultsForYear(effectiveYear);
 
-  // Group results by discipline + gender
+  // Group results by discipline + gender + round
   const groups = useMemo(() => {
     const map = new Map();
     for (const r of results) {
-      const key = `${r.discipline}||${r.gender}`;
-      if (!map.has(key)) map.set(key, { discipline: r.discipline, gender: r.gender, rows: [] });
+      const key = `${r.discipline}||${r.gender}||${r.round || ""}`;
+      if (!map.has(key)) map.set(key, { discipline: r.discipline, gender: r.gender, round: r.round || "", rows: [] });
       map.get(key).rows.push(r);
     }
     return [...map.values()].sort(compareDisciplineGender);
@@ -483,6 +576,21 @@ function MeetingHistoryPage({ Panel }) {
     } finally {
       setClosingYear(null);
     }
+  }
+
+  async function handleSaveResult(data) {
+    await saveResult(editingResult?.id || null, data);
+    setAddingResult(false);
+    setEditingResult(null);
+  }
+
+  async function handleDeleteResult(id, label) {
+    if (!window.confirm(`Supprimer ce résultat (${label}) ?`)) return;
+    await deleteResult(id);
+  }
+
+  async function handleToggleVisibility(year, currentVisible) {
+    await setEditionVisibility(year, !currentVisible);
   }
 
   const selectedEdition = editions.find((e) => e.year === effectiveYear);
@@ -524,26 +632,39 @@ function MeetingHistoryPage({ Panel }) {
                     {ed.year}
                   </span>
                 ) : (
-                  <button
-                    key={ed.year}
-                    onClick={() => setSelectedYear(ed.year)}
-                    style={{
-                      padding: "0.35rem 0.9rem",
-                      borderRadius: 20,
-                      border: "1.5px solid",
-                      cursor: "pointer",
-                      fontWeight: effectiveYear === ed.year ? 700 : 400,
-                      background: effectiveYear === ed.year ? "#1d4ed8" : "#f8fafc",
-                      color: effectiveYear === ed.year ? "#fff" : "#374151",
-                      borderColor: effectiveYear === ed.year ? "#1d4ed8" : "#cbd5e1",
-                      fontSize: "0.88rem",
-                    }}
-                  >
-                    {ed.year}
-                    {ed.isClosed && (
-                      <span style={{ marginLeft: 4, fontSize: "0.68rem", opacity: 0.75 }}>✓</span>
+                  <div key={ed.year} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                    <button
+                      onClick={() => setSelectedYear(ed.year)}
+                      style={{
+                        padding: "0.35rem 0.9rem",
+                        borderRadius: 20,
+                        border: "1.5px solid",
+                        cursor: "pointer",
+                        fontWeight: effectiveYear === ed.year ? 700 : 400,
+                        background: effectiveYear === ed.year ? "#1d4ed8" : "#f8fafc",
+                        color: effectiveYear === ed.year ? "#fff" : "#374151",
+                        borderColor: effectiveYear === ed.year ? "#1d4ed8" : "#cbd5e1",
+                        fontSize: "0.88rem",
+                        opacity: ed.visibleInStats === false ? 0.45 : 1,
+                      }}
+                    >
+                      {ed.year}
+                      {ed.isClosed && (
+                        <span style={{ marginLeft: 4, fontSize: "0.68rem", opacity: 0.75 }}>✓</span>
+                      )}
+                    </button>
+                    {isAdmin && (
+                      <label title="Visible dans les statistiques publiques" style={{ display: "flex", alignItems: "center", gap: 3, cursor: "pointer", fontSize: "0.68rem", color: "#6b7280" }}>
+                        <input
+                          type="checkbox"
+                          checked={ed.visibleInStats !== false}
+                          onChange={() => handleToggleVisibility(ed.year, ed.visibleInStats !== false)}
+                          style={{ width: 12, height: 12 }}
+                        />
+                        stats
+                      </label>
                     )}
-                  </button>
+                  </div>
                 )
               ))}
             </div>
@@ -598,27 +719,36 @@ function MeetingHistoryPage({ Panel }) {
           title={`Results — ${effectiveYear ?? "—"}`}
           subtitle={resultsLoading ? "Loading…" : `${results.length} entries, ${groups.length} events`}
           actions={
-            isAdmin && effectiveYear && results.length > 0 ? (
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            isAdmin && effectiveYear ? (
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
                 {closeStatus && (
                   <span style={{ fontSize: "0.8rem", color: "#15803d", maxWidth: 260 }}>
                     {closeStatus}
                   </span>
                 )}
                 <button
-                  onClick={() => setEditMode((v) => !v)}
-                  style={{
-                    padding: "0.3rem 0.8rem", borderRadius: 8,
-                    border: "1.5px solid",
-                    borderColor: editMode ? "#f59e0b" : "#d1d5db",
-                    background: editMode ? "#fef3c7" : "#fff",
-                    color: editMode ? "#92400e" : "#374151",
-                    fontWeight: editMode ? 700 : 400,
-                    fontSize: "0.82rem", cursor: "pointer", whiteSpace: "nowrap",
-                  }}
+                  className="btn btn--secondary"
+                  onClick={() => { setAddingResult(true); setEditingResult(null); }}
+                  style={{ whiteSpace: "nowrap", fontSize: "0.82rem" }}
                 >
-                  {editMode ? "✏️ Mode édition ON" : "✏️ Modifier les résultats"}
+                  + Ajouter un résultat
                 </button>
+                {results.length > 0 && (
+                  <button
+                    onClick={() => setEditMode((v) => !v)}
+                    style={{
+                      padding: "0.3rem 0.8rem", borderRadius: 8,
+                      border: "1.5px solid",
+                      borderColor: editMode ? "#f59e0b" : "#d1d5db",
+                      background: editMode ? "#fef3c7" : "#fff",
+                      color: editMode ? "#92400e" : "#374151",
+                      fontWeight: editMode ? 700 : 400,
+                      fontSize: "0.82rem", cursor: "pointer", whiteSpace: "nowrap",
+                    }}
+                  >
+                    {editMode ? "✏️ Mode édition ON" : "✏️ Modifier les résultats"}
+                  </button>
+                )}
                 {!selectedEdition?.isClosed && (
                   <button
                     className="btn btn--secondary"
@@ -633,6 +763,14 @@ function MeetingHistoryPage({ Panel }) {
             ) : null
           }
         >
+          {(addingResult || editingResult) && isAdmin && (
+            <ResultForm
+              year={effectiveYear}
+              initial={editingResult || {}}
+              onSave={handleSaveResult}
+              onCancel={() => { setAddingResult(false); setEditingResult(null); }}
+            />
+          )}
           {resultsLoading ? (
             <p className="panel-note">Loading results…</p>
           ) : results.length === 0 ? (
@@ -640,7 +778,7 @@ function MeetingHistoryPage({ Panel }) {
               <strong>No results found for {effectiveYear}</strong>
               <p>
                 {isAdmin
-                  ? 'Use the "Seed historical data" button in the Admin panel below to import data.'
+                  ? 'Use the "Seed historical data" button in the Admin panel below to import data, or click "+ Ajouter un résultat" to add manually.'
                   : 'Results for this edition are not yet available.'}
               </p>
             </div>
@@ -664,53 +802,73 @@ function MeetingHistoryPage({ Panel }) {
                     <th data-sticky-col="1" className="col-sticky col-sticky--last">Athlète</th>
                     <th>Nat.</th>
                     <th>Résultat</th>
-                    <th>{editMode ? "Genre / Ann." : "Ann."}</th>
-                    <th style={{ width: editMode ? 80 : 40 }}>{editMode ? "Actions" : "Pts"}</th>
+                    <th style={{ width: 44 }}>Série</th>
+                    <th>AN.</th>
+                    <th>Pts</th>
+                    {isAdmin && <th style={{ width: 80 }}></th>}
                   </tr>
                 </thead>
                 <tbody>
                   {groups.map((grp) => [
                     // Event group header
-                    <tr key={`grp-${grp.discipline}-${grp.gender}`} className="event-group-header">
-                      <td colSpan={7} style={{ paddingTop: "0.65rem", paddingBottom: "0.4rem" }}>
+                    <tr key={`grp-${grp.discipline}-${grp.gender}-${grp.round}`} className="event-group-header">
+                      <td colSpan={isAdmin ? 8 : 7} style={{ paddingTop: "0.65rem", paddingBottom: "0.4rem" }}>
                         <span style={{ fontWeight: 700, fontSize: "0.88rem", marginRight: 8 }}>
                           {grp.discipline}
                         </span>
                         <GenderTag gender={grp.gender} />
+                        {grp.round && (
+                          <span style={{ marginLeft: 8, fontSize: "0.75rem", fontWeight: 600, color: "#6b7280", background: "#f3f4f6", padding: "1px 7px", borderRadius: 10 }}>
+                            {grp.round}
+                          </span>
+                        )}
                       </td>
                     </tr>,
                     // Result rows
-                    ...grp.rows.map((r) =>
-                      editMode ? (
-                        <EditableResultRow key={r.id} r={r} />
-                      ) : (
-                        <tr key={r.id}>
-                          <td style={{ textAlign: "center" }}>
-                            <RankBadge rank={r.rank} />
+                    ...grp.rows.map((r) => (
+                      <tr key={r.id}>
+                        <td style={{ textAlign: "center" }}>
+                          <RankBadge rank={r.rank} />
+                        </td>
+                        <td style={{ fontSize: "0.78rem", color: "#888" }}>{r.discipline}</td>
+                        <td className="col-sticky col-sticky--last">
+                          <AthleteNameCell
+                            lastName={r.lastName}
+                            firstName={r.firstName}
+                            yob={r.yob}
+                            registryIdx={registryIdx}
+                          />
+                        </td>
+                        <td>
+                          <FlagImg noc={r.noc} />
+                          {r.noc}
+                        </td>
+                        <td style={{ fontWeight: 600, fontFamily: "monospace" }}>
+                          {r.result || "—"}
+                        </td>
+                        <td style={{ color: "#6b7280", fontSize: "0.75rem", textAlign: "center" }}>
+                          {r.heat || "—"}
+                        </td>
+                        <td style={{ color: "#888", fontSize: "0.82rem" }}>{r.yob || "—"}</td>
+                        <td style={{ color: "#888", fontSize: "0.82rem" }}>
+                          {r.points != null ? r.points : "—"}
+                        </td>
+                        {isAdmin && (
+                          <td style={{ whiteSpace: "nowrap" }}>
+                            <button
+                              onClick={() => { setEditingResult(r); setAddingResult(false); }}
+                              style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.75rem", color: "#6b7280", padding: "2px 4px" }}
+                              title="Modifier"
+                            >✏️</button>
+                            <button
+                              onClick={() => handleDeleteResult(r.id, `${r.discipline} ${r.lastName}`)}
+                              style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.75rem", color: "#dc2626", padding: "2px 4px" }}
+                              title="Supprimer"
+                            >🗑</button>
                           </td>
-                          <td style={{ fontSize: "0.78rem", color: "#888" }}>{r.discipline}</td>
-                          <td className="col-sticky col-sticky--last">
-                            <AthleteNameCell
-                              lastName={r.lastName}
-                              firstName={r.firstName}
-                              yob={r.yob}
-                              registryIdx={registryIdx}
-                            />
-                          </td>
-                          <td>
-                            <FlagImg noc={r.noc} />
-                            {r.noc}
-                          </td>
-                          <td style={{ fontWeight: 600, fontFamily: "monospace" }}>
-                            {r.result || "—"}
-                          </td>
-                          <td style={{ color: "#888", fontSize: "0.82rem" }}>{r.yob || "—"}</td>
-                          <td style={{ color: "#888", fontSize: "0.82rem" }}>
-                            {r.points != null ? r.points : "—"}
-                          </td>
-                        </tr>
-                      )
-                    ),
+                        )}
+                      </tr>
+                    )),
                   ])}
                 </tbody>
               </table>
@@ -732,10 +890,41 @@ function MeetingHistoryPage({ Panel }) {
                 <SeedButton onSeed={handleSeed} seeding={seeding} seedLog={seedLog} />
               </div>
               <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: "0.75rem" }}>
-                <p className="panel-note" style={{ marginBottom: "0.25rem" }}>
+                <p className="panel-note" style={{ marginBottom: "0.5rem" }}>
                   <strong>Close an edition</strong> to record participation in the athlete registry.
                   Select an edition above, then click the "Close edition" button in the Results panel.
                 </p>
+                <p className="panel-note" style={{ marginBottom: "0.5rem" }}>
+                  <strong>Visibilité dans les stats publiques :</strong> cochez/décochez la case "stats" sous chaque année dans le sélecteur d'édition.
+                </p>
+                <button
+                  className="btn"
+                  style={{ fontSize: "0.82rem" }}
+                  onClick={async () => {
+                    const years = editions.filter((e) => e.year >= 2004 && e.year <= 2018).map((e) => e.year);
+                    if (!years.length) return;
+                    if (!window.confirm(`Masquer les années ${years.join(", ")} des statistiques ?`)) return;
+                    await Promise.all(years.map((y) => setEditionVisibility(y, false)));
+                  }}
+                >
+                  Masquer 2004–2018 des stats
+                </button>
+                {effectiveYear && (
+                  <button
+                    className="btn"
+                    style={{ fontSize: "0.82rem", marginTop: "0.5rem", color: "#dc2626", borderColor: "#dc2626" }}
+                    onClick={async () => {
+                      if (!window.confirm(`Vider TOUS les résultats ${effectiveYear} de Firestore et les réimporter depuis le JSON ?`)) return;
+                      setSeedLog([`Suppression des résultats ${effectiveYear}…`]);
+                      const n = await clearResultsForYear(effectiveYear);
+                      setSeedLog((p) => [...p, `${n} résultats supprimés. Réimport en cours…`]);
+                      await seedMeetingDatabase((msg) => setSeedLog((p) => [...p, msg]));
+                      setSeedLog((p) => [...p, `✅ Résultats ${effectiveYear} réimportés.`]);
+                    }}
+                  >
+                    Vider et réimporter {effectiveYear}
+                  </button>
+                )}
               </div>
             </div>
           </Panel>

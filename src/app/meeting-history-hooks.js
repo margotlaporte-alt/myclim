@@ -9,7 +9,7 @@
  */
 import { useEffect, useState } from "react";
 import {
-  collection, deleteDoc, doc, getDocs, onSnapshot,
+  addDoc, collection, deleteDoc, doc, getDocs, onSnapshot,
   query, updateDoc, where, writeBatch, setDoc, serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../services/firebase";
@@ -222,6 +222,43 @@ export async function seedMeetingDatabase(onProgress) {
   onProgress?.(`Results: ${count} done`);
 
   return `Done — ${total} documents written to Firestore.`;
+}
+
+// ─── Clear all results for a year ────────────────────────────────────────────
+
+export async function clearResultsForYear(year) {
+  const snap = await getDocs(query(collection(db, MEETING_RESULTS_COL), where("year", "==", Number(year))));
+  let batch = writeBatch(db);
+  let count = 0;
+  for (const d of snap.docs) {
+    batch.delete(d.ref);
+    count++;
+    if (count % 400 === 0) { await batch.commit(); batch = writeBatch(db); }
+  }
+  if (count % 400 !== 0) await batch.commit();
+  return count;
+}
+
+// ─── Result CRUD ──────────────────────────────────────────────────────────────
+
+export async function saveResult(id, data) {
+  const now = serverTimestamp();
+  if (id) {
+    await updateDoc(doc(db, MEETING_RESULTS_COL, id), { ...data, updatedAt: now });
+    return id;
+  }
+  const ref = await addDoc(collection(db, MEETING_RESULTS_COL), { ...data, createdAt: now, updatedAt: now });
+  return ref.id;
+}
+
+export async function deleteResult(id) {
+  await deleteDoc(doc(db, MEETING_RESULTS_COL, id));
+}
+
+// ─── Edition visibility ────────────────────────────────────────────────────────
+
+export async function setEditionVisibility(year, visibleInStats) {
+  await updateDoc(doc(db, MEETING_EDITIONS_COL, String(year)), { visibleInStats });
 }
 
 // ─── Close an edition ─────────────────────────────────────────────────────────

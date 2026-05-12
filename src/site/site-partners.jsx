@@ -43,8 +43,6 @@ function PartnerCard({ sponsor }) {
               maxHeight: "100%",
               maxWidth: 180,
               objectFit: "contain",
-              filter: "brightness(0) invert(1)",
-              opacity: 0.8,
             }}
           />
         </div>
@@ -136,7 +134,7 @@ export function SitePartners() {
             The CMCM Luxembourg Indoor Meeting is made possible by the trust, commitment and generosity of our partners — from title sponsor to technical suppliers.
           </p>
           <a
-            href="mailto:contact@luxembourg-indoor-meeting.lu"
+            href="mailto:communication@fla.lu"
             className="site-btn site-btn--primary"
           >
             Become a partner
@@ -165,7 +163,7 @@ export function SitePartners() {
                   Our partner page is being set up. Please contact us for partnership enquiries.
                 </p>
                 <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-                  <a href="mailto:contact@luxembourg-indoor-meeting.lu" className="site-btn site-btn--primary">
+                  <a href="mailto:communication@fla.lu" className="site-btn site-btn--primary">
                     Become a partner
                   </a>
                 </div>
@@ -270,7 +268,7 @@ export function SitePartners() {
             ))}
           </div>
           <a
-            href="mailto:contact@luxembourg-indoor-meeting.lu"
+            href="mailto:communication@fla.lu"
             className="site-btn site-btn--primary"
           >
             Contact us about partnerships
