@@ -104,7 +104,17 @@ export function useAllWinners() {
       const items = snap.docs
         .map((d) => ({ id: d.id, ...d.data() }))
         .sort((a, b) => {
-          const dc = String(a.discipline || "").localeCompare(String(b.discipline || ""));
+          // Sort by canonical event order (track by distance, then field alpha)
+          const DISCIPLINE_ORDER = [
+            "50 m","60 m","60 m hurdles",
+            "200 m","200 m - Special Olympics",
+            "400 m","800 m","1000 m","1500 m","3000 m","5000 m",
+          ];
+          const keyOf = (d) => {
+            const i = DISCIPLINE_ORDER.indexOf(d);
+            return i !== -1 ? `0_${String(i).padStart(3,"0")}` : `1_${d}`;
+          };
+          const dc = keyOf(a.discipline || "").localeCompare(keyOf(b.discipline || ""));
           if (dc !== 0) return dc;
           if (a.gender !== b.gender) return a.gender === "W" ? -1 : 1;
           return b.year - a.year;
@@ -229,14 +239,17 @@ export async function closeEdition(year, results, onProgress) {
     let match = candidates.find((c) => c.yob === r.yob || c.birthYear === r.yob) ||
                 candidates.find((c) => String(c.nationality || "").toUpperCase() === r.noc);
 
-    const participation = {
-      year: Number(year),
-      discipline: r.discipline,
-      gender: r.gender,
-      rank: r.rank,
-      result: r.result,
-      noc: r.noc,
-    };
+    // Build participation — omit any fields that are undefined (Firestore rejects them)
+    const participation = Object.fromEntries(
+      Object.entries({
+        year:       Number(year),
+        discipline: r.discipline || "",
+        gender:     r.gender     || "",
+        rank:       r.rank       ?? null,
+        result:     r.result     || "",
+        noc:        r.noc        || "",
+      }).filter(([, v]) => v !== undefined),
+    );
 
     if (match) {
       // Add participation to existing registry entry
@@ -252,19 +265,20 @@ export async function closeEdition(year, results, onProgress) {
       }
     } else {
       // Create a new registry entry for this historical athlete
+      // Strip undefined values — Firestore rejects them
       const newId = `hist_${lastKey}_${(r.firstName || "").toLowerCase().slice(0, 4)}_${r.yob || ""}`;
+      const newEntry = {
+        lastName:    r.lastName  || "",
+        firstName:   r.firstName || "",
+        nationality: r.noc       || "",
+        editions:    [participation],
+        createdAt:   serverTimestamp(),
+        updatedAt:   serverTimestamp(),
+      };
+      if (r.yob != null) { newEntry.yob = r.yob; newEntry.birthYear = r.yob; }
       batch.set(
         doc(db, ATHLETE_REGISTRY_COLLECTION, newId),
-        {
-          lastName:    r.lastName,
-          firstName:   r.firstName,
-          yob:         r.yob,
-          birthYear:   r.yob,
-          nationality: r.noc,
-          editions:    [participation],
-          createdAt:   serverTimestamp(),
-          updatedAt:   serverTimestamp(),
-        },
+        newEntry,
         { merge: true },
       );
       created++;

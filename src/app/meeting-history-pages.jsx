@@ -14,6 +14,35 @@ import { useAthleteRegistry } from "./athlete-portal-hooks";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+/**
+ * Canonical discipline order:
+ *  1. Track events sorted by distance (shortest → longest)
+ *  2. Field events sorted alphabetically
+ *  3. Anything else at the end, alphabetically
+ */
+const DISCIPLINE_ORDER = [
+  "50 m", "60 m", "60 m hurdles",
+  "200 m", "200 m - Special Olympics",
+  "400 m", "800 m", "1000 m", "1500 m", "3000 m", "5000 m",
+  // field events follow alphabetically — handled by fallback
+];
+
+function disciplineSortKey(name) {
+  const idx = DISCIPLINE_ORDER.indexOf(name);
+  if (idx !== -1) return `0_${String(idx).padStart(3, "0")}`;
+  // Field events and unknowns: group after track, sort alpha
+  return `1_${name}`;
+}
+
+/** Compare two discipline+gender group objects for display order.
+ *  Within the same discipline, Women first. */
+function compareDisciplineGender(a, b) {
+  const dk = disciplineSortKey(a.discipline).localeCompare(disciplineSortKey(b.discipline));
+  if (dk !== 0) return dk;
+  // same discipline: W before M
+  return (a.gender === "W" ? 0 : 1) - (b.gender === "W" ? 0 : 1);
+}
+
 const FLAG_BASE = "https://flagcdn.com/20x15";
 const NOC_TO_ISO2 = {
   ALG: "dz", AND: "ad", ARG: "ar", AUS: "au", AUT: "at",
@@ -199,11 +228,7 @@ function MeetingHistoryPage({ Panel }) {
       if (!map.has(key)) map.set(key, { discipline: r.discipline, gender: r.gender, rows: [] });
       map.get(key).rows.push(r);
     }
-    return [...map.values()].sort((a, b) => {
-      const dc = String(a.discipline).localeCompare(String(b.discipline));
-      if (dc !== 0) return dc;
-      return a.gender === "W" ? -1 : 1;
-    });
+    return [...map.values()].sort(compareDisciplineGender);
   }, [results]);
 
   async function handleSeed() {
@@ -475,11 +500,7 @@ function MeetingRecordsPage({ Panel }) {
 
   const displayed = useMemo(() => {
     const base = genderFilter === "all" ? records : records.filter((r) => r.gender === genderFilter);
-    return [...base].sort((a, b) => {
-      const gc = (a.gender === "W" ? 0 : 1) - (b.gender === "W" ? 0 : 1);
-      if (gc !== 0) return gc;
-      return String(a.discipline).localeCompare(String(b.discipline));
-    });
+    return [...base].sort(compareDisciplineGender);
   }, [records, genderFilter]);
 
   return (
@@ -577,10 +598,12 @@ function MeetingWinnersPage({ Panel }) {
   const [disciplineFilter, setDisciplineFilter] = useState("all");
   const [search, setSearch] = useState("");
 
-  // Collect unique disciplines for filter
+  // Collect unique disciplines for filter — sorted by canonical event order
   const disciplines = useMemo(() => {
     const set = new Set(winners.map((w) => w.discipline));
-    return ["all", ...Array.from(set).sort()];
+    return ["all", ...Array.from(set).sort((a, b) =>
+      disciplineSortKey(a).localeCompare(disciplineSortKey(b))
+    )];
   }, [winners]);
 
   const filtered = useMemo(() => {
@@ -621,11 +644,7 @@ function MeetingWinnersPage({ Panel }) {
       if (!map.has(key)) map.set(key, { discipline: w.discipline, gender: w.gender, rows: [] });
       map.get(key).rows.push(w);
     }
-    return [...map.values()].sort((a, b) => {
-      const dc = String(a.discipline).localeCompare(String(b.discipline));
-      if (dc !== 0) return dc;
-      return a.gender === "W" ? -1 : 1;
-    });
+    return [...map.values()].sort(compareDisciplineGender);
   }, [filtered, disciplineFilter]);
 
   return (
