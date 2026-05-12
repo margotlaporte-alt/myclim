@@ -17,12 +17,13 @@ function genderLabel(g) {
 }
 
 const DISC_ORDER = [
-  "50m","60m","60m hurdles","60m Hurdles",
+  "50m","60m","60m hurdles",
   "200m","200m - Special Olympics",
   "400m","800m","1000m","1500m","3000m","5000m",
   "High Jump","Long Jump","Triple Jump","Pole Vault","Shot Put",
 ];
-const normDiscipline = (d) => (d || "").replace(/(\d)\s+(m\b)/gi, "$1$2").trim();
+const normDiscipline = (d) =>
+  (d || "").replace(/(\d)\s+(m\b)/gi, "$1$2").replace(/Hurdles/g, "hurdles").trim();
 const discKey = (d) => {
   const nd = normDiscipline(d);
   const i = DISC_ORDER.indexOf(nd);
