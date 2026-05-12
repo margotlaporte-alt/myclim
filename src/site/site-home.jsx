@@ -4,6 +4,7 @@ import { useMeetingEditions, useMeetingRecords } from "../app/meeting-history-ho
 import { usePublishedNews, useSponsors } from "./site-hooks";
 import cmcmLogo from "../assets/cmcm-logo.png";
 import heroPhoto from "../assets/hero-photo.jpg";
+import waLogo from "../assets/wa-indoor-tour-silver.png";
 import galleryDaemen from "../assets/site-gallery/gallery-daemen.jpg";
 import galleryWinner from "../assets/site-gallery/gallery-winner.jpg";
 import galleryMemories from "../assets/site-gallery/gallery-memories.jpg";
@@ -157,8 +158,7 @@ export function SiteHome() {
         <div className="site-hero__bg-grid" />
 
         <div className="site-hero__label">
-          <span className="site-hero__label-dot" />
-          <span className="site-hero__label-text">World Athletics Indoor Tour · Silver</span>
+          <img src={waLogo} alt="World Athletics Indoor Tour Silver" className="site-hero__label-wa" />
         </div>
 
         <div className="site-hero__content">
