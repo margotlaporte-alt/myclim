@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink } from "react-router-dom";
-import { useMeetingEditions, useMeetingResultsForYear, useAllWinners } from "../app/meeting-history-hooks";
+import { useMeetingEditions, useMeetingResultsForYear } from "../app/meeting-history-hooks";
 import { usePublishedNews, useSponsors } from "./site-hooks";
 import cmcmLogo from "../assets/cmcm-logo.png";
 import heroPhoto from "../assets/hero-photo.jpg";
@@ -117,7 +117,6 @@ export function SiteHome() {
   const latestYear = latestEdition ? Number(latestEdition.year || latestEdition.id) || null : null;
 
   const { results: latestResults } = useMeetingResultsForYear(latestYear);
-  const { winners: allWinners } = useAllWinners();
 
   // Derive key stats from data
   const totalCountries = 32; // could be computed from results
@@ -153,22 +152,16 @@ export function SiteHome() {
     const i = DISCIPLINE_ORDER.indexOf(d);
     return i !== -1 ? `0_${String(i).padStart(3, "0")}` : `1_${d}`;
   };
-  const sortWinners = (arr) =>
-    [...arr].sort((a, b) => {
-      const dc = keyOf(a.discipline || "").localeCompare(keyOf(b.discipline || ""));
-      if (dc !== 0) return dc;
-      return (a.gender === "W" ? -1 : 1) - (b.gender === "W" ? -1 : 1);
-    });
-
-  const winnersFromCollection = latestYear
-    ? sortWinners(allWinners.filter((w) => Number(w.year) === Number(latestYear)))
+  const latestWinners = latestYear
+    ? [...latestResults]
+        .filter((r) => Number(r.rank) === 1)
+        .sort((a, b) => {
+          const dc = keyOf(a.discipline || "").localeCompare(keyOf(b.discipline || ""));
+          if (dc !== 0) return dc;
+          return (a.gender === "W" ? -1 : 1) - (b.gender === "W" ? -1 : 1);
+        })
+        .slice(0, 14)
     : [];
-
-  const winnersFromResults = latestYear
-    ? sortWinners(latestResults.filter((r) => Number(r.rank) === 1)).slice(0, 10)
-    : [];
-
-  const latestWinners = (winnersFromCollection.length > 0 ? winnersFromCollection : winnersFromResults).slice(0, 12);
 
   return (
     <>
