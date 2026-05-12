@@ -3418,9 +3418,8 @@
       "result": "3.95",
       "discipline": "Pole Vault",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 2,
@@ -3430,9 +3429,8 @@
       "result": "3.60",
       "discipline": "Pole Vault",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 3,
@@ -3442,9 +3440,8 @@
       "result": "3.60",
       "discipline": "Pole Vault",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 3,
@@ -3454,9 +3451,8 @@
       "result": "3.60",
       "discipline": "Pole Vault",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 5,
@@ -3466,9 +3462,8 @@
       "result": "3.60",
       "discipline": "Pole Vault",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 6,
@@ -3478,9 +3473,8 @@
       "result": "3.50",
       "discipline": "Pole Vault",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 1,
@@ -3489,10 +3483,9 @@
       "noc": "NED",
       "result": "5.55",
       "discipline": "Pole Vault",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "gender": "M",
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 2,
@@ -3501,10 +3494,9 @@
       "noc": "BEL",
       "result": "5.45",
       "discipline": "Pole Vault",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "gender": "M",
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 3,
@@ -3513,10 +3505,9 @@
       "noc": "SUI",
       "result": "5.00",
       "discipline": "Pole Vault",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "gender": "M",
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 4,
@@ -3525,10 +3516,9 @@
       "noc": "FRA",
       "result": "4.90",
       "discipline": "Pole Vault",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "gender": "M",
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 5,
@@ -3537,10 +3527,9 @@
       "noc": "CZE",
       "result": "4.80",
       "discipline": "Pole Vault",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "gender": "M",
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 6,
@@ -3549,10 +3538,9 @@
       "noc": "SUI",
       "result": "4.80",
       "discipline": "Pole Vault",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "gender": "M",
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 7,
@@ -3561,10 +3549,9 @@
       "noc": "SUI",
       "result": "4.80",
       "discipline": "Pole Vault",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "gender": "M",
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 8,
@@ -3573,10 +3560,9 @@
       "noc": "FRA",
       "result": "4.20",
       "discipline": "Pole Vault",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "gender": "M",
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 1,
@@ -3584,11 +3570,10 @@
       "firstName": "Kafetien",
       "noc": "FRA",
       "result": "7.88",
-      "discipline": "Pole Vault",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "discipline": "Long Jump",
+      "gender": "M",
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 2,
@@ -3596,11 +3581,10 @@
       "firstName": "Jürgen",
       "noc": "NED",
       "result": "7.75",
-      "discipline": "Pole Vault",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "discipline": "Long Jump",
+      "gender": "M",
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 3,
@@ -3608,11 +3592,10 @@
       "firstName": "Andrej",
       "noc": "BLR",
       "result": "7.25",
-      "discipline": "Pole Vault",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "discipline": "Long Jump",
+      "gender": "M",
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 4,
@@ -3620,11 +3603,10 @@
       "firstName": "Mandou",
       "noc": "FRA",
       "result": "7.18",
-      "discipline": "Pole Vault",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "discipline": "Long Jump",
+      "gender": "M",
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 5,
@@ -3632,11 +3614,10 @@
       "firstName": "Nils",
       "noc": "NED",
       "result": "6.76",
-      "discipline": "Pole Vault",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "discipline": "Long Jump",
+      "gender": "M",
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 6,
@@ -3644,11 +3625,10 @@
       "firstName": "Olivier",
       "noc": "FRA",
       "result": "6.56",
-      "discipline": "Pole Vault",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "discipline": "Long Jump",
+      "gender": "M",
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 1,
@@ -3658,9 +3638,8 @@
       "result": "1.73",
       "discipline": "High Jump",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 2,
@@ -3670,9 +3649,8 @@
       "result": "1.73",
       "discipline": "High Jump",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 3,
@@ -3682,9 +3660,8 @@
       "result": "1.70",
       "discipline": "High Jump",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 4,
@@ -3694,9 +3671,8 @@
       "result": "1.61",
       "discipline": "High Jump",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 1,
@@ -3706,9 +3682,8 @@
       "result": "15.34",
       "discipline": "Shot Put",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 2,
@@ -3718,9 +3693,8 @@
       "result": "12.31",
       "discipline": "Shot Put",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 3,
@@ -3730,9 +3704,8 @@
       "result": "11.64",
       "discipline": "Shot Put",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 4,
@@ -3742,765 +3715,349 @@
       "result": "11.22",
       "discipline": "Shot Put",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 1,
-      "lastName": "RANDRIAMIR",
-      "firstName": "Berlioz",
-      "noc": "MAD",
-      "result": "07.82",
-      "discipline": "Shot Put",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 2,
-      "lastName": "SCIGACZEWSKI",
-      "firstName": "Thomasz",
-      "noc": "POL",
-      "result": "07.85",
-      "discipline": "Shot Put",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 3,
-      "lastName": "SEDOC",
-      "firstName": "Gregori",
-      "noc": "NED",
-      "result": "07.90",
-      "discipline": "Shot Put",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 5,
-      "lastName": "RIEKMANN",
-      "firstName": "Dirk",
-      "noc": "GER",
-      "result": "08.19",
-      "discipline": "Shot Put",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 1,
-      "lastName": "VAN DER WESTEN",
-      "firstName": "Marcel",
-      "noc": "NED",
-      "result": "07.89",
-      "discipline": "Shot Put",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 2,
-      "lastName": "GRANGENOIS",
-      "firstName": "Jimmy",
-      "noc": "FRA",
-      "result": "07.97",
-      "discipline": "Shot Put",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 3,
-      "lastName": "SPIER",
-      "firstName": "Virgil",
-      "noc": "NED",
-      "result": "07.99",
-      "discipline": "Shot Put",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 4,
-      "lastName": "STARK",
-      "firstName": "Arnaud",
-      "noc": "FRA",
-      "result": "08.17",
-      "discipline": "Shot Put",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 5,
-      "lastName": "POLFLIET",
-      "firstName": "Vincent",
-      "noc": "FRA",
-      "result": "08.48",
-      "discipline": "Shot Put",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 1,
       "lastName": "SEDOC",
       "firstName": "Gregori",
       "noc": "NED",
-      "result": "07.81",
-      "discipline": "60m",
+      "result": "7.81",
+      "discipline": "60m Hurdles",
       "gender": "M",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 2,
       "lastName": "VAN DER WESTEN",
       "firstName": "Marcel",
       "noc": "NED",
-      "result": "07.88",
-      "discipline": "60m",
+      "result": "7.88",
+      "discipline": "60m Hurdles",
       "gender": "M",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 3,
       "lastName": "SCIGACZEWSKI",
       "firstName": "Thomasz",
       "noc": "POL",
-      "result": "07.91",
-      "discipline": "60m",
+      "result": "7.91",
+      "discipline": "60m Hurdles",
       "gender": "M",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 4,
       "lastName": "RANDRIAMIR",
       "firstName": "Berlioz",
       "noc": "MAD",
-      "result": "07.92",
-      "discipline": "60m",
+      "result": "7.92",
+      "discipline": "60m Hurdles",
       "gender": "M",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 5,
       "lastName": "SPIER",
       "firstName": "Virgil",
       "noc": "NED",
-      "result": "08.12",
-      "discipline": "60m",
+      "result": "8.12",
+      "discipline": "60m Hurdles",
       "gender": "M",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
+    },
+    {
+      "rank": 6,
+      "lastName": "GODART",
+      "firstName": "Claude",
+      "noc": "LUX",
+      "result": "8.18",
+      "discipline": "60m Hurdles",
+      "gender": "M",
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 7,
       "lastName": "GRANGENOIS",
       "firstName": "Jimmy",
       "noc": "FRA",
-      "result": "08.23",
-      "discipline": "60m",
+      "result": "8.23",
+      "discipline": "60m Hurdles",
       "gender": "M",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 1,
-      "lastName": "HODDE",
-      "firstName": "Rosina",
-      "noc": "NED",
-      "result": "08.44",
-      "discipline": "60m",
-      "gender": "M",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 2,
-      "lastName": "TSCHOMBA",
-      "firstName": "Myriam",
-      "noc": "NED",
-      "result": "08.56",
-      "discipline": "60m",
-      "gender": "M",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 3,
-      "lastName": "FORTES",
-      "firstName": "Aurélie",
-      "noc": "FRA",
-      "result": "08.74",
-      "discipline": "60m",
-      "gender": "M",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 4,
-      "lastName": "REULAND",
-      "firstName": "Kim",
-      "noc": "LUX",
-      "result": "08.91",
-      "discipline": "60m",
-      "gender": "M",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 5,
-      "lastName": "MAEDER",
-      "firstName": "Ewa",
-      "noc": "SUI",
-      "result": "08.96",
-      "discipline": "60m",
-      "gender": "M",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 6,
-      "lastName": "HADORN",
-      "firstName": "Jacqueline",
-      "noc": "SUI",
-      "result": "09.06",
-      "discipline": "60m",
-      "gender": "M",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 1,
       "lastName": "TSCHOMBA",
       "firstName": "Myriam",
       "noc": "NED",
-      "result": "08.50",
-      "discipline": "60m",
+      "result": "8.50",
+      "discipline": "60m Hurdles",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 2,
       "lastName": "HODDE",
       "firstName": "Rosina",
       "noc": "NED",
-      "result": "08.52",
-      "discipline": "60m",
+      "result": "8.52",
+      "discipline": "60m Hurdles",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 3,
       "lastName": "FORTES",
       "firstName": "Aurélie",
       "noc": "FRA",
-      "result": "08.74",
-      "discipline": "60m",
+      "result": "8.74",
+      "discipline": "60m Hurdles",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 4,
       "lastName": "HADORN",
       "firstName": "Jacqueline",
       "noc": "SUI",
-      "result": "08.90",
-      "discipline": "60m",
+      "result": "8.90",
+      "discipline": "60m Hurdles",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 5,
       "lastName": "REULAND",
       "firstName": "Kim",
       "noc": "LUX",
-      "result": "08.94",
-      "discipline": "60m",
+      "result": "8.94",
+      "discipline": "60m Hurdles",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 6,
       "lastName": "MAEDER",
       "firstName": "Ewa",
       "noc": "SUI",
-      "result": "09.14",
-      "discipline": "60m",
+      "result": "9.14",
+      "discipline": "60m Hurdles",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 5,
-      "lastName": "ZDUN",
-      "firstName": "Laurent",
-      "noc": "FRA",
-      "result": "07.14",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 6,
-      "lastName": "BESRECHEL",
-      "firstName": "Morgan",
-      "noc": "FRA",
-      "result": "07.30",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 7,
-      "lastName": "BEBON",
-      "firstName": "Yann",
-      "noc": "LUX",
-      "result": "07.33",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 3,
-      "lastName": "LICHTENBERGER",
-      "firstName": "Yves",
-      "noc": "FRA",
-      "result": "07.34",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 4,
-      "lastName": "GAMEL",
-      "firstName": "Loic",
-      "noc": "FRA",
-      "result": "07.59",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 3,
-      "lastName": "FARAMELLI",
-      "firstName": "Gerard",
-      "noc": "LUX",
-      "result": "07.30",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 4,
-      "lastName": "KUHN",
-      "firstName": "Philippe",
-      "noc": "FRA",
-      "result": "07.31",
-      "discipline": "60m",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 1,
       "lastName": "CHYLA",
       "firstName": "Lukasz",
       "noc": "POL",
-      "result": "06.62",
+      "result": "6.62",
       "discipline": "60m",
       "gender": "M",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 2,
       "lastName": "NEWTON",
       "firstName": "Lee-Roy",
       "noc": "RSA",
-      "result": "06.74",
+      "result": "6.74",
       "discipline": "60m",
       "gender": "M",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 3,
       "lastName": "NOVAK",
       "firstName": "Marcin",
       "noc": "POL",
-      "result": "06.77",
+      "result": "6.77",
       "discipline": "60m",
       "gender": "M",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 4,
       "lastName": "HEISEN",
       "firstName": "Maarten",
       "noc": "NED",
-      "result": "06.79",
+      "result": "6.79",
       "discipline": "60m",
       "gender": "M",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 5,
       "lastName": "ADU-MFUM",
       "firstName": "Harry",
       "noc": "GHA",
-      "result": "06.83",
+      "result": "6.83",
       "discipline": "60m",
       "gender": "M",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 6,
       "lastName": "DE SIMONE",
       "firstName": "Adrien",
       "noc": "FRA",
-      "result": "07.21",
+      "result": "7.21",
       "discipline": "60m",
       "gender": "M",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 5,
-      "lastName": "KIPGEN",
-      "firstName": "Laurence",
-      "noc": "LUX",
-      "result": "08.09",
-      "discipline": "60m",
-      "gender": "M",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 6,
-      "lastName": "ZWALLY",
-      "firstName": "Fabienne",
-      "noc": "LUX",
-      "result": "08.19",
-      "discipline": "60m",
-      "gender": "M",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 5,
-      "lastName": "SCHAEFER",
-      "firstName": "Daniela",
-      "noc": "SUI",
-      "result": "08.15",
-      "discipline": "60m",
-      "gender": "M",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 6,
-      "lastName": "TIRONI",
-      "firstName": "Stefanie",
-      "noc": "LUX",
-      "result": "08.28",
-      "discipline": "60m",
-      "gender": "M",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 1,
       "lastName": "ONYSKO",
       "firstName": "Daria",
       "noc": "POL",
-      "result": "07.32",
+      "result": "7.32",
       "discipline": "60m",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 2,
       "lastName": "POELMANN",
       "firstName": "Jacqueline",
       "noc": "NED",
-      "result": "07.44",
+      "result": "7.44",
       "discipline": "60m",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 2,
       "lastName": "VAN AFFENDALFT",
       "firstName": "Pascal",
       "noc": "NED",
-      "result": "07.44",
+      "result": "7.44",
       "discipline": "60m",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 4,
       "lastName": "HUYGHES",
       "firstName": "Amélie",
       "noc": "FRA",
-      "result": "07.61",
+      "result": "7.61",
       "discipline": "60m",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 5,
       "lastName": "HESS",
       "firstName": "Myriam",
       "noc": "LUX",
-      "result": "07.66",
+      "result": "7.66",
       "discipline": "60m",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 6,
       "lastName": "HAYEN",
       "firstName": "Chantal",
       "noc": "LUX",
-      "result": "07.73",
+      "result": "7.73",
       "discipline": "60m",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 7,
       "lastName": "FRISCH",
       "firstName": "Sandra",
       "noc": "LUX",
-      "result": "07.88",
+      "result": "7.88",
       "discipline": "60m",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 8,
       "lastName": "MORGENTHALER",
       "firstName": "Sabine",
       "noc": "SUI",
-      "result": "07.92",
+      "result": "7.92",
       "discipline": "60m",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 1,
       "lastName": "SETOWSKA",
       "firstName": "Ewelina",
       "noc": "POL",
-      "result": "2'08''07",
+      "result": "2:08.07",
       "discipline": "800m",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 2,
       "lastName": "SCHOENBECK",
       "firstName": "Charlotte",
       "noc": "SWE",
-      "result": "2'10''99",
+      "result": "2:10.99",
       "discipline": "800m",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 3,
       "lastName": "RAFTAKI",
       "firstName": "Aggeliki",
       "noc": "GRE",
-      "result": "2'11''44",
+      "result": "2:11.44",
       "discipline": "800m",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 4,
       "lastName": "KEIFFER",
       "firstName": "Lisa",
       "noc": "LUX",
-      "result": "2'24''24",
+      "result": "2:24.24",
       "discipline": "800m",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 2,
-      "lastName": "KEMP",
-      "firstName": "Christian",
-      "noc": "LUX",
-      "result": "22.87",
-      "discipline": "800m",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 3,
-      "lastName": "BESRECHEL",
-      "firstName": "Morgan",
-      "noc": "FRA",
-      "result": "23.00",
-      "discipline": "800m",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 4,
-      "lastName": "POLFLIET",
-      "firstName": "Vincent",
-      "noc": "FRA",
-      "result": "23.54",
-      "discipline": "800m",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 3,
-      "lastName": "THOREZ",
-      "firstName": "Gregory",
-      "noc": "FRA",
-      "result": "23.38",
-      "discipline": "800m",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 3,
-      "lastName": "FORTES",
-      "firstName": "Didier",
-      "noc": "FRA",
-      "result": "22.59",
-      "discipline": "800m",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 4,
-      "lastName": "LICHTENBERGER",
-      "firstName": "Yves",
-      "noc": "FRA",
-      "result": "23.24",
-      "discipline": "800m",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 5,
-      "lastName": "GAMEL",
-      "firstName": "Loïc",
-      "noc": "FRA",
-      "result": "24.11",
-      "discipline": "800m",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 1,
@@ -4510,9 +4067,8 @@
       "result": "20.98",
       "discipline": "200m",
       "gender": "M",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 2,
@@ -4522,9 +4078,8 @@
       "result": "21.05",
       "discipline": "200m",
       "gender": "M",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 3,
@@ -4534,9 +4089,8 @@
       "result": "21.39",
       "discipline": "200m",
       "gender": "M",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 4,
@@ -4546,357 +4100,327 @@
       "result": "22.72",
       "discipline": "200m",
       "gender": "M",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 1,
       "lastName": "LUSTIGOVA",
       "firstName": "Marcela",
       "noc": "CZE",
-      "result": "4'26''09",
+      "result": "4:26.09",
       "discipline": "1500m",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 2,
       "lastName": "BOSSERT",
       "firstName": "Emmanuelle",
       "noc": "FRA",
-      "result": "4'29''69",
+      "result": "4:29.69",
       "discipline": "1500m",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 3,
       "lastName": "OTTERMATT",
       "firstName": "Berangere",
       "noc": "FRA",
-      "result": "4'30''23",
+      "result": "4:30.23",
       "discipline": "1500m",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 4,
       "lastName": "PTACKOVA",
       "firstName": "Lenka",
       "noc": "CZE",
-      "result": "4'37''61",
+      "result": "4:37.61",
       "discipline": "1500m",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 5,
       "lastName": "CHEPSOI",
       "firstName": "Florence",
       "noc": "KEN",
-      "result": "4'38''40",
+      "result": "4:38.40",
       "discipline": "1500m",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 6,
       "lastName": "MALAKWEN",
       "firstName": "Lucy",
       "noc": "KEN",
-      "result": "4'38''75",
+      "result": "4:38.75",
       "discipline": "1500m",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 7,
       "lastName": "CLAUSSE",
       "firstName": "Aline",
       "noc": "FRA",
-      "result": "4'39''46",
+      "result": "4:39.46",
       "discipline": "1500m",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 8,
       "lastName": "MELOUKI",
       "firstName": "Ibtisam",
       "noc": "FRA",
-      "result": "4'41''95",
+      "result": "4:41.95",
       "discipline": "1500m",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 9,
       "lastName": "SCHELLER",
       "firstName": "Maryse",
       "noc": "LUX",
-      "result": "4'42''74",
+      "result": "4:42.74",
       "discipline": "1500m",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 10,
       "lastName": "DRATWICKI",
       "firstName": "Nathalie",
       "noc": "LUX",
-      "result": "5'01''42",
+      "result": "5:01.42",
       "discipline": "1500m",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 11,
       "lastName": "SCHAAF",
       "firstName": "Jessica",
       "noc": "LUX",
-      "result": "5'10''10",
+      "result": "5:10.10",
       "discipline": "1500m",
       "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 1,
-      "lastName": "BARTUNEK",
-      "firstName": "Vladimir",
-      "noc": "CZE",
-      "result": "3'51''62",
-      "discipline": "1500m",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 2,
-      "lastName": "SPES",
-      "firstName": "Boris",
-      "noc": "SLO",
-      "result": "3'51''99",
-      "discipline": "1500m",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 3,
-      "lastName": "INEKE",
-      "firstName": "Leon",
-      "noc": "NED",
-      "result": "3'55''66",
-      "discipline": "1500m",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 4,
-      "lastName": "VAN LEEUWEN",
-      "firstName": "Martin",
-      "noc": "NED",
-      "result": "3'56''28",
-      "discipline": "1500m",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 5,
-      "lastName": "ARBOUZE",
-      "firstName": "Hamid",
-      "noc": "FRA",
-      "result": "3'57''48",
-      "discipline": "1500m",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 6,
-      "lastName": "MICHEL",
-      "firstName": "Sébastien",
-      "noc": "FRA",
-      "result": "3'58''16",
-      "discipline": "1500m",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 7,
-      "lastName": "DE HEER",
-      "firstName": "Dirk",
-      "noc": "NED",
-      "result": "4'00''77",
-      "discipline": "1500m",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 8,
-      "lastName": "THARI",
-      "firstName": "Karim",
-      "noc": "FRA",
-      "result": "4'06''44",
-      "discipline": "1500m",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
-    },
-    {
-      "rank": 9,
-      "lastName": "SCHUMACHER",
-      "firstName": "Mike",
-      "noc": "LUX",
-      "result": "4'13''29",
-      "discipline": "1500m",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "round": "",
+      "year": 2005
     },
     {
       "rank": 1,
       "lastName": "BENSGHIR",
       "firstName": "Yassine",
       "noc": "MAR",
-      "result": "3'45''33",
+      "result": "3:45.33",
       "discipline": "1500m",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "gender": "M",
+      "round": "Final A",
+      "year": 2005
     },
     {
       "rank": 2,
       "lastName": "BOUJAMAA",
       "firstName": "Stouti",
       "noc": "BEL",
-      "result": "3'45''56",
+      "result": "3:45.56",
       "discipline": "1500m",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "gender": "M",
+      "round": "Final A",
+      "year": 2005
     },
     {
       "rank": 3,
       "lastName": "FIEGEN",
       "firstName": "David",
       "noc": "LUX",
-      "result": "3'45''60",
+      "result": "3:45.60",
       "discipline": "1500m",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "gender": "M",
+      "round": "Final A",
+      "year": 2005
     },
     {
       "rank": 4,
       "lastName": "HADJAMOU",
       "firstName": "Adil",
       "noc": "FRA",
-      "result": "3'46''15",
+      "result": "3:46.15",
       "discipline": "1500m",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "gender": "M",
+      "round": "Final A",
+      "year": 2005
     },
     {
       "rank": 5,
       "lastName": "MERDJA",
       "firstName": "Karim",
       "noc": "FRA",
-      "result": "3'46''90",
+      "result": "3:46.90",
       "discipline": "1500m",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "gender": "M",
+      "round": "Final A",
+      "year": 2005
     },
     {
       "rank": 6,
       "lastName": "RIZKI",
       "firstName": "Monder",
       "noc": "BEL",
-      "result": "3'47''82",
+      "result": "3:47.82",
       "discipline": "1500m",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "gender": "M",
+      "round": "Final A",
+      "year": 2005
     },
     {
       "rank": 7,
       "lastName": "KOSGEI",
       "firstName": "Peter",
       "noc": "KEN",
-      "result": "3'47''90",
+      "result": "3:47.90",
       "discipline": "1500m",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "gender": "M",
+      "round": "Final A",
+      "year": 2005
     },
     {
       "rank": 8,
       "lastName": "SANG",
       "firstName": "Isaak",
       "noc": "KEN",
-      "result": "3'48''43",
+      "result": "3:48.43",
       "discipline": "1500m",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "gender": "M",
+      "round": "Final A",
+      "year": 2005
     },
     {
       "rank": 9,
       "lastName": "ANDERSEN",
       "firstName": "Robert",
       "noc": "SWE",
-      "result": "3'52''28",
+      "result": "3:52.28",
       "discipline": "1500m",
-      "gender": "W",
-      "year": 2005,
-      "date": "2005-01-29",
-      "notes": ""
+      "gender": "M",
+      "round": "Final A",
+      "year": 2005
+    },
+    {
+      "rank": 1,
+      "lastName": "BARTUNEK",
+      "firstName": "Vladimir",
+      "noc": "CZE",
+      "result": "3:51.62",
+      "discipline": "1500m",
+      "gender": "M",
+      "round": "Final B",
+      "year": 2005
+    },
+    {
+      "rank": 2,
+      "lastName": "SPES",
+      "firstName": "Boris",
+      "noc": "SLO",
+      "result": "3:51.99",
+      "discipline": "1500m",
+      "gender": "M",
+      "round": "Final B",
+      "year": 2005
+    },
+    {
+      "rank": 3,
+      "lastName": "INEKE",
+      "firstName": "Leon",
+      "noc": "NED",
+      "result": "3:55.66",
+      "discipline": "1500m",
+      "gender": "M",
+      "round": "Final B",
+      "year": 2005
+    },
+    {
+      "rank": 4,
+      "lastName": "VAN LEEUWEN",
+      "firstName": "Martin",
+      "noc": "NED",
+      "result": "3:56.28",
+      "discipline": "1500m",
+      "gender": "M",
+      "round": "Final B",
+      "year": 2005
+    },
+    {
+      "rank": 5,
+      "lastName": "ARBOUZE",
+      "firstName": "Hamid",
+      "noc": "FRA",
+      "result": "3:57.48",
+      "discipline": "1500m",
+      "gender": "M",
+      "round": "Final B",
+      "year": 2005
+    },
+    {
+      "rank": 6,
+      "lastName": "MICHEL",
+      "firstName": "Sébastien",
+      "noc": "FRA",
+      "result": "3:58.16",
+      "discipline": "1500m",
+      "gender": "M",
+      "round": "Final B",
+      "year": 2005
+    },
+    {
+      "rank": 7,
+      "lastName": "DE HEER",
+      "firstName": "Dirk",
+      "noc": "NED",
+      "result": "4:00.77",
+      "discipline": "1500m",
+      "gender": "M",
+      "round": "Final B",
+      "year": 2005
+    },
+    {
+      "rank": 8,
+      "lastName": "THARI",
+      "firstName": "Karim",
+      "noc": "FRA",
+      "result": "4:06.44",
+      "discipline": "1500m",
+      "gender": "M",
+      "round": "Final B",
+      "year": 2005
+    },
+    {
+      "rank": 9,
+      "lastName": "SCHUMACHER",
+      "firstName": "Mike",
+      "noc": "LUX",
+      "result": "4:13.29",
+      "discipline": "1500m",
+      "gender": "M",
+      "round": "Final B",
+      "year": 2005
     }
   ],
   "2006": [
