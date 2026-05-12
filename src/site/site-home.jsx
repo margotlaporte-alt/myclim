@@ -10,6 +10,9 @@ import galleryWinner from "../assets/site-gallery/gallery-winner.jpg";
 import galleryMemories from "../assets/site-gallery/gallery-memories.jpg";
 import galleryAutographs from "../assets/site-gallery/gallery-autographs.jpg";
 import galleryVolunteers from "../assets/site-gallery/gallery-volunteers.jpg";
+import ambiance1 from "../assets/site-gallery/ambiance-1.jpg";
+import ambiance2 from "../assets/site-gallery/ambiance-2.jpg";
+import ambiance3 from "../assets/site-gallery/ambiance-3.jpg";
 
 /* ── Animated counter ──────────────────────────────────── */
 function AnimatedNumber({ target, suffix = "", prefix = "" }) {
@@ -554,47 +557,85 @@ export function SiteHome() {
       ════════════════════════════════════════════════ */}
       {latestWinners.length > 0 && (
         <section className="site-section site-section--alt">
-          <div className="site-container">
-            <div className="site-section-header" style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 48, flexWrap: "wrap", gap: 16 }}>
-              <div>
-                <span className="site-eyebrow">Last edition · {latestYear}</span>
-                <h2 className="site-heading">Event winners</h2>
-              </div>
-              <NavLink to="/statistics" className="site-btn site-btn--secondary site-btn--sm">
-                Full results →
-              </NavLink>
+          {/* Full-width action photo header */}
+          <div style={{ position: "relative", height: 260, overflow: "hidden", marginBottom: 64 }}>
+            <img
+              src={ambiance1}
+              alt="Race action CMCM Luxembourg Indoor Meeting"
+              style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 30%" }}
+            />
+            <div style={{
+              position: "absolute", inset: 0,
+              background: "linear-gradient(to right, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.55) 100%)",
+            }} />
+            <div style={{
+              position: "absolute", inset: 0,
+              display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 8,
+            }}>
+              <span className="site-eyebrow" style={{ color: "rgba(255,255,255,0.7)" }}>Last edition · {latestYear}</span>
+              <h2 className="site-heading" style={{ color: "#fff", margin: 0, textShadow: "0 2px 12px rgba(0,0,0,0.4)" }}>Event winners</h2>
             </div>
+          </div>
 
-            <div className="site-card">
-              <table className="site-records-table">
-                <thead>
-                  <tr>
-                    <th>Discipline</th>
-                    <th>Athlete</th>
-                    <th>Nation</th>
-                    <th>Performance</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {latestWinners.map((r, i) => (
-                    <tr key={r.id || i}>
-                      <td>
-                        <span className={`site-badge ${r.gender === "W" ? "site-badge--red" : "site-badge--blue"}`} style={{ marginRight: 8 }}>
-                          {r.gender === "W" ? "W" : "M"}
-                        </span>
-                        {r.discipline}
-                      </td>
-                      <td style={{ fontWeight: 600 }}>
-                        {r.firstName} {r.lastName}
-                      </td>
-                      <td>
-                        <span className="noc">{r.noc}</span>
-                      </td>
-                      <td className="mark">{r.mark || r.result}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <div className="site-container">
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 40, alignItems: "start" }}>
+
+              {/* Side photos */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div style={{ borderRadius: "var(--site-radius)", overflow: "hidden", aspectRatio: "3/4" }}>
+                  <img
+                    src={ambiance2}
+                    alt="Award ceremony CMCM Luxembourg Indoor Meeting"
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                </div>
+                <div style={{ borderRadius: "var(--site-radius)", overflow: "hidden", aspectRatio: "3/2" }}>
+                  <img
+                    src={ambiance3}
+                    alt="Athlete on track CMCM Luxembourg Indoor Meeting"
+                    style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 20%" }}
+                  />
+                </div>
+              </div>
+
+              {/* Table */}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
+                  <p style={{ color: "var(--site-text-muted)", fontSize: "0.875rem", margin: 0 }}>
+                    Final results — CMCM Luxembourg Indoor Meeting {latestYear}
+                  </p>
+                  <NavLink to="/statistics" className="site-btn site-btn--secondary site-btn--sm">
+                    Full results →
+                  </NavLink>
+                </div>
+                <div className="site-card">
+                  <table className="site-records-table">
+                    <thead>
+                      <tr>
+                        <th>Discipline</th>
+                        <th>Athlete</th>
+                        <th>Nation</th>
+                        <th>Performance</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {latestWinners.map((r, i) => (
+                        <tr key={r.id || i}>
+                          <td>
+                            <span className={`site-badge ${r.gender === "W" ? "site-badge--red" : "site-badge--blue"}`} style={{ marginRight: 8 }}>
+                              {r.gender === "W" ? "W" : "M"}
+                            </span>
+                            {r.discipline}
+                          </td>
+                          <td style={{ fontWeight: 600 }}>{r.firstName} {r.lastName}</td>
+                          <td><span className="noc">{r.noc}</span></td>
+                          <td className="mark">{r.mark || r.result}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
         </section>

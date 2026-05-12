@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import volontaire1 from "../assets/site-gallery/volontaire-1.jpg";
 import coque1 from "../assets/site-gallery/Coque2026.jpg";
 import coque2 from "../assets/site-gallery/Coque2026-2.jpg";
 import coque3 from "../assets/site-gallery/Coque2026-3.jpg";
@@ -369,7 +370,22 @@ export function SiteEvent() {
         <div className="site-container">
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "start" }}>
             <div>
-              <span className="site-eyebrow" style={{ color: "#b08c1e" }}>VIP visits available!</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 4 }}>
+                <span className="site-eyebrow" style={{ color: "#b08c1e", margin: 0 }}>VIP visits available!</span>
+                <span style={{
+                  background: "#1a1a2e",
+                  color: "#c9a227",
+                  fontSize: "0.72rem",
+                  fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  padding: "3px 10px",
+                  borderRadius: 20,
+                  border: "1px solid rgba(201,162,39,0.4)",
+                }}>
+                  VIP ticket required
+                </span>
+              </div>
               <h2 className="site-heading site-heading--sm">Discover the Meeting Like Never Before</h2>
               <p style={{ color: "var(--site-text-muted)", lineHeight: 1.75, marginBottom: 24 }}>
                 Join our exclusive VIP Tour and step behind the scenes of the CMCM Luxembourg Indoor Meeting 2026. Experience the excitement from a whole new perspective — walk through the athletes' warm-up area, feel the energy trackside, and explore the heart of the event.
@@ -412,7 +428,7 @@ export function SiteEvent() {
                 marginBottom: 24,
               }}>
                 <p style={{ fontSize: "0.875rem", color: "var(--site-text-muted)", margin: 0, lineHeight: 1.6 }}>
-                  <strong style={{ color: "var(--site-text)" }}>Both tours start at 14:15</strong> in the VIP area and last approximately 30 minutes. Participation is optional. <strong style={{ color: "var(--site-text)" }}>Places are limited</strong> — don't miss your chance!
+                  Exclusively reserved for <strong style={{ color: "#c9a227" }}>VIP ticket holders</strong>. <strong style={{ color: "var(--site-text)" }}>Both tours start at 14:15</strong> in the VIP area and last approximately 30 minutes. Participation is optional. <strong style={{ color: "var(--site-text)" }}>Places are limited</strong> — don't miss your chance!
                 </p>
               </div>
 
@@ -503,19 +519,17 @@ export function SiteEvent() {
       <section className="site-section site-section--alt" id="volunteer">
         <div className="site-container">
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "center" }}>
-            <div
-              style={{
-                background: "linear-gradient(135deg, rgba(16,102,204,0.2), rgba(232,0,28,0.15))",
-                border: "1px solid var(--site-border)",
-                borderRadius: "var(--site-radius-lg)",
-                aspectRatio: "4/3",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "4rem",
-              }}
-            >
-              🙋
+            <div style={{
+              borderRadius: "var(--site-radius-lg)",
+              overflow: "hidden",
+              aspectRatio: "4/3",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+            }}>
+              <img
+                src={volontaire1}
+                alt="CMCM Luxembourg Indoor Meeting volunteers"
+                style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 25%" }}
+              />
             </div>
             <div>
               <SectionTitle
