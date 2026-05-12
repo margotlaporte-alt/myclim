@@ -10,6 +10,7 @@ import {
   saveResult,
   seedMeetingDatabase,
   setEditionVisibility,
+  syncWinnersForYear,
   useAllWinners,
   useMeetingEditions,
   useMeetingRecords,
@@ -511,6 +512,117 @@ function EditableResultRow({ r, onSaved, onDeleted }) {
   );
 }
 
+// ─── Winners comparison panel ─────────────────────────────────────────────────
+
+const _nd = (d) => (d || "").replace(/(\d)\s+(m\b)/gi, "$1$2").replace(/Hurdles/g, "hurdles").trim();
+const _key = (disc, gender) => `${_nd(disc)}_${gender}`;
+
+function WinnersComparisonPanel({ editions, allWinners, Panel }) {
+  const [year, setYear] = useState(() => editions[0]?.year ?? null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState(null);
+
+  const { results, loading } = useMeetingResultsForYear(year);
+
+  const rank1 = useMemo(() =>
+    results.filter((r) => Number(r.rank) === 1),
+    [results],
+  );
+
+  const winnersByKey = useMemo(() => {
+    const map = new Map();
+    for (const w of allWinners) {
+      if (w.year === year) map.set(_key(w.discipline, w.gender), w);
+    }
+    return map;
+  }, [allWinners, year]);
+
+  const rows = useMemo(() => {
+    const seen = new Set();
+    const out = [];
+    for (const r of rank1) {
+      const k = _key(r.discipline, r.gender);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      const w = winnersByKey.get(k);
+      const rName = `${r.firstName || ""} ${r.lastName || ""}`.trim();
+      const wName = w ? `${w.firstName || ""} ${w.lastName || ""}`.trim() : null;
+      const rMark = r.result || r.mark || "";
+      const wMark = w ? (w.result || w.mark || "") : null;
+      out.push({ disc: _nd(r.discipline), gender: r.gender, rName, rMark, wName, wMark, nameMismatch: w && rName.toLowerCase() !== wName.toLowerCase(), markMismatch: w && rMark !== wMark, inResults: true, inWinners: !!w });
+    }
+    for (const [k, w] of winnersByKey) {
+      if (!seen.has(k)) {
+        out.push({ disc: _nd(w.discipline), gender: w.gender, rName: null, rMark: null, wName: `${w.firstName || ""} ${w.lastName || ""}`.trim(), wMark: w.result || w.mark || "", nameMismatch: false, markMismatch: false, inResults: false, inWinners: true });
+      }
+    }
+    return out.sort((a, b) => a.disc.localeCompare(b.disc) || (a.gender === "W" ? -1 : 1));
+  }, [rank1, winnersByKey]);
+
+  const mismatches = rows.filter((r) => r.nameMismatch || r.markMismatch || !r.inWinners || !r.inResults).length;
+
+  async function handleSync() {
+    if (!window.confirm(`Remplacer les winners ${year} par les résultats officiels (rank=1) ?`)) return;
+    setSyncing(true); setSyncMsg(null);
+    try {
+      const n = await syncWinnersForYear(year, rank1);
+      setSyncMsg(`✅ ${n} winners synchronisés pour ${year}.`);
+    } catch (e) {
+      setSyncMsg(`❌ ${e.message}`);
+    } finally { setSyncing(false); }
+  }
+
+  return (
+    <Panel title="Comparaison Winners vs Résultats" subtitle="Divergences entre palmarès PDF (meetingWinners) et résultats officiels (meetingResults rank=1)">
+      <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 16 }}>
+        <select className="input" value={year ?? ""} onChange={(e) => { setYear(Number(e.target.value)); setSyncMsg(null); }} style={{ minWidth: 120 }}>
+          {editions.map((e) => <option key={e.year} value={e.year}>{e.year}</option>)}
+        </select>
+        {!loading && (
+          <span style={{ fontSize: "0.82rem", color: mismatches > 0 ? "#b45309" : "#059669", fontWeight: 600 }}>
+            {mismatches === 0 ? "✅ Tout correspond" : `⚠️ ${mismatches} divergence(s)`}
+          </span>
+        )}
+        <button className="btn btn--primary" onClick={handleSync} disabled={syncing || loading || rank1.length === 0} style={{ marginLeft: "auto", fontSize: "0.82rem" }}>
+          {syncing ? "Sync…" : `↓ Sync ${year} depuis résultats`}
+        </button>
+      </div>
+      {syncMsg && <p style={{ fontSize: "0.82rem", marginBottom: 12, color: syncMsg.startsWith("✅") ? "#059669" : "#dc2626" }}>{syncMsg}</p>}
+      {loading ? <p style={{ color: "#6b7280", fontSize: "0.85rem" }}>Chargement…</p> : (
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+          <thead>
+            <tr style={{ background: "#f9fafb" }}>
+              {["Discipline","G","Résultats (rank=1)","Perfs","Winners (PDF)","Perfs","Statut"].map((h) => (
+                <th key={h} style={{ padding: "6px 10px", textAlign: "left", fontWeight: 700, fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.06em", color: "#6b7280", borderBottom: "1px solid #e5e7eb" }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0
+              ? <tr><td colSpan={7} style={{ padding: "24px", textAlign: "center", color: "#6b7280" }}>Aucune donnée pour {year}</td></tr>
+              : rows.map((r, i) => {
+                const bg = !r.inResults ? "#fef3c7" : !r.inWinners ? "#ecfdf5" : (r.nameMismatch || r.markMismatch) ? "#fff7ed" : "#f0fdf4";
+                const status = !r.inResults ? "❌ Absent des résultats" : !r.inWinners ? "➕ Nouveau dans résultats" : (r.nameMismatch || r.markMismatch) ? "⚠️ Divergence" : "✅ OK";
+                return (
+                  <tr key={i} style={{ background: bg, borderBottom: "1px solid #e5e7eb" }}>
+                    <td style={{ padding: "6px 10px", fontWeight: 600 }}>{r.disc}</td>
+                    <td style={{ padding: "6px 10px" }}><GenderTag gender={r.gender} /></td>
+                    <td style={{ padding: "6px 10px", color: r.nameMismatch ? "#b45309" : undefined, fontWeight: r.nameMismatch ? 700 : undefined }}>{r.rName ?? "—"}</td>
+                    <td style={{ padding: "6px 10px", fontStyle: "italic", color: r.markMismatch ? "#b45309" : undefined }}>{r.rMark ?? "—"}</td>
+                    <td style={{ padding: "6px 10px", color: r.nameMismatch ? "#dc2626" : undefined }}>{r.wName ?? "—"}</td>
+                    <td style={{ padding: "6px 10px", fontStyle: "italic", color: r.markMismatch ? "#dc2626" : undefined }}>{r.wMark ?? "—"}</td>
+                    <td style={{ padding: "6px 10px", fontSize: "0.75rem", whiteSpace: "nowrap" }}>{status}</td>
+                  </tr>
+                );
+              })
+            }
+          </tbody>
+        </table>
+      )}
+    </Panel>
+  );
+}
+
 // ─── Meeting History page ─────────────────────────────────────────────────────
 
 function MeetingHistoryPage({ Panel }) {
@@ -519,6 +631,7 @@ function MeetingHistoryPage({ Panel }) {
   const isAdmin = roles.includes("admin");
 
   const { editions, loading: editionsLoading } = useMeetingEditions();
+  const { winners: allWinners } = useAllWinners();
   const [selectedYear, setSelectedYear] = useState(null);
   const [closingYear, setClosingYear] = useState(null);
   const [closeStatus, setCloseStatus] = useState(null);
@@ -877,6 +990,13 @@ function MeetingHistoryPage({ Panel }) {
           )}
         </Panel>
       </section>
+
+      {/* Winners comparison */}
+      {isAdmin && editions.length > 0 && (
+        <section className="panel-grid panel-grid--1">
+          <WinnersComparisonPanel editions={editions} allWinners={allWinners} Panel={Panel} />
+        </section>
+      )}
 
       {/* Admin tools */}
       {isAdmin && (
