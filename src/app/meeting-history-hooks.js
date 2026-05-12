@@ -224,6 +224,40 @@ export async function seedMeetingDatabase(onProgress) {
   return `Done — ${total} documents written to Firestore.`;
 }
 
+// ─── Reset winners collection (delete all + re-seed from JSON) ───────────────
+
+/**
+ * Deletes every document in meetingWinners, then re-seeds from the bundled
+ * JSON. Use this to fix stale documents left behind by previous seeds that
+ * used different discipline name formats (e.g. "60 m" vs "60m").
+ */
+export async function resetAndReseedWinners(onProgress) {
+  onProgress?.("Deleting all winners…");
+  const snap = await getDocs(collection(db, MEETING_WINNERS_COL));
+  let batch = writeBatch(db);
+  let count = 0;
+  for (const d of snap.docs) {
+    batch.delete(d.ref);
+    count++;
+    if (count % 400 === 0) { await batch.commit(); batch = writeBatch(db); }
+  }
+  await batch.commit();
+  onProgress?.(`Deleted ${count} old documents.`);
+
+  onProgress?.("Re-seeding winners from JSON…");
+  const winnersJson = await import("../data/meetingWinners.json").then((m) => m.default);
+  batch = writeBatch(db); count = 0;
+  for (const w of winnersJson) {
+    const id = `${w.year}_${w.gender}_${w.discipline.replace(/\s+/g, "_")}`;
+    batch.set(doc(db, MEETING_WINNERS_COL, id), { ...w, seededAt: serverTimestamp() });
+    count++;
+    if (count % 400 === 0) { await batch.commit(); batch = writeBatch(db); }
+  }
+  await batch.commit();
+  onProgress?.(`Re-seeded ${count} winners.`);
+  return `Done — ${count} winners written.`;
+}
+
 // ─── Clear all results for a year ────────────────────────────────────────────
 
 export async function clearResultsForYear(year) {

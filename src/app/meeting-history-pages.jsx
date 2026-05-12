@@ -6,6 +6,7 @@ import {
   clearResultsForYear,
   closeEdition,
   deleteResult,
+  resetAndReseedWinners,
   saveResult,
   seedMeetingDatabase,
   setEditionVisibility,
@@ -888,6 +889,33 @@ function MeetingHistoryPage({ Panel }) {
                   JSON files into Firestore. Safe to re-run — uses merge writes.
                 </p>
                 <SeedButton onSeed={handleSeed} seeding={seeding} seedLog={seedLog} />
+              </div>
+              <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: "0.75rem" }}>
+                <p className="panel-note" style={{ marginBottom: "0.5rem" }}>
+                  <strong>Réinitialiser les winners</strong> — supprime tous les documents de la collection meetingWinners
+                  (y compris les anciens IDs avec disciplines "60 m" vs "60m") puis recharge depuis le JSON corrigé.
+                  À utiliser si des doublons de noms apparaissent dans Winners History ou Luxembourg.
+                </p>
+                <button
+                  className="btn btn--danger"
+                  style={{ fontSize: "0.82rem" }}
+                  onClick={async () => {
+                    if (!window.confirm("Supprimer TOUS les winners et re-seeder depuis le JSON ? (les données 2026 seront perdues — relancer Close Edition ensuite)")) return;
+                    setSeedLog([]);
+                    setSeeding(true);
+                    try {
+                      const result = await resetAndReseedWinners((msg) => setSeedLog((p) => [...p, msg]));
+                      setSeedLog((p) => [...p, `✅ ${result}`]);
+                    } catch (err) {
+                      setSeedLog((p) => [...p, `❌ ${err.message}`]);
+                    } finally {
+                      setSeeding(false);
+                    }
+                  }}
+                  disabled={seeding}
+                >
+                  🔄 Réinitialiser winners (purge + re-seed)
+                </button>
               </div>
               <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: "0.75rem" }}>
                 <p className="panel-note" style={{ marginBottom: "0.5rem" }}>
