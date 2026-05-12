@@ -719,7 +719,7 @@ function MeetingHistoryPage({ Panel }) {
           title={`Results — ${effectiveYear ?? "—"}`}
           subtitle={resultsLoading ? "Loading…" : `${results.length} entries, ${groups.length} events`}
           actions={
-            isAdmin && effectiveYear ? (
+            isAdmin && effectiveYear && !selectedEdition?.cancelled ? (
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
                 {closeStatus && (
                   <span style={{ fontSize: "0.8rem", color: "#15803d", maxWidth: 260 }}>
@@ -909,7 +909,7 @@ function MeetingHistoryPage({ Panel }) {
                 >
                   Masquer 2004–2018 des stats
                 </button>
-                {effectiveYear && (
+                {effectiveYear && !selectedEdition?.cancelled && (
                   <button
                     className="btn"
                     style={{ fontSize: "0.82rem", marginTop: "0.5rem", color: "#dc2626", borderColor: "#dc2626" }}
