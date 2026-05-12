@@ -585,7 +585,7 @@ export function SiteHome() {
                         {r.discipline}
                       </td>
                       <td style={{ fontWeight: 600 }}>
-                        {r.fullName || `${r.firstName || ""} ${r.lastName || ""}`.trim()}
+                        {r.firstName} {r.lastName}
                       </td>
                       <td>
                         <span className="noc">{r.noc}</span>
