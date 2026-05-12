@@ -16,6 +16,38 @@ function genderLabel(g) {
   return g === "W" ? "Women" : "Men";
 }
 
+const DISC_ORDER = [
+  "50m","60m","60m hurdles","60m Hurdles",
+  "200m","200m - Special Olympics",
+  "400m","800m","1000m","1500m","3000m","5000m",
+  "High Jump","Long Jump","Triple Jump","Pole Vault","Shot Put",
+];
+const normDiscipline = (d) => (d || "").replace(/(\d)\s+(m\b)/gi, "$1$2").trim();
+const discKey = (d) => {
+  const nd = normDiscipline(d);
+  const i = DISC_ORDER.indexOf(nd);
+  return i !== -1 ? `0_${i.toString().padStart(3, "0")}` : `1_${nd}`;
+};
+
+const NOC_TO_ISO2 = {
+  GER:"DE", GBR:"GB", NED:"NL", SUI:"CH", DEN:"DK", NOR:"NO",
+  SWE:"SE", FIN:"FI", BLR:"BY", CZE:"CZ", SVK:"SK", SLO:"SI",
+  CRO:"HR", SRB:"RS", MKD:"MK", GRE:"GR", TUR:"TR", RSA:"ZA",
+  ZAF:"ZA", KEN:"KE", ETH:"ET", MAR:"MA", ALG:"DZ", NGR:"NG",
+  CMR:"CM", JAM:"JM", BAH:"BS", TTO:"TT", AUS:"AU", NZL:"NZ",
+  JPN:"JP", CHN:"CN", KOR:"KR", MAS:"MY", HKG:"HK", LAT:"LV",
+  LTU:"LT", EST:"EE", MDA:"MD", ARM:"AM", GEO:"GE", AZE:"AZ",
+  KAZ:"KZ", UZB:"UZ", ROU:"RO", HUN:"HU", BUL:"BG",
+};
+function nocToFlag(noc) {
+  if (!noc) return "";
+  const iso = NOC_TO_ISO2[noc] || noc;
+  if (iso.length !== 2) return "";
+  try {
+    return String.fromCodePoint(0x1F1E6 + iso.charCodeAt(0) - 65, 0x1F1E6 + iso.charCodeAt(1) - 65);
+  } catch { return ""; }
+}
+
 function LoadingRows({ cols = 5 }) {
   return Array.from({ length: 6 }).map((_, i) => (
     <tr key={i} style={{ opacity: 0.4 }}>
@@ -34,21 +66,28 @@ function RecordsPanel({ records, loading }) {
   const [search, setSearch] = useState("");
 
   const filtered = useMemo(() => {
+    const seen = new Set();
     return records
       .filter((r) => genderFilter === "all" || r.gender === genderFilter)
       .filter((r) => {
         if (!search) return true;
         const q = search.toLowerCase();
         return (
-          r.discipline?.toLowerCase().includes(q) ||
+          normDiscipline(r.discipline)?.toLowerCase().includes(q) ||
           r.fullName?.toLowerCase().includes(q) ||
           r.noc?.toLowerCase().includes(q)
         );
       })
       .sort((a, b) => {
-        const dc = String(a.discipline || "").localeCompare(String(b.discipline || ""));
+        const dc = discKey(a.discipline).localeCompare(discKey(b.discipline));
         if (dc !== 0) return dc;
-        return (a.gender || "").localeCompare(b.gender || "");
+        return (a.gender === "W" ? 0 : 1) - (b.gender === "W" ? 0 : 1);
+      })
+      .filter((r) => {
+        const key = `${normDiscipline(r.discipline)}_${r.gender}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
       });
   }, [records, genderFilter, search]);
 
@@ -90,17 +129,22 @@ function RecordsPanel({ records, loading }) {
             {loading ? <LoadingRows cols={6} /> : filtered.length === 0 ? (
               <tr><td colSpan={6} className="site-empty-state">No records found</td></tr>
             ) : filtered.map((r, i) => (
-              <tr key={r.id || i}>
-                <td>{r.discipline}</td>
+              <tr key={r.id || i} className={r.noc === "LUX" ? "row--lux" : ""}>
+                <td style={{ fontWeight: 600 }}>{normDiscipline(r.discipline)}</td>
                 <td>
                   <span className={`site-badge ${r.gender === "W" ? "site-badge--red" : "site-badge--blue"}`}>
-                    {genderLabel(r.gender)}
+                    {r.gender === "W" ? "W" : "M"}
                   </span>
                 </td>
-                <td className="athlete-name">{r.fullName}</td>
-                <td><span className="noc-badge">{r.noc}</span></td>
-                <td className="mark">{formatMark(r.mark)}</td>
-                <td style={{ color: "var(--site-text-muted)" }}>{r.year}</td>
+                <td className="athlete-name" style={{ color: r.noc === "LUX" ? "var(--site-red)" : undefined, fontWeight: r.noc === "LUX" ? 700 : undefined }}>
+                  {r.fullName}
+                </td>
+                <td>
+                  <span title={r.noc} style={{ fontSize: "1.1rem", marginRight: 4 }}>{nocToFlag(r.noc)}</span>
+                  <span className="noc-badge">{r.noc}</span>
+                </td>
+                <td className="mark" style={{ color: "var(--site-red)", fontWeight: 700 }}>{formatMark(r.mark)}</td>
+                <td style={{ color: "var(--site-text-muted)", fontSize: "0.82rem" }}>{r.year}</td>
               </tr>
             ))}
           </tbody>
@@ -118,8 +162,8 @@ function WinnersPanel({ winners, loading }) {
   const [search, setSearch] = useState("");
 
   const disciplines = useMemo(() => {
-    const set = new Set(winners.map((w) => w.discipline));
-    return ["all", ...Array.from(set).sort()];
+    const set = new Set(winners.map((w) => normDiscipline(w.discipline)));
+    return ["all", ...Array.from(set).sort((a, b) => discKey(a).localeCompare(discKey(b)))];
   }, [winners]);
 
   const years = useMemo(() => {
@@ -129,14 +173,14 @@ function WinnersPanel({ winners, loading }) {
 
   const filtered = useMemo(() => {
     return winners
-      .filter((w) => disciplineFilter === "all" || w.discipline === disciplineFilter)
+      .filter((w) => disciplineFilter === "all" || normDiscipline(w.discipline) === disciplineFilter)
       .filter((w) => genderFilter === "all" || w.gender === genderFilter)
       .filter((w) => yearFilter === "all" || String(w.year) === yearFilter)
       .filter((w) => {
         if (!search) return true;
         const q = search.toLowerCase();
         const full = `${w.lastName || ""} ${w.firstName || ""}`.toLowerCase();
-        return full.includes(q) || (w.noc || "").toLowerCase().includes(q) || (w.discipline || "").toLowerCase().includes(q);
+        return full.includes(q) || (w.noc || "").toLowerCase().includes(q) || normDiscipline(w.discipline).toLowerCase().includes(q);
       });
   }, [winners, disciplineFilter, genderFilter, yearFilter, search]);
 
@@ -196,18 +240,21 @@ function WinnersPanel({ winners, loading }) {
             {loading ? <LoadingRows cols={6} /> : filtered.length === 0 ? (
               <tr><td colSpan={6} className="site-empty-state">No results found</td></tr>
             ) : filtered.map((w, i) => (
-              <tr key={w.id || i}>
-                <td style={{ color: "var(--site-text-muted)", fontVariantNumeric: "tabular-nums" }}>{w.year}</td>
-                <td>{w.discipline}</td>
+              <tr key={w.id || i} className={w.noc === "LUX" ? "row--lux" : ""}>
+                <td style={{ color: "var(--site-text-muted)", fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>{w.year}</td>
+                <td style={{ fontWeight: 600 }}>{normDiscipline(w.discipline)}</td>
                 <td>
                   <span className={`site-badge ${w.gender === "W" ? "site-badge--red" : "site-badge--blue"}`}>
-                    {genderLabel(w.gender)}
+                    {w.gender === "W" ? "W" : "M"}
                   </span>
                 </td>
-                <td className="athlete-name">
+                <td className="athlete-name" style={{ color: w.noc === "LUX" ? "var(--site-red)" : undefined, fontWeight: w.noc === "LUX" ? 700 : undefined }}>
                   {w.firstName} {w.lastName}
                 </td>
-                <td><span className="noc-badge">{w.noc}</span></td>
+                <td>
+                  <span title={w.noc} style={{ fontSize: "1.1rem", marginRight: 4 }}>{nocToFlag(w.noc)}</span>
+                  <span className="noc-badge">{w.noc}</span>
+                </td>
                 <td className="mark">{formatMark(w.result)}</td>
               </tr>
             ))}
@@ -234,13 +281,13 @@ function EditionResultsPanel({ editions }) {
   const { results, loading } = useMeetingResultsForYear(Number(selectedYear));
 
   const disciplines = useMemo(() => {
-    const set = new Set(results.map((r) => r.discipline));
-    return ["all", ...Array.from(set).sort()];
+    const set = new Set(results.map((r) => normDiscipline(r.discipline)));
+    return ["all", ...Array.from(set).sort((a, b) => discKey(a).localeCompare(discKey(b)))];
   }, [results]);
 
   const filtered = useMemo(() => {
     return results
-      .filter((r) => disciplineFilter === "all" || r.discipline === disciplineFilter)
+      .filter((r) => disciplineFilter === "all" || normDiscipline(r.discipline) === disciplineFilter)
       .filter((r) => genderFilter === "all" || r.gender === genderFilter)
       .filter((r) => {
         if (!search) return true;
@@ -323,14 +370,19 @@ function EditionResultsPanel({ editions }) {
                 <td style={{ fontWeight: r.rank === 1 ? 800 : 400, color: r.rank === 1 ? "var(--site-gold)" : "var(--site-text-muted)" }}>
                   {r.rank === 1 ? "🥇" : r.rank === 2 ? "🥈" : r.rank === 3 ? "🥉" : r.rank || "—"}
                 </td>
-                <td>{r.discipline}</td>
+                <td style={{ fontWeight: 600 }}>{normDiscipline(r.discipline)}</td>
                 <td>
                   <span className={`site-badge ${r.gender === "W" ? "site-badge--red" : "site-badge--blue"}`}>
-                    {genderLabel(r.gender)}
+                    {r.gender === "W" ? "W" : "M"}
                   </span>
                 </td>
-                <td className="athlete-name">{r.firstName} {r.lastName}</td>
-                <td><span className="noc-badge">{r.noc}</span></td>
+                <td className="athlete-name" style={{ color: r.noc === "LUX" ? "var(--site-red)" : undefined, fontWeight: r.noc === "LUX" ? 700 : undefined }}>
+                  {r.firstName} {r.lastName}
+                </td>
+                <td>
+                  <span title={r.noc} style={{ fontSize: "1.1rem", marginRight: 4 }}>{nocToFlag(r.noc)}</span>
+                  <span className="noc-badge">{r.noc}</span>
+                </td>
                 <td className="mark">{formatMark(r.result)}</td>
                 <td style={{ color: "var(--site-text-dim)", fontSize: "0.78rem" }}>{r.notes || ""}</td>
               </tr>
@@ -370,6 +422,7 @@ function LuxPanel({ winners, records, loading }) {
               <tr>
                 <th>Year</th>
                 <th>Discipline</th>
+                <th>Gender</th>
                 <th>Athlete</th>
                 <th>Performance</th>
               </tr>
@@ -377,9 +430,14 @@ function LuxPanel({ winners, records, loading }) {
             <tbody>
               {luxWinners.map((w, i) => (
                 <tr key={w.id || i}>
-                  <td style={{ color: "var(--site-text-muted)" }}>{w.year}</td>
-                  <td>{w.discipline}</td>
-                  <td className="athlete-name">{w.firstName} {w.lastName}</td>
+                  <td style={{ color: "var(--site-text-muted)", fontWeight: 600 }}>{w.year}</td>
+                  <td style={{ fontWeight: 600 }}>{normDiscipline(w.discipline)}</td>
+                  <td>
+                    <span className={`site-badge ${w.gender === "W" ? "site-badge--red" : "site-badge--blue"}`}>
+                      {w.gender === "W" ? "W" : "M"}
+                    </span>
+                  </td>
+                  <td className="athlete-name" style={{ color: "var(--site-red)", fontWeight: 700 }}>{w.firstName} {w.lastName}</td>
                   <td className="mark">{formatMark(w.result)}</td>
                 </tr>
               ))}
@@ -405,10 +463,10 @@ function LuxPanel({ winners, records, loading }) {
               <tbody>
                 {luxRecords.map((r, i) => (
                   <tr key={r.id || i}>
-                    <td>{r.discipline}</td>
-                    <td className="athlete-name">{r.fullName}</td>
-                    <td className="mark">{r.mark}</td>
-                    <td style={{ color: "var(--site-text-muted)" }}>{r.year}</td>
+                    <td style={{ fontWeight: 600 }}>{normDiscipline(r.discipline)}</td>
+                    <td className="athlete-name" style={{ color: "var(--site-red)", fontWeight: 700 }}>{r.fullName}</td>
+                    <td className="mark" style={{ color: "var(--site-red)", fontWeight: 700 }}>{r.mark}</td>
+                    <td style={{ color: "var(--site-text-muted)", fontSize: "0.82rem" }}>{r.year}</td>
                   </tr>
                 ))}
               </tbody>

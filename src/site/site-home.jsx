@@ -152,19 +152,30 @@ export function SiteHome() {
   const DISCIPLINE_ORDER = [
     "60 m", "60 m hurdles", "200 m", "400 m", "800 m", "1000 m", "1500 m", "3000 m", "5000 m",
   ];
+  const normDiscipline = (d) => (d || "").replace(/(\d)\s+(m\b)/gi, "$1$2").trim();
   const keyOf = (d) => {
-    const i = DISCIPLINE_ORDER.indexOf(d);
-    return i !== -1 ? `0_${String(i).padStart(3, "0")}` : `1_${d}`;
+    const nd = normDiscipline(d);
+    const i = DISCIPLINE_ORDER.indexOf(nd);
+    return i !== -1 ? `0_${String(i).padStart(3, "0")}` : `1_${nd}`;
   };
   const latestWinners = latestYear
-    ? [...latestResults]
-        .filter((r) => Number(r.rank) === 1)
-        .sort((a, b) => {
-          const dc = keyOf(a.discipline || "").localeCompare(keyOf(b.discipline || ""));
-          if (dc !== 0) return dc;
-          return (a.gender === "W" ? -1 : 1) - (b.gender === "W" ? -1 : 1);
-        })
-        .slice(0, 14)
+    ? (() => {
+        const seen = new Set();
+        return [...latestResults]
+          .filter((r) => Number(r.rank) === 1)
+          .sort((a, b) => {
+            const dc = keyOf(a.discipline || "").localeCompare(keyOf(b.discipline || ""));
+            if (dc !== 0) return dc;
+            return (a.gender === "W" ? -1 : 1) - (b.gender === "W" ? -1 : 1);
+          })
+          .filter((r) => {
+            const key = `${normDiscipline(r.discipline)}_${r.gender}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          })
+          .slice(0, 14);
+      })()
     : [];
 
   return (
@@ -632,7 +643,7 @@ export function SiteHome() {
                             <span className={`site-badge ${r.gender === "W" ? "site-badge--red" : "site-badge--blue"}`} style={{ marginRight: 8 }}>
                               {r.gender === "W" ? "W" : "M"}
                             </span>
-                            {r.discipline}
+                            {normDiscipline(r.discipline)}
                           </td>
                           <td style={{ fontWeight: 600 }}>{r.firstName} {r.lastName}</td>
                           <td><span className="noc">{r.noc}</span></td>
