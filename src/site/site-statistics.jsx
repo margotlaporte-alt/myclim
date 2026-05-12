@@ -172,6 +172,7 @@ function WinnersPanel({ winners, loading }) {
   }, [winners]);
 
   const filtered = useMemo(() => {
+    const seen = new Set();
     return winners
       .filter((w) => disciplineFilter === "all" || normDiscipline(w.discipline) === disciplineFilter)
       .filter((w) => genderFilter === "all" || w.gender === genderFilter)
@@ -181,6 +182,12 @@ function WinnersPanel({ winners, loading }) {
         const q = search.toLowerCase();
         const full = `${w.lastName || ""} ${w.firstName || ""}`.toLowerCase();
         return full.includes(q) || (w.noc || "").toLowerCase().includes(q) || normDiscipline(w.discipline).toLowerCase().includes(q);
+      })
+      .filter((w) => {
+        const key = `${w.year}_${normDiscipline(w.discipline)}_${w.gender}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
       });
   }, [winners, disciplineFilter, genderFilter, yearFilter, search]);
 
@@ -396,10 +403,18 @@ function EditionResultsPanel({ editions }) {
 
 /* ── Luxembourg performances panel ─────────────────────── */
 function LuxPanel({ winners, records, loading }) {
-  const luxWinners = useMemo(() =>
-    winners.filter((w) => w.noc === "LUX").sort((a, b) => b.year - a.year),
-    [winners],
-  );
+  const luxWinners = useMemo(() => {
+    const seen = new Set();
+    return winners
+      .filter((w) => w.noc === "LUX")
+      .sort((a, b) => b.year - a.year || discKey(a.discipline).localeCompare(discKey(b.discipline)))
+      .filter((w) => {
+        const key = `${w.year}_${normDiscipline(w.discipline)}_${w.gender}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  }, [winners]);
 
   const luxRecords = useMemo(() =>
     records.filter((r) => r.noc === "LUX"),
