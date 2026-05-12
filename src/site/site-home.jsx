@@ -13,6 +13,7 @@ import galleryVolunteers from "../assets/site-gallery/gallery-volunteers.jpg";
 import ambiance1 from "../assets/site-gallery/ambiance-1.jpg";
 import ambiance2 from "../assets/site-gallery/ambiance-2.jpg";
 import ambiance3 from "../assets/site-gallery/ambiance-3.jpg";
+import aboutVdw from "../assets/site-gallery/about-vdw.jpg";
 
 /* ── Animated counter ──────────────────────────────────── */
 function AnimatedNumber({ target, suffix = "", prefix = "" }) {
@@ -374,13 +375,17 @@ export function SiteHome() {
       <section className="site-section">
         <div className="site-container">
           <div className="site-about__grid">
-            <div className="site-about__visual">
-              <div className="site-about__visual-card">
-                <div className="site-about__visual-bg" />
+            <div className="site-about__visual" style={{ position: "relative" }}>
+              <div style={{
+                borderRadius: "var(--site-radius-lg)",
+                overflow: "hidden",
+                aspectRatio: "3/4",
+                boxShadow: "0 16px 48px rgba(0,0,0,0.15)",
+              }}>
                 <img
-                  src={cmcmLogo}
-                  alt="CMCM Luxembourg Indoor Meeting"
-                  className="site-about__visual-logo"
+                  src={aboutVdw}
+                  alt="Elisa Van der Weken CMCM Luxembourg Indoor Meeting"
+                  style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top" }}
                 />
               </div>
               <div className="site-about__visual-badge">
@@ -401,23 +406,25 @@ export function SiteHome() {
                 Part of the World Athletics Indoor Tour Silver circuit, the meeting attracts world-class performers across all disciplines, from sprints to field events, offering a unique atmosphere in the heart of Europe.
               </p>
 
-              <div className="site-about__facts">
-                <div className="site-about__fact">
-                  <strong>Coque</strong>
-                  <span>Venue</span>
-                </div>
-                <div className="site-about__fact">
-                  <strong>January</strong>
-                  <span>Each year</span>
-                </div>
-                <div className="site-about__fact">
-                  <strong>FLA</strong>
-                  <span>Organiser</span>
-                </div>
-                <div className="site-about__fact">
-                  <strong>Silver</strong>
-                  <span>WA Indoor Tour label</span>
-                </div>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 8, marginTop: 4 }}>
+                {[
+                  ["Coque", "Venue"],
+                  ["January", "Each year"],
+                  ["FLA", "Organiser"],
+                  ["WA Silver", "Indoor Tour label"],
+                ].map(([val, label]) => (
+                  <div key={label} style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    padding: "10px 16px",
+                    background: "var(--site-section-alt-bg, #f4f6f9)",
+                    borderRadius: "var(--site-radius-sm)",
+                    borderLeft: "3px solid var(--site-red)",
+                  }}>
+                    <strong style={{ fontSize: "0.9rem", fontWeight: 800, color: "var(--site-text)", lineHeight: 1.2 }}>{val}</strong>
+                    <span style={{ fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--site-text-muted)", marginTop: 2 }}>{label}</span>
+                  </div>
+                ))}
               </div>
 
               <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginTop: "8px" }}>

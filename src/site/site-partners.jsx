@@ -1,11 +1,12 @@
 import { useSponsors } from "./site-hooks";
 
-const CATEGORY_ORDER = ["title", "main", "institutional", "media", "supplier"];
+const CATEGORY_ORDER = ["title", "main", "institutional", "media", "Meeting's Sponsor", "supplier"];
 const CATEGORY_LABELS = {
   title: "Title Partner",
   main: "Main Partners",
   institutional: "Institutional Partners",
   media: "Media Partners",
+  "Meeting's Sponsor": "Event Sponsors",
   supplier: "Suppliers & Partners",
 };
 const CATEGORY_DESCRIPTIONS = {
@@ -13,57 +14,37 @@ const CATEGORY_DESCRIPTIONS = {
   main: "Our main partners provide essential support across operations, logistics and athlete services, making the meeting possible at the highest level.",
   institutional: "Public institutions and federations whose backing gives the event its legitimacy and enables its long-term ambitions.",
   media: "Media partners who broadcast and cover the meeting, amplifying its reach to fans across Luxembourg and beyond.",
+  "Meeting's Sponsor": "Official event sponsors who contribute directly to the competition experience.",
   supplier: "Specialist suppliers and technical partners who bring expertise and equipment essential to a world-class athletics event.",
 };
 
-function PartnerCard({ sponsor }) {
-  const content = (
-    <div
-      style={{
-        background: "var(--site-card)",
-        border: "1px solid var(--site-border)",
-        borderRadius: "var(--site-radius)",
-        padding: "24px 32px",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 16,
-        transition: "transform 0.22s, box-shadow 0.22s, border-color 0.22s",
-        cursor: sponsor.website ? "pointer" : "default",
-        textDecoration: "none",
-      }}
-      className="site-card"
+function PartnerLogo({ sponsor }) {
+  const inner = (
+    <div style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "20px 32px",
+      background: "var(--site-card)",
+      border: "1px solid var(--site-border)",
+      borderRadius: "var(--site-radius)",
+      transition: "transform 0.2s, box-shadow 0.2s",
+      cursor: sponsor.website ? "pointer" : "default",
+      minWidth: 140,
+    }}
+    className="site-card"
+    title={sponsor.name}
     >
       {sponsor.logoUrl ? (
-        <div style={{ height: 60, display: "flex", alignItems: "center" }}>
-          <img
-            src={sponsor.logoUrl}
-            alt={sponsor.name}
-            style={{
-              maxHeight: "100%",
-              maxWidth: 180,
-              objectFit: "contain",
-            }}
-          />
-        </div>
+        <img
+          src={sponsor.logoUrl}
+          alt={sponsor.name}
+          style={{ maxHeight: 52, maxWidth: 160, objectFit: "contain", display: "block" }}
+        />
       ) : (
-        <div style={{
-          height: 60,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: "1.1rem",
-          fontWeight: 800,
-          color: "var(--site-text-muted)",
-          letterSpacing: "0.04em",
-        }}>
+        <span style={{ fontSize: "1rem", fontWeight: 800, color: "var(--site-text-muted)" }}>
           {sponsor.name}
-        </div>
-      )}
-      {sponsor.description && (
-        <p style={{ fontSize: "0.8rem", color: "var(--site-text-muted)", textAlign: "center", lineHeight: 1.6, margin: 0 }}>
-          {sponsor.description}
-        </p>
+        </span>
       )}
     </div>
   );
@@ -71,11 +52,11 @@ function PartnerCard({ sponsor }) {
   if (sponsor.website) {
     return (
       <a href={sponsor.website} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
-        {content}
+        {inner}
       </a>
     );
   }
-  return content;
+  return inner;
 }
 
 function FeaturedPartner({ sponsor }) {
@@ -120,6 +101,11 @@ export function SitePartners() {
     acc[cat].push(s);
     return acc;
   }, {});
+
+  // Sort each category by `order` field (ascending)
+  Object.values(byCategory).forEach((arr) =>
+    arr.sort((a, b) => (a.order ?? 99) - (b.order ?? 99))
+  );
 
   const titlePartner = byCategory.title?.[0] || null;
 
@@ -214,19 +200,15 @@ export function SitePartners() {
                     <p style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--site-red)", marginBottom: 8 }}>
                       {CATEGORY_LABELS[cat]}
                     </p>
-                    {CATEGORY_DESCRIPTIONS[cat] && (
-                      <p style={{ fontSize: "0.9rem", color: "var(--site-text-muted)", maxWidth: 560, margin: "0 auto", lineHeight: 1.65 }}>
-                        {CATEGORY_DESCRIPTIONS[cat]}
-                      </p>
-                    )}
                   </div>
                   <div style={{
-                    display: "grid",
-                    gridTemplateColumns: `repeat(auto-fill, minmax(${cat === "main" ? 240 : 180}px, 1fr))`,
+                    display: "flex",
+                    justifyContent: "center",
+                    flexWrap: "wrap",
                     gap: 16,
                   }}>
                     {byCategory[cat].map((s) => (
-                      <PartnerCard key={s.id} sponsor={s} />
+                      <PartnerLogo key={s.id} sponsor={s} />
                     ))}
                   </div>
                 </div>
