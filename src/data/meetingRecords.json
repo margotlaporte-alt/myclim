@@ -223,5 +223,41 @@
     "noc": "NED",
     "date": "03.02.2018",
     "year": 2018
+  },
+  {
+    "gender": "W",
+    "discipline": "60 m",
+    "mark": "7.07",
+    "fullName": "VAN DER WEKEN Patrizia",
+    "noc": "LUX",
+    "date": "19.01.2025",
+    "year": 2025
+  },
+  {
+    "gender": "W",
+    "discipline": "200 m",
+    "mark": "22.84",
+    "fullName": "WESSOLLY Jessica-Bianca",
+    "noc": "DEU",
+    "date": "19.01.2025",
+    "year": 2025
+  },
+  {
+    "gender": "W",
+    "discipline": "3000 m",
+    "mark": "10:04.76",
+    "fullName": "SCHMOETTEN Pascale",
+    "noc": "LUX",
+    "date": "29.01.2005",
+    "year": 2005
+  },
+  {
+    "gender": "M",
+    "discipline": "High Jump",
+    "mark": "2.28 m",
+    "fullName": "CARMOY Thomas",
+    "noc": "BEL",
+    "date": "13.02.2021",
+    "year": 2021
   }
 ]

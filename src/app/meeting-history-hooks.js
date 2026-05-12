@@ -104,7 +104,17 @@ export function useAllWinners() {
       const items = snap.docs
         .map((d) => ({ id: d.id, ...d.data() }))
         .sort((a, b) => {
-          const dc = String(a.discipline || "").localeCompare(String(b.discipline || ""));
+          // Sort by canonical event order (track by distance, then field alpha)
+          const DISCIPLINE_ORDER = [
+            "50 m","60 m","60 m hurdles",
+            "200 m","200 m - Special Olympics",
+            "400 m","800 m","1000 m","1500 m","3000 m","5000 m",
+          ];
+          const keyOf = (d) => {
+            const i = DISCIPLINE_ORDER.indexOf(d);
+            return i !== -1 ? `0_${String(i).padStart(3,"0")}` : `1_${d}`;
+          };
+          const dc = keyOf(a.discipline || "").localeCompare(keyOf(b.discipline || ""));
           if (dc !== 0) return dc;
           if (a.gender !== b.gender) return a.gender === "W" ? -1 : 1;
           return b.year - a.year;
