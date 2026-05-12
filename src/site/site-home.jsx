@@ -575,8 +575,8 @@ export function SiteHome() {
       ════════════════════════════════════════════════ */}
       {latestWinners.length > 0 && (
         <section className="site-section site-section--alt">
-          {/* Full-width action photo header */}
-          <div style={{ position: "relative", height: 260, overflow: "hidden", marginBottom: 64 }}>
+          {/* Full-width action photo strip */}
+          <div style={{ position: "relative", height: 220, overflow: "hidden" }}>
             <img
               src={ambiance1}
               alt="Race action CMCM Luxembourg Indoor Meeting"
@@ -584,15 +584,13 @@ export function SiteHome() {
             />
             <div style={{
               position: "absolute", inset: 0,
-              background: "linear-gradient(to right, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.55) 100%)",
+              background: "linear-gradient(to bottom, transparent 50%, var(--site-section-alt-bg, #f4f6f9) 100%)",
             }} />
-            <div style={{
-              position: "absolute", inset: 0,
-              display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 8,
-            }}>
-              <span className="site-eyebrow" style={{ color: "rgba(255,255,255,0.7)" }}>Last edition · {latestYear}</span>
-              <h2 className="site-heading" style={{ color: "#fff", margin: 0, textShadow: "0 2px 12px rgba(0,0,0,0.4)" }}>Event winners</h2>
-            </div>
+          </div>
+          {/* Title below the photo */}
+          <div style={{ textAlign: "center", padding: "32px 0 40px" }}>
+            <span className="site-eyebrow">Last edition · {latestYear}</span>
+            <h2 className="site-heading site-heading--sm" style={{ margin: "8px 0 0" }}>Event winners</h2>
           </div>
 
           <div className="site-container">
