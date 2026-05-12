@@ -152,7 +152,7 @@ export function SiteHome() {
   const DISCIPLINE_ORDER = [
     "60 m", "60 m hurdles", "200 m", "400 m", "800 m", "1000 m", "1500 m", "3000 m", "5000 m",
   ];
-  const normDiscipline = (d) => (d || "").replace(/(\d)\s+(m\b)/gi, "$1$2").trim();
+  const normDiscipline = (d) => (d || "").replace(/(\d)\s+(m\b)/gi, "$1$2").replace(/Hurdles/g, "hurdles").trim();
   const keyOf = (d) => {
     const nd = normDiscipline(d);
     const i = DISCIPLINE_ORDER.indexOf(nd);
