@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import cmcmLogo from "../assets/cmcm-logo.png";
+import waLogo from "../assets/wa-indoor-tour-silver.png";
 import { useAuth } from "../context/auth-context";
 import "./site.css";
 
@@ -67,7 +68,7 @@ export function SiteLayout() {
             <img src={cmcmLogo} alt="CMCM Luxembourg Indoor Meeting" />
             <div className="site-nav__logo-text">
               <span className="site-nav__logo-name">Luxembourg Indoor Meeting</span>
-              <span className="site-nav__logo-sub">World Athletics Indoor Tour · Silver</span>
+              <img src={waLogo} alt="World Athletics Indoor Tour Silver" className="site-nav__wa-logo" />
             </div>
           </NavLink>
 

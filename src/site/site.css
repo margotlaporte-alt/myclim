@@ -140,10 +140,11 @@
   color: var(--site-text);
 }
 
-.site-nav__logo-sub {
-  font-size: 0.62rem;
-  color: var(--site-text-muted);
-  letter-spacing: 0.04em;
+.site-nav__wa-logo {
+  height: 22px;
+  width: auto;
+  margin-top: 3px;
+  opacity: 0.85;
 }
 
 .site-nav__links {
