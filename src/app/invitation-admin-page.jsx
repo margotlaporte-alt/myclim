@@ -417,6 +417,7 @@ function InvitationRow({ invitation: inv, onResend, onCancel, onDelete, history 
             : <span style={{ color: "#999", fontSize: "0.8rem" }}>—</span>}
         </div>
       </td>
+      <td style={{ fontSize: "0.8rem", color: "#546770" }}>{formatDate(inv.createdAt)}</td>
       {history ? (
         <td>
           <span style={{ fontSize: "0.8rem", fontWeight: 700, color: STATUS_COLOR[inv.status] || "#546770" }}>
@@ -429,7 +430,6 @@ function InvitationRow({ invitation: inv, onResend, onCancel, onDelete, history 
           {expired && <span style={{ marginLeft: 6, color: "#e8001c", fontWeight: 700 }}>Expiré</span>}
         </td>
       )}
-      <td style={{ fontSize: "0.8rem", color: "#546770" }}>{formatDate(inv.createdAt)}</td>
       <td>
         <div style={{ display: "flex", gap: 6 }}>
           {inv.status !== "accepted" && (
