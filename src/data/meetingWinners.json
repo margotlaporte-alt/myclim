@@ -2617,110 +2617,122 @@
   },
   {
     "year": 2026,
+    "gender": "W",
     "discipline": "60 m",
-    "gender": "W",
+    "firstName": "Elisa",
     "lastName": "VAN DER WEKEN",
-    "firstName": "Patrizia",
     "noc": "LUX",
-    "result": "7.14"
+    "result": "7.19",
+    "edition": 24
   },
   {
     "year": 2026,
+    "gender": "W",
     "discipline": "200 m",
-    "gender": "W",
+    "firstName": "Sandra",
     "lastName": "SEVILLA",
-    "firstName": "Paula",
     "noc": "ESP",
-    "result": "23.16"
+    "result": "23.32",
+    "edition": 24
   },
   {
     "year": 2026,
-    "discipline": "800 m",
     "gender": "W",
+    "discipline": "800 m",
+    "firstName": "Vera",
     "lastName": "ARENDT",
-    "firstName": "Fanny",
     "noc": "LUX",
-    "result": "2:00.83"
+    "result": "2:03.54",
+    "edition": 24
   },
   {
     "year": 2026,
-    "discipline": "1500 m",
     "gender": "W",
+    "discipline": "1500 m",
+    "firstName": "Dawit",
     "lastName": "MULUGETA",
-    "firstName": "Samrawit",
     "noc": "ETH",
-    "result": "4:07.59"
+    "result": "4:10.23",
+    "edition": 24
   },
   {
     "year": 2026,
-    "discipline": "60 m hurdles",
     "gender": "W",
+    "discipline": "60 m hurdles",
+    "firstName": "Laura",
     "lastName": "ALESSANDRINI",
-    "firstName": "Sacha",
-    "noc": "FRA",
-    "result": "8.00"
+    "noc": "ITA",
+    "result": "7.94",
+    "edition": 24
   },
   {
     "year": 2026,
-    "discipline": "Pole Vault",
     "gender": "W",
+    "discipline": "Pole Vault",
+    "firstName": "Ninon",
     "lastName": "PETIT",
-    "firstName": "Berenice",
     "noc": "FRA",
-    "result": "4.45 m"
+    "result": "4.55",
+    "edition": 24
   },
   {
     "year": 2026,
+    "gender": "M",
     "discipline": "400 m",
-    "gender": "M",
+    "firstName": "Joshua",
     "lastName": "BREDAU",
-    "firstName": "Jean Paul",
     "noc": "GER",
-    "result": "45.94"
+    "result": "45.81",
+    "edition": 24
   },
   {
     "year": 2026,
+    "gender": "M",
     "discipline": "800 m",
-    "gender": "M",
-    "lastName": "ENGLISH",
     "firstName": "Mark",
+    "lastName": "ENGLISH",
     "noc": "IRL",
-    "result": "1:44.65"
+    "result": "1:46.23",
+    "edition": 24
   },
   {
     "year": 2026,
+    "gender": "M",
     "discipline": "1500 m",
-    "gender": "M",
+    "firstName": "Luke",
     "lastName": "SISK",
-    "firstName": "Pieter",
-    "noc": "BEL",
-    "result": "3:34.63"
+    "noc": "IRL",
+    "result": "3:36.78",
+    "edition": 24
   },
   {
     "year": 2026,
+    "gender": "M",
     "discipline": "3000 m",
-    "gender": "M",
+    "firstName": "Pieter",
     "lastName": "VERHEYDEN",
-    "firstName": "Ruben",
     "noc": "BEL",
-    "result": "7:40.31"
+    "result": "7:41.23",
+    "edition": 24
   },
   {
     "year": 2026,
+    "gender": "M",
     "discipline": "60 m hurdles",
-    "gender": "M",
+    "firstName": "Damian",
     "lastName": "SZYMANSKI",
-    "firstName": "Jakub",
     "noc": "POL",
-    "result": "7.48"
+    "result": "7.57",
+    "edition": 24
   },
   {
     "year": 2026,
-    "discipline": "Long Jump",
     "gender": "M",
+    "discipline": "Long Jump",
+    "firstName": "Maykel Massó",
     "lastName": "GUERRA",
-    "firstName": "Jaime",
-    "noc": "ESP",
-    "result": "7.84 m"
+    "noc": "CUB",
+    "result": "8.22",
+    "edition": 24
   }
 ]
