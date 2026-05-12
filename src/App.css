@@ -1310,6 +1310,17 @@ textarea {
   align-items: center;
 }
 
+.sidebar-brand-lockup--link {
+  text-decoration: none;
+  color: inherit;
+  border-radius: 10px;
+  transition: opacity 0.15s;
+}
+
+.sidebar-brand-lockup--link:hover {
+  opacity: 0.8;
+}
+
 .sidebar-brand-logo-shell {
   padding: 9px;
   border-radius: 16px;

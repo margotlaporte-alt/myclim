@@ -1,7 +1,7 @@
 function getMailFunctionUrl() {
   const env = typeof import.meta !== "undefined" && import.meta.env ? import.meta.env : {};
   const configuredUrl = String(env.VITE_MAIL_FUNCTION_URL || "").trim();
-  return configuredUrl || "/.netlify/functions/send-transactional-mail-background";
+  return configuredUrl || "/.netlify/functions/send-transactional-mail";
 }
 
 function getMailRequestTimeoutMs() {
@@ -120,6 +120,65 @@ export async function enqueueTransactionalMail(payload) {
 
     throw new Error(errorMessage);
   }
+}
+
+// ─── Invitation admin ────────────────────────────────────────────────────────
+
+export function buildInvitationMail({ email, firstName, roles, activationUrl }) {
+  const displayName = String(firstName || "").trim() || "bonjour";
+  const roleLabels = Array.isArray(roles) && roles.length
+    ? roles.join(", ")
+    : "Accès plateforme";
+
+  return {
+    type: "admin-invitation",
+    to: email,
+    subject: "Votre invitation MyCLIM / Your MyCLIM invitation",
+    body: `Bonjour ${displayName},
+
+Un administrateur de la plateforme MyCLIM vous a créé un compte avec les accès suivants : ${roleLabels}.
+
+Cliquez sur le lien ci-dessous pour activer votre compte et choisir votre mot de passe :
+${activationUrl}
+
+Ce lien est valable 7 jours.
+
+À bientôt,
+L'équipe CMCM Luxembourg Indoor Meeting`,
+    html: buildBrandedEmailShell({
+      title: "Votre invitation MyCLIM",
+      preheader: "Activez votre compte MyCLIM / Activate your MyCLIM account.",
+      content: `
+        <p style="margin:0 0 18px 0;font-size:16px;line-height:1.7;">Bonjour ${displayName},</p>
+        <p style="margin:0 0 18px 0;font-size:16px;line-height:1.7;">
+          Un administrateur vous a créé un compte sur <strong>MyCLIM</strong> avec les accès suivants&nbsp;:
+        </p>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 28px 0;border-collapse:collapse;">
+          <tr>
+            <td style="padding:16px 20px;background:#f6f9fc;border:1px solid #dbe4f0;border-radius:12px;font-size:15px;line-height:1.6;">
+              ${roleLabels}
+            </td>
+          </tr>
+        </table>
+        <p style="margin:0 0 18px 0;font-size:16px;line-height:1.7;">
+          Cliquez sur le bouton ci-dessous pour activer votre compte et choisir votre mot de passe. Ce lien est valable <strong>7 jours</strong>.
+        </p>
+        <p style="margin:0 0 28px 0;">
+          <a href="${activationUrl}" style="display:inline-block;background:#e30d25;color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:999px;font-weight:700;font-size:15px;">
+            Activer mon compte →
+          </a>
+        </p>
+        <p style="margin:0 0 8px 0;font-size:13px;color:#5d6b82;">
+          Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br />
+          <a href="${activationUrl}" style="color:#0f5f9c;word-break:break-all;">${activationUrl}</a>
+        </p>
+        <p style="margin:24px 0 0 0;font-size:15px;line-height:1.7;">
+          À bientôt,<br />
+          <strong>L'équipe CMCM Luxembourg Indoor Meeting</strong>
+        </p>
+      `,
+    }),
+  };
 }
 
 // ─── Compte créé (tous parcours) ────────────────────────────────────────────
@@ -975,6 +1034,262 @@ L'équipe du CMCM Luxembourg Indoor Meeting`,
         <p style="margin:0;font-size:15px;line-height:1.7;">
           Au plaisir de vous accueillir,<br />
           <strong>L'équipe du CMCM Luxembourg Indoor Meeting</strong>
+        </p>
+      `,
+    }),
+  };
+}
+
+// ─── Communiqué / annonce presse ────────────────────────────────────────────
+
+export function buildPressAnnouncementMail({ email, name, subject, body }) {
+  const displayName = String(name || "").trim();
+  const greeting = displayName ? `Bonjour ${displayName},` : "Bonjour,";
+  const htmlBody = String(body || "")
+    .split(/\n\n+/)
+    .map((para) => `<p style="margin:0 0 16px 0;font-size:16px;line-height:1.7;">${para.replace(/\n/g, "<br />")}</p>`)
+    .join("");
+  const plainBody = String(body || "");
+
+  return {
+    type: "press-announcement",
+    to: email,
+    subject: String(subject || "").trim() || "CMCM Luxembourg Indoor Meeting — Information presse",
+    body: `${greeting}\n\n${plainBody}\n\nL'équipe CMCM Luxembourg Indoor Meeting`,
+    html: buildBrandedEmailShell({
+      title: String(subject || "Information presse").trim(),
+      preheader: String(body || "").slice(0, 100).replace(/\n/g, " "),
+      content: `
+        <p style="margin:0 0 18px 0;font-size:16px;line-height:1.7;">${greeting}</p>
+        ${htmlBody}
+        <p style="margin:24px 0 0 0;font-size:15px;line-height:1.7;">
+          Cordialement,<br />
+          <strong>L'équipe CMCM Luxembourg Indoor Meeting</strong>
+        </p>
+      `,
+    }),
+  };
+}
+
+// ─── Accréditation presse ────────────────────────────────────────────────────
+
+export function buildPressRegistrationConfirmationMail({ email, firstName, requestType }) {
+  const displayName = String(firstName || "").trim() || "bonjour";
+  const requestTypeLabelFr = requestType === "photographer" ? "Photographe" : "Presse";
+  const requestTypeLabelEn = requestType === "photographer" ? "Photographer" : "Press";
+  const zonesFr = requestType === "photographer" ? "Mixed Zone et Infield" : "Mixed Zone";
+  const zonesEn = requestType === "photographer" ? "Mixed Zone and Infield" : "Mixed Zone";
+
+  return {
+    type: "press-registration-confirmation",
+    to: email,
+    subject: "Demande d'accréditation presse reçue / Press accreditation request received",
+    body: `Bonjour ${displayName},
+
+Votre demande d'accréditation presse (${requestTypeLabelFr}) a bien été reçue et est en cours d'examen.
+
+Type de demande : ${requestTypeLabelFr}
+Zones d'accès (si acceptée) : ${zonesFr}
+
+Vous recevrez une réponse dans les prochains jours.
+
+À bientôt,
+L'équipe CMCM Luxembourg Indoor Meeting
+
+---
+
+Hello ${displayName},
+
+Your press accreditation request (${requestTypeLabelEn}) has been received and is under review.
+
+Request type: ${requestTypeLabelEn}
+Access zones (if accepted): ${zonesEn}
+
+You will receive a response within the next few days.
+
+See you soon,
+The CMCM Luxembourg Indoor Meeting team`,
+    html: buildBrandedEmailShell({
+      title: "Demande d'accréditation presse",
+      preheader: "Votre demande d'accréditation presse a bien été reçue / Your press accreditation request has been received.",
+      content: `
+        <p style="margin:0 0 18px 0;font-size:16px;line-height:1.7;">Bonjour ${displayName},</p>
+        <p style="margin:0 0 18px 0;font-size:16px;line-height:1.7;">
+          Votre <strong>demande d'accréditation presse</strong> a bien été reçue et est en cours d'examen.
+        </p>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 28px 0;border-collapse:collapse;">
+          <tr>
+            <td style="padding:20px;background:#f6f9fc;border:1px solid #dbe4f0;border-radius:16px;">
+              <p style="margin:0 0 6px 0;font-size:14px;"><strong>Type de demande</strong></p>
+              <p style="margin:0 0 16px 0;font-size:16px;">${requestTypeLabelFr}</p>
+              <p style="margin:0 0 6px 0;font-size:14px;"><strong>Zones d'accès (si acceptée)</strong></p>
+              <p style="margin:0 0 16px 0;font-size:16px;">${zonesFr}</p>
+              <p style="margin:0 0 6px 0;font-size:14px;"><strong>Statut</strong></p>
+              <p style="margin:0;font-size:16px;">En cours d'examen</p>
+            </td>
+          </tr>
+        </table>
+        <p style="margin:0 0 28px 0;font-size:16px;line-height:1.7;">
+          Vous recevrez une réponse dans les prochains jours.
+        </p>
+        ${englishBox(`
+          <p style="margin:0 0 12px 0;font-size:16px;line-height:1.7;">Hello ${displayName},</p>
+          <p style="margin:0 0 12px 0;font-size:16px;line-height:1.7;">
+            Your <strong>press accreditation request</strong> has been received and is under review.
+          </p>
+          <p style="margin:0 0 6px 0;font-size:14px;"><strong>Request type</strong></p>
+          <p style="margin:0 0 12px 0;font-size:16px;">${requestTypeLabelEn}</p>
+          <p style="margin:0 0 6px 0;font-size:14px;"><strong>Access zones (if accepted)</strong></p>
+          <p style="margin:0 0 12px 0;font-size:16px;">${zonesEn}</p>
+          <p style="margin:0 0 6px 0;font-size:14px;"><strong>Status</strong></p>
+          <p style="margin:0;font-size:16px;">Under review</p>
+        `)}
+        <p style="margin:0;font-size:15px;line-height:1.7;">
+          À bientôt,<br />
+          <strong>L'équipe CMCM Luxembourg Indoor Meeting</strong>
+        </p>
+      `,
+    }),
+  };
+}
+
+export function buildPressRegistrationDecisionMail({ email, firstName, requestType, decision, rejectionComment }) {
+  const displayName = String(firstName || "").trim() || "bonjour";
+  const requestTypeLabelFr = requestType === "photographer" ? "Photographe" : "Presse";
+  const requestTypeLabelEn = requestType === "photographer" ? "Photographer" : "Press";
+  const isAccepted = decision === "accepted";
+  const zonesFr = requestType === "photographer" ? "Mixed Zone et Infield" : "Mixed Zone";
+  const zonesEn = requestType === "photographer" ? "Mixed Zone and Infield" : "Mixed Zone";
+
+  if (isAccepted) {
+    return {
+      type: "press-registration-accepted",
+      to: email,
+      subject: "Accréditation presse acceptée / Press accreditation accepted — CMCM Luxembourg Indoor Meeting",
+      body: `Bonjour ${displayName},
+
+Votre demande d'accréditation presse (${requestTypeLabelFr}) a été acceptée pour le CMCM Luxembourg Indoor Meeting.
+
+Zones d'accès : ${zonesFr}
+
+Votre badge vous sera remis le jour du meeting. Merci de vous présenter à l'accueil presse dès votre arrivée.
+
+À bientôt,
+L'équipe CMCM Luxembourg Indoor Meeting
+
+---
+
+Hello ${displayName},
+
+Your press accreditation request (${requestTypeLabelEn}) has been accepted for the CMCM Luxembourg Indoor Meeting.
+
+Access zones: ${zonesEn}
+
+Your badge will be handed to you on the day of the meeting. Please check in at the press desk upon arrival.
+
+See you soon,
+The CMCM Luxembourg Indoor Meeting team`,
+      html: buildBrandedEmailShell({
+        title: "Accréditation presse acceptée",
+        preheader: "Votre accréditation presse a été acceptée / Your press accreditation has been accepted.",
+        content: `
+          <p style="margin:0 0 18px 0;font-size:16px;line-height:1.7;">Bonjour ${displayName},</p>
+          <p style="margin:0 0 18px 0;font-size:16px;line-height:1.7;">
+            Votre <strong>demande d'accréditation presse</strong> a été <strong>acceptée</strong> pour le
+            <strong>CMCM Luxembourg Indoor Meeting</strong>.
+          </p>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 28px 0;border-collapse:collapse;">
+            <tr>
+              <td style="padding:20px;background:#f0faf4;border:1px solid #b7e4c7;border-radius:16px;">
+                <p style="margin:0 0 6px 0;font-size:14px;"><strong>Type d'accréditation</strong></p>
+                <p style="margin:0 0 16px 0;font-size:16px;">${requestTypeLabelFr}</p>
+                <p style="margin:0 0 6px 0;font-size:14px;"><strong>Zones d'accès</strong></p>
+                <p style="margin:0;font-size:16px;">${zonesFr}</p>
+              </td>
+            </tr>
+          </table>
+          <p style="margin:0 0 28px 0;font-size:16px;line-height:1.7;">
+            Votre badge vous sera remis le jour du meeting. Merci de vous présenter à l'<strong>accueil presse</strong> dès votre arrivée.
+          </p>
+          ${englishBox(`
+            <p style="margin:0 0 12px 0;font-size:16px;line-height:1.7;">Hello ${displayName},</p>
+            <p style="margin:0 0 12px 0;font-size:16px;line-height:1.7;">
+              Your <strong>press accreditation request</strong> has been <strong>accepted</strong> for the
+              <strong>CMCM Luxembourg Indoor Meeting</strong>.
+            </p>
+            <p style="margin:0 0 6px 0;font-size:14px;"><strong>Accreditation type</strong></p>
+            <p style="margin:0 0 12px 0;font-size:16px;">${requestTypeLabelEn}</p>
+            <p style="margin:0 0 6px 0;font-size:14px;"><strong>Access zones</strong></p>
+            <p style="margin:0 0 12px 0;font-size:16px;">${zonesEn}</p>
+            <p style="margin:0;font-size:16px;line-height:1.7;">
+              Your badge will be handed to you on the day of the meeting. Please check in at the <strong>press desk</strong> upon arrival.
+            </p>
+          `)}
+          <p style="margin:0;font-size:15px;line-height:1.7;">
+            À bientôt,<br />
+            <strong>L'équipe CMCM Luxembourg Indoor Meeting</strong>
+          </p>
+        `,
+      }),
+    };
+  }
+
+  return {
+    type: "press-registration-rejected",
+    to: email,
+    subject: "Demande d'accréditation presse — CMCM Luxembourg Indoor Meeting",
+    body: `Bonjour ${displayName},
+
+Nous avons bien étudié votre demande d'accréditation presse (${requestTypeLabelFr}).
+
+Après examen, nous ne sommes pas en mesure de donner suite à votre demande pour cette édition.${rejectionComment ? `\n\nMotif : ${rejectionComment}` : ""}
+
+À bientôt,
+L'équipe CMCM Luxembourg Indoor Meeting
+
+---
+
+Hello ${displayName},
+
+We have reviewed your press accreditation request (${requestTypeLabelEn}).
+
+After consideration, we are unable to grant your request for this edition.${rejectionComment ? `\n\nReason: ${rejectionComment}` : ""}
+
+See you soon,
+The CMCM Luxembourg Indoor Meeting team`,
+    html: buildBrandedEmailShell({
+      title: "Demande d'accréditation presse",
+      preheader: "Suite donnée à votre demande d'accréditation presse.",
+      content: `
+        <p style="margin:0 0 18px 0;font-size:16px;line-height:1.7;">Bonjour ${displayName},</p>
+        <p style="margin:0 0 18px 0;font-size:16px;line-height:1.7;">
+          Nous avons bien étudié votre <strong>demande d'accréditation presse</strong> (${requestTypeLabelFr}).
+        </p>
+        <p style="margin:0 0 18px 0;font-size:16px;line-height:1.7;">
+          Après examen, nous ne sommes pas en mesure de donner suite à votre demande pour cette édition.
+        </p>
+        ${rejectionComment ? `
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 28px 0;border-collapse:collapse;">
+          <tr>
+            <td style="padding:20px;background:#f6f9fc;border:1px solid #dbe4f0;border-radius:16px;">
+              <p style="margin:0 0 6px 0;font-size:14px;"><strong>Motif</strong></p>
+              <p style="margin:0;font-size:16px;">${rejectionComment}</p>
+            </td>
+          </tr>
+        </table>` : ""}
+        ${englishBox(`
+          <p style="margin:0 0 12px 0;font-size:16px;line-height:1.7;">Hello ${displayName},</p>
+          <p style="margin:0 0 12px 0;font-size:16px;line-height:1.7;">
+            We have reviewed your <strong>press accreditation request</strong> (${requestTypeLabelEn}).
+          </p>
+          <p style="margin:0;font-size:16px;line-height:1.7;">
+            After consideration, we are unable to grant your request for this edition.
+          </p>
+          ${rejectionComment ? `<p style="margin:12px 0 0 0;font-size:16px;"><strong>Reason:</strong> ${rejectionComment}</p>` : ""}
+        `)}
+        <p style="margin:0;font-size:15px;line-height:1.7;">
+          À bientôt,<br />
+          <strong>L'équipe CMCM Luxembourg Indoor Meeting</strong>
         </p>
       `,
     }),

@@ -174,14 +174,14 @@ function AppShell(props) {
             </div>
           ) : (
             <div className="sidebar-brand">
-              <div className="sidebar-brand-lockup">
+              <a href="/" className="sidebar-brand-lockup sidebar-brand-lockup--link" title="Retour au site public">
                 <div className="sidebar-brand-logo-shell">
                   <img alt="Logo CMCM Luxembourg Indoor Meeting" className="sidebar-brand-logo" src={cmcmLogo} />
                 </div>
                 <div className="sidebar-brand-copy">
                   <h2>MyCLIM</h2>
                 </div>
-              </div>
+              </a>
               <p className="sidebar-brand-tagline">Plateforme équipes et accès meeting.</p>
             </div>
           )}

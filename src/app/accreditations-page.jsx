@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { collection, doc, onSnapshot, serverTimestamp, setDoc } from "firebase/firestore";
+import { collection, doc, onSnapshot, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import accreditationQrEmagazineAthleteUrl from "../assets/accreditation-qr-emagazine-athlete.png";
 import accreditationQrPhotosLiveAthleteUrl from "../assets/accreditation-qr-photos-live-athlete.png";
 import accreditationQrResultsLiveAthleteUrl from "../assets/accreditation-qr-results-live-athlete.png";
@@ -85,6 +85,9 @@ function AccreditationsPage(props) {
   const [isZoneLibraryExpanded, setIsZoneLibraryExpanded] = useState(false);
   const [users, setUsers] = useState([]);
   const [usersLoading, setUsersLoading] = useState(true);
+  const [pressAccreditations, setPressAccreditations] = useState([]);
+  const [pressLoading, setPressLoading] = useState(true);
+  const [pressSearch, setPressSearch] = useState("");
   const [accreditationStatus, setAccreditationStatus] = useState("");
   const [isSavingAccreditation, setIsSavingAccreditation] = useState(false);
   const [newZoneName, setNewZoneName] = useState("");
@@ -225,6 +228,29 @@ function AccreditationsPage(props) {
       },
     );
 
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, "pressRegistrations"),
+      (snapshot) => {
+        const accepted = snapshot.docs
+          .map((d) => ({ id: d.id, ...d.data() }))
+          .filter((r) => r.status === "accepted")
+          .sort((a, b) => {
+            const aMs = a.submittedAt?.toMillis?.() || 0;
+            const bMs = b.submittedAt?.toMillis?.() || 0;
+            return bMs - aMs;
+          });
+        setPressAccreditations(accepted);
+        setPressLoading(false);
+      },
+      () => {
+        setPressAccreditations([]);
+        setPressLoading(false);
+      },
+    );
     return unsubscribe;
   }, []);
 
@@ -1112,7 +1138,7 @@ function AccreditationsPage(props) {
 
   const availableAccreditationTabs = [
     ...(canManageAccreditationConfiguration ? ["roles"] : []),
-    ...(canOperatePrinting ? ["people", "print", "tracking", "history", "judges"] : []),
+    ...(canOperatePrinting ? ["people", "print", "tracking", "history", "judges", "press"] : []),
   ];
 
   useEffect(() => {
@@ -1293,6 +1319,13 @@ function AccreditationsPage(props) {
               onClick={() => setActiveAccreditationTab("judges")}
             >
               Juges
+            </button>
+            <button
+              className={`admin-subtab ${activeAccreditationTab === "press" ? "admin-subtab--active" : ""}`}
+              type="button"
+              onClick={() => setActiveAccreditationTab("press")}
+            >
+              Presse
             </button>
           </>
         ) : null}
@@ -2524,6 +2557,134 @@ function AccreditationsPage(props) {
                 <p className="panel-note">Aucun badge juge n'est encore rangé.</p>
               )}
             </Panel>
+          </Panel>
+        </section>
+      ) : canOperatePrinting && activeAccreditationTab === "press" ? (
+        <section className="admin-stack">
+          <Panel
+            title="Accréditations presse"
+            subtitle="Journalistes et photographes dont la demande a été acceptée. Gérez ici le statut d'impression de leurs badges."
+          >
+            {pressLoading ? <p className="panel-note">Chargement des accréditations presse...</p> : null}
+
+            <div className="accreditation-person-summary">
+              <div className="team-summary-pill">
+                <strong>{pressAccreditations.length}</strong>
+                <span>Accrédité(s)</span>
+              </div>
+              <div className="team-summary-pill">
+                <strong>{pressAccreditations.filter((r) => r.requestType === "press").length}</strong>
+                <span>Presse</span>
+              </div>
+              <div className="team-summary-pill">
+                <strong>{pressAccreditations.filter((r) => r.requestType === "photographer").length}</strong>
+                <span>Photographe(s)</span>
+              </div>
+              <div className="team-summary-pill">
+                <strong>{pressAccreditations.filter((r) => r.printStatus === "Imprimé").length}</strong>
+                <span>Badge(s) imprimé(s)</span>
+              </div>
+            </div>
+
+            <div className="admin-toolbar">
+              <label className="field">
+                <span>Rechercher</span>
+                <input
+                  placeholder="Nom, prénom, média..."
+                  value={pressSearch}
+                  onChange={(event) => setPressSearch(event.target.value)}
+                />
+              </label>
+            </div>
+
+            {pressAccreditations.length === 0 && !pressLoading ? (
+              <div className="placeholder-card">
+                <p className="eyebrow">Aucune accréditation presse</p>
+                <h2>Aucune demande acceptée pour le moment</h2>
+                <p>
+                  Les accréditations presse apparaissent ici lorsqu'un administrateur accepte une demande depuis la page Presse.
+                </p>
+              </div>
+            ) : (
+              <div className="table-wrap">
+                <table className="data-table data-table--admin">
+                  <thead>
+                    <tr>
+                      <th>Nom</th>
+                      <th>Média</th>
+                      <th>Type</th>
+                      <th>Zones</th>
+                      <th>Impression</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pressAccreditations
+                      .filter((r) => {
+                        if (!pressSearch.trim()) return true;
+                        const q = pressSearch.trim().toLowerCase();
+                        return (
+                          (r.firstName || "").toLowerCase().includes(q) ||
+                          (r.lastName || "").toLowerCase().includes(q) ||
+                          (r.media || "").toLowerCase().includes(q)
+                        );
+                      })
+                      .map((r) => (
+                        <tr key={r.id}>
+                          <td>{`${r.firstName || ""} ${r.lastName || ""}`.trim() || "—"}</td>
+                          <td>{r.media || "—"}</td>
+                          <td>
+                            <span className="status-pill">
+                              {r.requestType === "photographer" ? "Photographe" : "Presse"}
+                            </span>
+                          </td>
+                          <td>
+                            {r.requestType === "photographer" ? "Mixed Zone + Infield" : "Mixed Zone"}
+                          </td>
+                          <td>
+                            <span
+                              className={`status-pill ${
+                                r.printStatus === "Imprimé"
+                                  ? "status-pill--ok"
+                                  : r.printStatus === "Dans la file"
+                                    ? "status-pill--accent"
+                                    : r.printStatus === "Annulé" || r.printStatus === "Imprimé à détruire"
+                                      ? "status-pill--danger"
+                                      : ""
+                              }`}
+                            >
+                              {r.printStatus || "Non-imprimé"}
+                            </span>
+                          </td>
+                          <td>
+                            <select
+                              value={r.printStatus || "Non-imprimé"}
+                              style={{ fontSize: "0.85rem" }}
+                              onChange={async (event) => {
+                                try {
+                                  await updateDoc(doc(db, "pressRegistrations", r.id), {
+                                    printStatus: event.target.value,
+                                  });
+                                } catch (err) {
+                                  console.error("Press print status update failed", err);
+                                }
+                              }}
+                            >
+                              {ACCREDITATION_PRINT_STATUS_OPTIONS.map((opt) => (
+                                <option key={opt} value={opt}>{opt}</option>
+                              ))}
+                            </select>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div className="accreditation-print-note">
+              Pour accepter ou refuser des nouvelles demandes, rendez-vous dans la page <strong>Presse</strong> du menu de navigation.
+            </div>
           </Panel>
         </section>
       ) : null}
