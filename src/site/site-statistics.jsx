@@ -519,6 +519,45 @@ export function SiteStatistics() {
         </div>
       </section>
 
+      {/* ── Live Results iframe ──────────────────────────── */}
+      <section className="site-section site-section--alt" style={{ paddingTop: 48, paddingBottom: 48 }}>
+        <div className="site-container">
+          <div style={{ marginBottom: 32 }}>
+            <span className="site-eyebrow" style={{ color: "var(--site-red)" }}>● Live</span>
+            <h2 className="site-heading site-heading--sm" style={{ marginBottom: 8 }}>Results &amp; Live Ranking</h2>
+            <p style={{ color: "var(--site-text-muted)", fontSize: "0.9rem" }}>
+              Results updated live throughout competition day.
+            </p>
+          </div>
+          <div style={{
+            borderRadius: "var(--site-radius-lg)",
+            overflow: "hidden",
+            border: "1px solid var(--site-border)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.06)",
+            background: "#fff",
+          }}>
+            <iframe
+              src="https://fla.laportal.net/Competitions/Details/18079"
+              title="CMCM Luxembourg Indoor Meeting 2026 — Live Results"
+              width="100%"
+              height="700"
+              style={{ display: "block", border: "none" }}
+              loading="lazy"
+            />
+          </div>
+          <div style={{ marginTop: 16, textAlign: "right" }}>
+            <a
+              href="https://fla.laportal.net/Competitions/Details/18079"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="site-btn site-btn--secondary site-btn--sm"
+            >
+              Open full results page →
+            </a>
+          </div>
+        </div>
+      </section>
+
       {/* ── Tab navigation ───────────────────────────────── */}
       <div style={{ borderBottom: "1px solid var(--site-border)", background: "var(--site-surface)", position: "sticky", top: "var(--site-nav-h)", zIndex: 10 }}>
         <div className="site-container">
