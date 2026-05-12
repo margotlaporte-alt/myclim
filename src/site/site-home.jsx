@@ -4,6 +4,11 @@ import { useMeetingEditions, useMeetingRecords } from "../app/meeting-history-ho
 import { usePublishedNews, useSponsors } from "./site-hooks";
 import cmcmLogo from "../assets/cmcm-logo.png";
 import heroPhoto from "../assets/hero-photo.jpg";
+import galleryDaemen from "../assets/site-gallery/gallery-daemen.jpg";
+import galleryWinner from "../assets/site-gallery/gallery-winner.jpg";
+import galleryMemories from "../assets/site-gallery/gallery-memories.jpg";
+import galleryAutographs from "../assets/site-gallery/gallery-autographs.jpg";
+import galleryVolunteers from "../assets/site-gallery/gallery-volunteers.jpg";
 
 /* ── Animated counter ──────────────────────────────────── */
 function AnimatedNumber({ target, suffix = "", prefix = "" }) {
@@ -366,6 +371,50 @@ export function SiteHome() {
                 >
                   Become a volunteer
                 </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════
+          GALLERY
+      ════════════════════════════════════════════════ */}
+      <section className="site-section site-section--alt site-gallery-section">
+        <div className="site-container">
+          <div className="site-section-header site-section-header--center" style={{ marginBottom: 40 }}>
+            <span className="site-eyebrow">Edition 2026</span>
+            <h2 className="site-heading">Live from the Coque</h2>
+          </div>
+          <div className="site-gallery-mosaic">
+            <div className="site-gallery-item site-gallery-item--featured">
+              <img src={galleryDaemen} alt="Athlete celebrating on stage with fireworks" />
+              <div className="site-gallery-item__overlay">
+                <span>Opening Ceremony</span>
+              </div>
+            </div>
+            <div className="site-gallery-item">
+              <img src={galleryWinner} alt="Winner ceremony" />
+              <div className="site-gallery-item__overlay">
+                <span>Winner Ceremony</span>
+              </div>
+            </div>
+            <div className="site-gallery-item">
+              <img src={galleryAutographs} alt="Athlete signing autographs for fans" />
+              <div className="site-gallery-item__overlay">
+                <span>Fan Moments</span>
+              </div>
+            </div>
+            <div className="site-gallery-item">
+              <img src={galleryVolunteers} alt="Volunteers on track" />
+              <div className="site-gallery-item__overlay">
+                <span>Our Volunteers</span>
+              </div>
+            </div>
+            <div className="site-gallery-item">
+              <img src={galleryMemories} alt="Fans with Memories 2026 frame" />
+              <div className="site-gallery-item__overlay">
+                <span>Memories 2026</span>
               </div>
             </div>
           </div>
