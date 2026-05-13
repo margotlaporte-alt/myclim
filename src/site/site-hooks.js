@@ -157,13 +157,13 @@ export function usePublishedPressReleases() {
   const [releases, setReleases] = useState([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
+    // No composite index needed: fetch all ordered by date, filter published client-side
     const q = query(
       collection(db, SITE_PRESS_RELEASES_COL),
-      where("published", "==", true),
       orderBy("date", "desc"),
     );
     const unsub = onSnapshot(q, (snap) => {
-      setReleases(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setReleases(snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((r) => r.published === true));
       setLoading(false);
     }, () => setLoading(false));
     return unsub;
