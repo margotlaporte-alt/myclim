@@ -514,7 +514,7 @@ export function WebsiteSponsorsPage({ Panel }) {
 
 /* ── Press releases admin ─────────────────────────────────── */
 const PRESS_CATEGORIES = ["Communiqué de presse", "Press release", "Déclaration", "Résultats"];
-const PRESS_LANGUAGES = ["en", "fr", "de", "lu"];
+const PRESS_LANGUAGES = ["en", "fr", "de", "lu", "es", "pl"];
 
 function PressReleaseForm({ initial, onSave, onCancel }) {
   const [data, setData] = useState({
@@ -565,9 +565,17 @@ function PressReleaseForm({ initial, onSave, onCancel }) {
           </div>
           <div>
             <label style={labelStyle}>Language</label>
-            <select style={inputStyle} value={data.language} onChange={(e) => set("language", e.target.value)}>
+            <input
+              list="press-languages-list"
+              style={inputStyle}
+              value={data.language}
+              onChange={(e) => set("language", e.target.value.toLowerCase())}
+              placeholder="fr, en, de…"
+              maxLength={10}
+            />
+            <datalist id="press-languages-list">
               {PRESS_LANGUAGES.map((l) => <option key={l} value={l}>{l.toUpperCase()}</option>)}
-            </select>
+            </datalist>
           </div>
           <div>
             <label style={labelStyle}>Year</label>

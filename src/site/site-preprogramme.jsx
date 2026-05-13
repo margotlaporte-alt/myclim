@@ -197,7 +197,7 @@ export function SitePreProgramme() {
               </div>
             </div>
 
-            <PhotoGrid photos={[business1, business2, gforster]} />
+            <PhotoGrid photos={[business1, business2, influencerGodart]} />
           </div>
 
           {/* Packs */}
