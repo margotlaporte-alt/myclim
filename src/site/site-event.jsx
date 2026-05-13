@@ -10,6 +10,12 @@ import vip3 from "../assets/site-gallery/vip-3.jpg";
 import vip4 from "../assets/site-gallery/vip-4.jpeg";
 import vip5 from "../assets/site-gallery/vip-5.jpeg";
 import vip6 from "../assets/site-gallery/vip-6.jpeg";
+import ticketAmbiance1 from "../assets/site-gallery/ticket-ambiance-1.jpg";
+import ticketAmbiance2 from "../assets/site-gallery/ticket-ambiance-2.jpg";
+import ticketAmbiance3 from "../assets/site-gallery/ticket-ambiance-3.jpg";
+import ticketFan1 from "../assets/site-gallery/ticket-fan-1.jpg";
+import ticketPublic4 from "../assets/site-gallery/ticket-public-4.jpg";
+import ticketPublic5 from "../assets/site-gallery/ticket-public-5.jpg";
 
 const TIMETABLE = [
   { time: "08:00", event: "Venue opens", detail: "Athlete check-in and warm-up area available" },
@@ -197,93 +203,159 @@ export function SiteEvent() {
           <SectionTitle
             eyebrow="Ticket sale"
             title="Tickets &amp; access"
-            lead="Secure your place at the CMCM Luxembourg Indoor Meeting 2026. Tickets available from 17 November 2026 at 10:00 on ticket-regional.lu."
+            lead="Secure your place at the CMCM Luxembourg Indoor Meeting 2026."
           />
 
-          {/* Ticket tiers */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, marginBottom: 40 }}>
-            {/* Under 18 */}
-            <div className="site-card" style={{ padding: 32 }}>
-              <div style={{ width: 48, height: 4, background: "var(--site-blue)", borderRadius: 2, marginBottom: 24 }} />
-              <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--site-text)", marginBottom: 6 }}>Under 18</h3>
-              <div style={{ fontSize: "2rem", fontWeight: 900, color: "var(--site-blue)", marginBottom: 12, lineHeight: 1 }}>
-                Free
+          {/* Atmosphere photo strip */}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "2fr 1fr 1fr 1fr",
+            gap: 6,
+            height: 220,
+            overflow: "hidden",
+            borderRadius: "var(--site-radius)",
+            marginBottom: 48,
+          }}>
+            {[ticketPublic5, ticketFan1, ticketPublic4, ticketAmbiance2].map((src, i) => (
+              <div key={i} style={{ overflow: "hidden" }}>
+                <img
+                  src={src}
+                  alt=""
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform 0.5s ease" }}
+                  onMouseEnter={e => e.currentTarget.style.transform = "scale(1.06)"}
+                  onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+                />
               </div>
-              <p style={{ fontSize: "0.875rem", lineHeight: 1.65, color: "var(--site-text-muted)", marginBottom: 24 }}>
+            ))}
+          </div>
+
+          {/* Ticket cards */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20, marginBottom: 32 }}>
+
+            {/* Under 18 */}
+            <div className="site-card" style={{ padding: "36px 32px", display: "flex", flexDirection: "column" }}>
+              <div style={{ width: 40, height: 3, background: "var(--site-blue)", borderRadius: 2, marginBottom: 28 }} />
+              <div style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--site-text-muted)", marginBottom: 8 }}>Under 18</div>
+              <div style={{ fontSize: "3rem", fontWeight: 900, color: "var(--site-blue)", lineHeight: 1, marginBottom: 6 }}>Free</div>
+              <p style={{ fontSize: "0.85rem", color: "var(--site-text-muted)", lineHeight: 1.6, marginBottom: 28 }}>
                 Free entrance for all spectators under 18 years old.
               </p>
+              <div style={{ borderTop: "1px solid var(--site-border)", paddingTop: 20, marginTop: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
+                {["Full day access to the stands", "Pre-programme + main programme"].map(item => (
+                  <div key={item} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                    <span style={{ color: "var(--site-blue)", fontWeight: 700, fontSize: "0.9rem", marginTop: 1 }}>✓</span>
+                    <span style={{ fontSize: "0.82rem", color: "var(--site-text-muted)", lineHeight: 1.5 }}>{item}</span>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* Regular */}
-            <div className="site-card" style={{ padding: 32 }}>
-              <div style={{ width: 48, height: 4, background: "var(--site-red)", borderRadius: 2, marginBottom: 24 }} />
-              <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--site-text)", marginBottom: 6 }}>Regular Ticket</h3>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 12 }}>
-                <div style={{ fontSize: "2rem", fontWeight: 900, color: "var(--site-red)", lineHeight: 1 }}>€12</div>
-                <div style={{
-                  background: "rgba(232,0,28,0.1)",
-                  color: "var(--site-red)",
-                  fontSize: "0.75rem",
-                  fontWeight: 700,
-                  padding: "3px 10px",
-                  borderRadius: 20,
-                }}>
+            {/* Regular — highlighted */}
+            <div style={{
+              padding: "36px 32px",
+              background: "var(--site-card)",
+              border: "2px solid var(--site-red)",
+              borderRadius: "var(--site-radius)",
+              display: "flex",
+              flexDirection: "column",
+              position: "relative",
+              boxShadow: "0 8px 32px rgba(232,0,28,0.12)",
+            }}>
+              <div style={{
+                position: "absolute",
+                top: -13,
+                left: "50%",
+                transform: "translateX(-50%)",
+                background: "var(--site-red)",
+                color: "#fff",
+                fontSize: "0.7rem",
+                fontWeight: 800,
+                textTransform: "uppercase",
+                letterSpacing: "0.1em",
+                padding: "4px 16px",
+                borderRadius: 20,
+                whiteSpace: "nowrap",
+              }}>Most popular</div>
+              <div style={{ width: 40, height: 3, background: "var(--site-red)", borderRadius: 2, marginBottom: 28 }} />
+              <div style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--site-text-muted)", marginBottom: 8 }}>Regular Ticket</div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 6 }}>
+                <span style={{ fontSize: "3rem", fontWeight: 900, color: "var(--site-red)", lineHeight: 1 }}>€12</span>
+                <span style={{ background: "rgba(232,0,28,0.08)", color: "var(--site-red)", fontSize: "0.72rem", fontWeight: 700, padding: "3px 10px", borderRadius: 20 }}>
                   Early-bird €8 until Dec 15
-                </div>
+                </span>
               </div>
-              <p style={{ fontSize: "0.875rem", lineHeight: 1.65, color: "var(--site-text-muted)", marginBottom: 24 }}>
-                Enjoy an electrifying live experience from the stands, with access to both the pre-program and the main program.
+              <p style={{ fontSize: "0.85rem", color: "var(--site-text-muted)", lineHeight: 1.6, marginBottom: 28 }}>
+                Live the atmosphere from the stands, from the pre-programme to the final.
               </p>
+              <div style={{ borderTop: "1px solid rgba(232,0,28,0.15)", paddingTop: 20, marginBottom: 24, display: "flex", flexDirection: "column", gap: 8 }}>
+                {[
+                  "Full day access to the stands",
+                  "Pre-programme + main programme",
+                  "Live international athletics",
+                ].map(item => (
+                  <div key={item} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                    <span style={{ color: "var(--site-red)", fontWeight: 700, fontSize: "0.9rem", marginTop: 1 }}>✓</span>
+                    <span style={{ fontSize: "0.82rem", color: "var(--site-text-muted)", lineHeight: 1.5 }}>{item}</span>
+                  </div>
+                ))}
+              </div>
               <a
                 href="https://www.ticket-regional.lu/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="site-btn site-btn--secondary site-btn--sm"
+                className="site-btn site-btn--primary site-btn--sm"
+                style={{ marginTop: "auto", textAlign: "center" }}
               >
                 Buy ticket →
               </a>
             </div>
 
             {/* VIP */}
-            <div
-              className="site-card"
-              style={{
-                padding: 32,
-                background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)",
-                border: "1px solid rgba(255,255,255,0.1)",
-              }}
-            >
-              <div style={{ width: 48, height: 4, background: "#c9a227", borderRadius: 2, marginBottom: 24 }} />
-              <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#fff", marginBottom: 6 }}>VIP Ticket</h3>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 12 }}>
-                <div style={{ fontSize: "2rem", fontWeight: 900, color: "#c9a227", lineHeight: 1 }}>€75</div>
-                <div style={{
-                  background: "rgba(201,162,39,0.2)",
-                  color: "#c9a227",
-                  fontSize: "0.75rem",
-                  fontWeight: 700,
-                  padding: "3px 10px",
-                  borderRadius: 20,
-                }}>
+            <div style={{
+              padding: "36px 32px",
+              background: "linear-gradient(150deg, #1a1a2e 0%, #16213e 100%)",
+              border: "1px solid rgba(201,162,39,0.3)",
+              borderRadius: "var(--site-radius)",
+              display: "flex",
+              flexDirection: "column",
+            }}>
+              <div style={{ width: 40, height: 3, background: "#c9a227", borderRadius: 2, marginBottom: 28 }} />
+              <div style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.4)", marginBottom: 8 }}>VIP Ticket</div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 6 }}>
+                <span style={{ fontSize: "3rem", fontWeight: 900, color: "#c9a227", lineHeight: 1 }}>€75</span>
+                <span style={{ background: "rgba(201,162,39,0.15)", color: "#c9a227", fontSize: "0.72rem", fontWeight: 700, padding: "3px 10px", borderRadius: 20 }}>
                   Early-bird €50 until Dec 15
-                </div>
+                </span>
               </div>
-              <p style={{ fontSize: "0.875rem", lineHeight: 1.65, color: "rgba(255,255,255,0.65)", marginBottom: 24 }}>
-                Experience the event in a premium setting, including catering and a VIP tour of the venue. Tickets are limited.
+              <p style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.55)", lineHeight: 1.6, marginBottom: 28 }}>
+                Premium seating, unlimited catering and an exclusive backstage tour. Limited places.
               </p>
+              <div style={{ borderTop: "1px solid rgba(201,162,39,0.2)", paddingTop: 20, marginBottom: 24, display: "flex", flexDirection: "column", gap: 8 }}>
+                {[
+                  "Premium seating in the VIP area",
+                  "Unlimited food & drinks",
+                  "Exclusive 30-min VIP tour (14:15)",
+                  "Choice: backstage or Coque guided visit",
+                ].map(item => (
+                  <div key={item} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                    <span style={{ color: "#c9a227", fontWeight: 700, fontSize: "0.9rem", marginTop: 1 }}>✓</span>
+                    <span style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.55)", lineHeight: 1.5 }}>{item}</span>
+                  </div>
+                ))}
+              </div>
               <a
                 href="https://www.ticket-regional.lu/"
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
+                  marginTop: "auto",
+                  display: "block",
+                  textAlign: "center",
                   background: "#c9a227",
                   color: "#fff",
                   fontWeight: 700,
-                  fontSize: "0.8rem",
-                  padding: "10px 20px",
+                  fontSize: "0.82rem",
+                  padding: "11px 20px",
                   borderRadius: "var(--site-radius-sm)",
                   textDecoration: "none",
                 }}
@@ -293,54 +365,8 @@ export function SiteEvent() {
             </div>
           </div>
 
-          {/* What's included */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-            <div style={{
-              padding: "28px 32px",
-              background: "var(--site-card)",
-              border: "1px solid var(--site-border)",
-              borderRadius: "var(--site-radius)",
-            }}>
-              <h4 style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--site-text-muted)", marginBottom: 16 }}>
-                Regular Ticket — What's included
-              </h4>
-              {[
-                "Access to the stands for the full day",
-                "Pre-program and main competition",
-                "Live athletics atmosphere",
-              ].map((item) => (
-                <div key={item} style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 10 }}>
-                  <span style={{ color: "var(--site-red)", fontWeight: 700, marginTop: 1 }}>✓</span>
-                  <span style={{ fontSize: "0.875rem", color: "var(--site-text-muted)", lineHeight: 1.5 }}>{item}</span>
-                </div>
-              ))}
-            </div>
-
-            <div style={{
-              padding: "28px 32px",
-              background: "linear-gradient(135deg, rgba(26,26,46,0.05), rgba(201,162,39,0.06))",
-              border: "1px solid rgba(201,162,39,0.3)",
-              borderRadius: "var(--site-radius)",
-            }}>
-              <h4 style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#b08c1e", marginBottom: 16 }}>
-                VIP Ticket — What's included
-              </h4>
-              {[
-                "Unlimited high-quality food and drinks throughout the event",
-                "Premium seating in the VIP area",
-                "Exclusive 30-minute VIP tour of the venue (starting 14:15)",
-                "Choice between backstage tour or guided Coque visit",
-              ].map((item) => (
-                <div key={item} style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 10 }}>
-                  <span style={{ color: "#c9a227", fontWeight: 700, marginTop: 1 }}>✓</span>
-                  <span style={{ fontSize: "0.875rem", color: "var(--site-text-muted)", lineHeight: 1.5 }}>{item}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
+          {/* Bottom banner */}
           <div style={{
-            marginTop: 32,
             padding: "20px 28px",
             background: "rgba(16,102,204,0.06)",
             border: "1px solid rgba(16,102,204,0.2)",
@@ -351,14 +377,9 @@ export function SiteEvent() {
             flexWrap: "wrap",
           }}>
             <span style={{ fontSize: "0.875rem", color: "var(--site-text-muted)", flex: 1 }}>
-              Tickets available from <strong style={{ color: "var(--site-text)" }}>17 November 2026 at 10:00</strong> on ticket-regional.lu
+              On sale from <strong style={{ color: "var(--site-text)" }}>17 November 2026 at 10:00</strong> on ticket-regional.lu
             </span>
-            <a
-              href="https://www.ticket-regional.lu/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="site-btn site-btn--primary site-btn--sm"
-            >
+            <a href="https://www.ticket-regional.lu/" target="_blank" rel="noopener noreferrer" className="site-btn site-btn--primary site-btn--sm">
               Access ticketing →
             </a>
           </div>
