@@ -224,6 +224,51 @@ export async function seedMeetingDatabase(onProgress) {
   return `Done — ${total} documents written to Firestore.`;
 }
 
+// ─── Sync winners for one year from rank=1 results ───────────────────────────
+
+const _normDisc = (d) => (d || "").replace(/(\d)\s+(m\b)/gi, "$1$2").replace(/Hurdles/g, "hurdles").trim();
+
+/**
+ * Replace meetingWinners documents for `year` with the rank=1 results.
+ * Deletes old docs for that year first, then writes one doc per discipline/gender.
+ */
+export async function syncWinnersForYear(year, rank1Results) {
+  // Delete existing winners for this year
+  const snap = await getDocs(
+    query(collection(db, MEETING_WINNERS_COL), where("year", "==", Number(year))),
+  );
+  let batch = writeBatch(db);
+  let count = 0;
+  for (const d of snap.docs) {
+    batch.delete(d.ref);
+    count++;
+    if (count % 400 === 0) { await batch.commit(); batch = writeBatch(db); }
+  }
+  await batch.commit();
+
+  // Write new winners from rank=1
+  batch = writeBatch(db); count = 0;
+  for (const r of rank1Results) {
+    const disc = _normDisc(r.discipline).replace(/\s+/g, "_");
+    const id = `${year}_${r.gender || "X"}_${disc}`;
+    batch.set(doc(db, MEETING_WINNERS_COL, id), {
+      year: Number(year),
+      discipline: _normDisc(r.discipline),
+      gender: r.gender || "",
+      firstName: r.firstName || "",
+      lastName: r.lastName || "",
+      noc: r.noc || "",
+      result: r.result || r.mark || "",
+      syncedFromResults: true,
+      syncedAt: serverTimestamp(),
+    });
+    count++;
+    if (count % 400 === 0) { await batch.commit(); batch = writeBatch(db); }
+  }
+  await batch.commit();
+  return count;
+}
+
 // ─── Reset winners collection (delete all + re-seed from JSON) ───────────────
 
 /**
