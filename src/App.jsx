@@ -22,6 +22,7 @@ import { SiteStatistics } from "./site/site-statistics";
 import { SitePress } from "./site/site-press";
 import { SitePartners } from "./site/site-partners";
 import { SiteNewsListPage, SiteNewsArticlePage } from "./site/site-news";
+import { SitePreProgramme } from "./site/site-preprogramme";
 import { VolunteersPage as VolunteersPageScreen } from "./app/volunteers-page";
 import { AccreditationsPage as AccreditationsPageScreen } from "./app/accreditations-page";
 import { AppShell as AppShellScreen, DashboardHome as DashboardHomeScreen } from "./app/app-shell-layout";
@@ -408,6 +409,7 @@ export default function App() {
             <Route path="/partners" element={<SitePartners />} />
             <Route path="/news" element={<SiteNewsListPage />} />
             <Route path="/news/:slug" element={<SiteNewsArticlePage />} />
+            <Route path="/programme" element={<SitePreProgramme />} />
           </Route>
 
           {/* ── Auth & standalone public pages ───────────── */}
