@@ -431,3 +431,11 @@ export async function closeEdition(year, results, onProgress) {
   await batch.commit();
   return `Edition ${year} closed. ${matched} athletes matched in registry, ${created} new registry entries created.`;
 }
+
+export async function updateEdition(year, fields) {
+  await setDoc(
+    doc(db, MEETING_EDITIONS_COL, String(year)),
+    fields,
+    { merge: true },
+  );
+}
