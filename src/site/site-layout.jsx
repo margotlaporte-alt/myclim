@@ -8,6 +8,7 @@ import "./site.css";
 const NAV_LINKS = [
   { to: "/", label: "Home", end: true },
   { to: "/event", label: "Event" },
+  { to: "/programme", label: "Pre-Programme" },
   { to: "/statistics", label: "Results & Statistics" },
   { to: "/press", label: "Press" },
   { to: "/partners", label: "Partners" },
@@ -194,6 +195,8 @@ export function SiteLayout() {
               <ul className="site-footer__col-links">
                 <li><NavLink to="/event">Venue & Access</NavLink></li>
                 <li><NavLink to="/event#tickets">Tickets</NavLink></li>
+                <li><NavLink to="/programme">Pre-Programme</NavLink></li>
+                <li><NavLink to="/programme#business-race">Business Race</NavLink></li>
                 <li><NavLink to="/event#volunteer">Become a Volunteer</NavLink></li>
                 <li><NavLink to="/press">Press Accreditation</NavLink></li>
                 <li><NavLink to="/statistics">Meeting Records</NavLink></li>
