@@ -85,6 +85,7 @@ const WebsiteDashboardPageScreen = lazyNamed(() => import("./app/website-admin-p
 const WebsiteNewsPageScreen = lazyNamed(() => import("./app/website-admin-pages"), "WebsiteNewsPage");
 const WebsiteSponsorsPageScreen = lazyNamed(() => import("./app/website-admin-pages"), "WebsiteSponsorsPage");
 const WebsitePressPageScreen = lazyNamed(() => import("./app/website-admin-pages"), "WebsitePressPage");
+const WebsiteEditionPageScreen = lazyNamed(() => import("./app/website-admin-pages"), "WebsiteEditionPage");
 const InvitationAdminPageScreen = lazyNamed(() => import("./app/invitation-admin-page"), "InvitationAdminPage");
 const InvitePage = lazyNamed(() => import("./app/invite-page"), "InvitePage");
 
@@ -301,6 +302,10 @@ function WebsitePressPage() {
   return <WebsitePressPageScreen Panel={Panel} />;
 }
 
+function WebsiteEditionPage() {
+  return <WebsiteEditionPageScreen Panel={Panel} />;
+}
+
 function InvitationAdminPage() {
   return <InvitationAdminPageScreen Panel={Panel} />;
 }
@@ -473,6 +478,7 @@ export default function App() {
               <Route element={<RequireRouteAccess allowedRoles={["admin", "gestionnaire", "gestionnaire_site"]} />}>
                 <Route path="website">
                   <Route index element={<WebsiteDashboardPage />} />
+                  <Route path="edition" element={<WebsiteEditionPage />} />
                   <Route path="news" element={<WebsiteNewsPage />} />
                   <Route path="sponsors" element={<WebsiteSponsorsPage />} />
                   <Route path="press" element={<WebsitePressPage />} />

@@ -13,6 +13,7 @@ import {
   useAllPressReleases,
   useSponsors,
 } from "../site/site-hooks";
+import { updateEdition, useMeetingEditions } from "./meeting-history-hooks";
 
 /* ── Shared helpers ──────────────────────────────────────── */
 function formatDate(ts) {
@@ -715,6 +716,13 @@ export function WebsiteDashboardPage({ Panel }) {
 
   const sections = [
     {
+      to: "/app/website/edition",
+      icon: "📅",
+      title: "Édition courante",
+      desc: "Date, lieu, liens live, disciplines, timetable",
+      cta: "Configurer l'édition",
+    },
+    {
       to: "/app/website/news",
       icon: "📰",
       title: "News",
@@ -776,6 +784,447 @@ export function WebsiteDashboardPage({ Panel }) {
           )
         ))}
       </div>
+    </Panel>
+  );
+}
+
+/* ── Edition config page ─────────────────────────────────── */
+
+const CANONICAL_DISCIPLINES = [
+  "60m", "60m Hurdles", "200m", "400m", "800m", "1500m", "Mile",
+  "3000m", "5000m", "High Jump", "Pole Vault", "Long Jump", "Triple Jump",
+  "Shot Put", "Weight Throw",
+];
+
+export function WebsiteEditionPage({ Panel }) {
+  const { editions, loading: editionsLoading } = useMeetingEditions();
+
+  // Default to the most recent non-closed edition
+  const defaultYear = editions.find((e) => !e.isClosed)?.year ?? editions[0]?.year ?? null;
+  const [selectedYear, setSelectedYear] = useState(null);
+  const effectiveYear = selectedYear ?? defaultYear;
+  const selectedEdition = editions.find((e) => e.year === effectiveYear) ?? null;
+
+  // Infos de base
+  const [dateInput, setDateInput] = useState("");
+  const [venueInput, setVenueInput] = useState("");
+  const [infoSaving, setInfoSaving] = useState(false);
+
+  // Liens live
+  const [streamingUrlInput, setStreamingUrlInput] = useState("");
+  const [resultsUrlInput, setResultsUrlInput] = useState("");
+  const [liveUrlsSaving, setLiveUrlsSaving] = useState(false);
+
+  // Disciplines
+  const [disciplinesSaving, setDisciplinesSaving] = useState(false);
+
+  // Timetable
+  const [ttForm, setTtForm] = useState({ type: "event", time: "", gender: "WOMEN", event: "", isField: false, label: "PRE-PROGRAM" });
+  const [timetableSaving, setTimetableSaving] = useState(false);
+
+  function getDisc(event) {
+    return (selectedEdition?.disciplines || []).find((d) => d.event === event)
+      || { event, womenPrize: null, menPrize: null };
+  }
+
+  async function handleDisciplineChange(event, gender, prize) {
+    const current = (selectedEdition?.disciplines || []).filter((d) => d.event !== event);
+    const existing = (selectedEdition?.disciplines || []).find((d) => d.event === event)
+      || { event, womenPrize: null, menPrize: null };
+    const updated = { ...existing, [gender === "W" ? "womenPrize" : "menPrize"]: prize || null };
+    const next = [...current, updated].filter((d) => d.womenPrize || d.menPrize);
+    setDisciplinesSaving(true);
+    try { await updateEdition(effectiveYear, { disciplines: next }); }
+    finally { setDisciplinesSaving(false); }
+  }
+
+  function newTtId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+  async function handleAddTimetableEntry() {
+    const current = selectedEdition?.timetable || [];
+    const entry = ttForm.type === "header"
+      ? { id: newTtId(), type: "header", label: ttForm.label }
+      : { id: newTtId(), type: "event", time: ttForm.time.trim(), gender: ttForm.gender, event: ttForm.event.trim(), isField: ttForm.isField };
+    setTimetableSaving(true);
+    try {
+      await updateEdition(effectiveYear, { timetable: [...current, entry] });
+      setTtForm((f) => ({ ...f, time: "", event: "" }));
+    } finally { setTimetableSaving(false); }
+  }
+
+  async function handleRemoveTimetableEntry(id) {
+    const next = (selectedEdition?.timetable || []).filter((e) => e.id !== id);
+    setTimetableSaving(true);
+    try { await updateEdition(effectiveYear, { timetable: next }); }
+    finally { setTimetableSaving(false); }
+  }
+
+  async function handleMoveTimetableEntry(id, dir) {
+    const arr = [...(selectedEdition?.timetable || [])];
+    const idx = arr.findIndex((e) => e.id === id);
+    if (idx < 0) return;
+    const swap = idx + dir;
+    if (swap < 0 || swap >= arr.length) return;
+    [arr[idx], arr[swap]] = [arr[swap], arr[idx]];
+    setTimetableSaving(true);
+    try { await updateEdition(effectiveYear, { timetable: arr }); }
+    finally { setTimetableSaving(false); }
+  }
+
+  const inp = { padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: "0.8rem", fontFamily: "inherit" };
+
+  return (
+    <Panel title="Édition courante — Configuration site" subtitle="Date, lieu, liens live, disciplines et timetable affichés sur le site public">
+      {/* Edition selector */}
+      <div style={{ marginBottom: 24 }}>
+        <label style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#546770", display: "block", marginBottom: 8 }}>
+          Édition
+        </label>
+        {editionsLoading ? (
+          <p style={{ color: "#546770", fontSize: "0.875rem" }}>Chargement…</p>
+        ) : (
+          <select
+            value={effectiveYear ?? ""}
+            onChange={(e) => setSelectedYear(Number(e.target.value))}
+            style={{ ...inp, minWidth: 140 }}
+          >
+            {editions.filter((e) => !e.cancelled).map((e) => (
+              <option key={e.year} value={e.year}>
+                {e.year}{e.isClosed ? " ✓" : ""}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
+
+      {selectedEdition && (
+        <div style={{ display: "grid", gap: 24 }}>
+
+          {/* ── Infos de base ── */}
+          <div style={{ padding: "16px 20px", background: "#f8fafc", borderRadius: 10, border: "1px solid #e2e8f0" }}>
+            <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#374151", marginBottom: 14 }}>Infos de base</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+              <div>
+                <div style={{ fontSize: "0.72rem", color: "#6b7280", marginBottom: 4 }}>Date</div>
+                <input
+                  type="text"
+                  placeholder={selectedEdition.date || "ex : 18 January 2026"}
+                  value={dateInput}
+                  onChange={(e) => setDateInput(e.target.value)}
+                  onFocus={() => !dateInput && setDateInput(selectedEdition.date || "")}
+                  style={{ ...inp, width: "100%", boxSizing: "border-box" }}
+                />
+              </div>
+              <div>
+                <div style={{ fontSize: "0.72rem", color: "#6b7280", marginBottom: 4 }}>Lieu</div>
+                <input
+                  type="text"
+                  placeholder={selectedEdition.venue || "ex : Coque, Luxembourg"}
+                  value={venueInput}
+                  onChange={(e) => setVenueInput(e.target.value)}
+                  onFocus={() => !venueInput && setVenueInput(selectedEdition.venue || "")}
+                  style={{ ...inp, width: "100%", boxSizing: "border-box" }}
+                />
+              </div>
+            </div>
+            <button
+              className="btn btn--secondary"
+              disabled={infoSaving || (!dateInput.trim() && !venueInput.trim())}
+              onClick={async () => {
+                setInfoSaving(true);
+                const fields = {};
+                if (dateInput.trim()) fields.date = dateInput.trim();
+                if (venueInput.trim()) fields.venue = venueInput.trim();
+                try { await updateEdition(effectiveYear, fields); setDateInput(""); setVenueInput(""); }
+                finally { setInfoSaving(false); }
+              }}
+              style={{ fontSize: "0.8rem" }}
+            >
+              {infoSaving ? "…" : "Sauvegarder"}
+            </button>
+          </div>
+
+          {/* ── Liens Live ── */}
+          <div style={{ padding: "16px 20px", background: "#f8fafc", borderRadius: 10, border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#374151" }}>Liens Live — site public</div>
+
+            {/* Streaming */}
+            <div>
+              <div style={{ fontWeight: 600, fontSize: "0.78rem", color: "#6b7280", marginBottom: 6 }}>
+                Streaming (YouTube embed) — affiché uniquement si renseigné
+              </div>
+              {selectedEdition.streamingUrl && (
+                <div style={{ fontSize: "0.72rem", color: "#6b7280", marginBottom: 6, wordBreak: "break-all" }}>
+                  Actuel : <code style={{ background: "#f1f5f9", padding: "1px 4px", borderRadius: 4 }}>{selectedEdition.streamingUrl}</code>
+                </div>
+              )}
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <input
+                  type="url"
+                  placeholder="https://www.youtube.com/embed/…"
+                  value={streamingUrlInput}
+                  onChange={(e) => setStreamingUrlInput(e.target.value)}
+                  onFocus={() => !streamingUrlInput && setStreamingUrlInput(selectedEdition.streamingUrl || "")}
+                  style={{ ...inp, flex: 1 }}
+                />
+                <button
+                  className="btn btn--secondary"
+                  disabled={liveUrlsSaving || !streamingUrlInput.trim()}
+                  onClick={async () => {
+                    setLiveUrlsSaving(true);
+                    try { await updateEdition(effectiveYear, { streamingUrl: streamingUrlInput.trim() }); setStreamingUrlInput(""); }
+                    finally { setLiveUrlsSaving(false); }
+                  }}
+                  style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}
+                >
+                  {liveUrlsSaving ? "…" : "Sauvegarder"}
+                </button>
+                {selectedEdition.streamingUrl && (
+                  <button
+                    className="btn btn--secondary"
+                    disabled={liveUrlsSaving}
+                    onClick={async () => {
+                      setLiveUrlsSaving(true);
+                      try { await updateEdition(effectiveYear, { streamingUrl: null }); }
+                      finally { setLiveUrlsSaving(false); }
+                    }}
+                    style={{ whiteSpace: "nowrap", fontSize: "0.8rem", color: "#dc2626", borderColor: "#fca5a5" }}
+                  >
+                    Supprimer
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Résultats live */}
+            <div>
+              <div style={{ fontWeight: 600, fontSize: "0.78rem", color: "#6b7280", marginBottom: 6 }}>
+                Résultats live (iframe) — fallback laportal si vide
+              </div>
+              {selectedEdition.resultsUrl && (
+                <div style={{ fontSize: "0.72rem", color: "#6b7280", marginBottom: 6, wordBreak: "break-all" }}>
+                  Actuel : <code style={{ background: "#f1f5f9", padding: "1px 4px", borderRadius: 4 }}>{selectedEdition.resultsUrl}</code>
+                </div>
+              )}
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <input
+                  type="url"
+                  placeholder="https://fla.laportal.net/Competitions/Details/…"
+                  value={resultsUrlInput}
+                  onChange={(e) => setResultsUrlInput(e.target.value)}
+                  onFocus={() => !resultsUrlInput && setResultsUrlInput(selectedEdition.resultsUrl || "")}
+                  style={{ ...inp, flex: 1 }}
+                />
+                <button
+                  className="btn btn--secondary"
+                  disabled={liveUrlsSaving || !resultsUrlInput.trim()}
+                  onClick={async () => {
+                    setLiveUrlsSaving(true);
+                    try { await updateEdition(effectiveYear, { resultsUrl: resultsUrlInput.trim() }); setResultsUrlInput(""); }
+                    finally { setLiveUrlsSaving(false); }
+                  }}
+                  style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}
+                >
+                  {liveUrlsSaving ? "…" : "Sauvegarder"}
+                </button>
+                {selectedEdition.resultsUrl && (
+                  <button
+                    className="btn btn--secondary"
+                    disabled={liveUrlsSaving}
+                    onClick={async () => {
+                      setLiveUrlsSaving(true);
+                      try { await updateEdition(effectiveYear, { resultsUrl: null }); }
+                      finally { setLiveUrlsSaving(false); }
+                    }}
+                    style={{ whiteSpace: "nowrap", fontSize: "0.8rem", color: "#dc2626", borderColor: "#fca5a5" }}
+                  >
+                    Supprimer
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* ── Disciplines ── */}
+          <div style={{ padding: "16px 20px", background: "#f8fafc", borderRadius: 10, border: "1px solid #e2e8f0" }}>
+            <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#374151", marginBottom: 4 }}>
+              Disciplines
+              {disciplinesSaving && <span style={{ marginLeft: 8, fontSize: "0.75rem", color: "#6b7280", fontWeight: 400 }}>Sauvegarde…</span>}
+            </div>
+            <p style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: 12 }}>
+              {(selectedEdition.disciplines || []).length} épreuve(s) configurée(s). Les changements sont sauvegardés automatiquement. Choisir "—" supprime l'épreuve.
+            </p>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+                <thead>
+                  <tr style={{ background: "#f0f4f8" }}>
+                    <th style={{ padding: "8px 12px", textAlign: "center", width: 120, fontWeight: 600, color: "#6b7280", borderBottom: "1px solid #e2e8f0" }}>WOMEN</th>
+                    <th style={{ padding: "8px 12px", textAlign: "center", fontWeight: 700, color: "#111827", borderBottom: "1px solid #e2e8f0" }}>Épreuve</th>
+                    <th style={{ padding: "8px 12px", textAlign: "center", width: 120, fontWeight: 600, color: "#6b7280", borderBottom: "1px solid #e2e8f0" }}>MEN</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {CANONICAL_DISCIPLINES.map((disc) => {
+                    const d = getDisc(disc);
+                    return (
+                      <tr key={disc} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                        <td style={{ padding: "6px 12px", textAlign: "center" }}>
+                          <select
+                            value={d.womenPrize || ""}
+                            onChange={(e) => handleDisciplineChange(disc, "W", e.target.value)}
+                            style={{ padding: "3px 6px", borderRadius: 4, border: "1px solid #d1d5db", fontSize: "0.78rem", background: d.womenPrize ? "#dcfce7" : "#fff" }}
+                          >
+                            <option value="">—</option>
+                            <option value="A">Prize A</option>
+                            <option value="B">Prize B</option>
+                          </select>
+                        </td>
+                        <td style={{ padding: "6px 12px", textAlign: "center", fontWeight: 600, color: "#111827" }}>{disc}</td>
+                        <td style={{ padding: "6px 12px", textAlign: "center" }}>
+                          <select
+                            value={d.menPrize || ""}
+                            onChange={(e) => handleDisciplineChange(disc, "M", e.target.value)}
+                            style={{ padding: "3px 6px", borderRadius: 4, border: "1px solid #d1d5db", fontSize: "0.78rem", background: d.menPrize ? "#dcfce7" : "#fff" }}
+                          >
+                            <option value="">—</option>
+                            <option value="A">Prize A</option>
+                            <option value="B">Prize B</option>
+                          </select>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* ── Timetable ── */}
+          <div style={{ padding: "16px 20px", background: "#f8fafc", borderRadius: 10, border: "1px solid #e2e8f0" }}>
+            <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#374151", marginBottom: 4 }}>
+              Timetable
+              {timetableSaving && <span style={{ marginLeft: 8, fontSize: "0.75rem", color: "#6b7280", fontWeight: 400 }}>Sauvegarde…</span>}
+            </div>
+            <p style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: 12 }}>
+              {(selectedEdition.timetable || []).length} entrée(s)
+            </p>
+
+            {/* Existing entries */}
+            {(selectedEdition.timetable || []).length > 0 && (
+              <div style={{ marginBottom: 20, border: "1px solid #e2e8f0", borderRadius: 8, overflow: "hidden" }}>
+                {(selectedEdition.timetable || []).map((entry, idx) => (
+                  <div
+                    key={entry.id}
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr auto",
+                      alignItems: "center",
+                      padding: "8px 12px",
+                      borderBottom: "1px solid #f1f5f9",
+                      background: entry.type === "header" ? "#1e3a5f" : (entry.isField ? "#1e3a8a" : "#f8fafc"),
+                      color: entry.type === "header" || entry.isField ? "#fff" : "#111827",
+                    }}
+                  >
+                    <span style={{ fontSize: "0.82rem", fontWeight: entry.type === "header" ? 700 : 400 }}>
+                      {entry.type === "header"
+                        ? `▶ ${entry.label}`
+                        : `${entry.time}${entry.gender ? ` · ${entry.gender}` : ""} · ${entry.event}${entry.isField ? " (field)" : ""}`
+                      }
+                    </span>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      <button
+                        onClick={() => handleMoveTimetableEntry(entry.id, -1)}
+                        disabled={idx === 0 || timetableSaving}
+                        style={{ padding: "2px 6px", borderRadius: 4, border: "1px solid rgba(0,0,0,0.15)", background: "rgba(255,255,255,0.15)", cursor: "pointer", fontSize: "0.75rem", color: "inherit" }}
+                      >↑</button>
+                      <button
+                        onClick={() => handleMoveTimetableEntry(entry.id, 1)}
+                        disabled={idx === (selectedEdition.timetable || []).length - 1 || timetableSaving}
+                        style={{ padding: "2px 6px", borderRadius: 4, border: "1px solid rgba(0,0,0,0.15)", background: "rgba(255,255,255,0.15)", cursor: "pointer", fontSize: "0.75rem", color: "inherit" }}
+                      >↓</button>
+                      <button
+                        onClick={() => handleRemoveTimetableEntry(entry.id)}
+                        disabled={timetableSaving}
+                        style={{ padding: "2px 6px", borderRadius: 4, border: "1px solid rgba(220,38,38,0.3)", background: "rgba(220,38,38,0.1)", cursor: "pointer", fontSize: "0.75rem", color: "#dc2626" }}
+                      >×</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add form */}
+            <div style={{ padding: "12px 16px", background: "#fff", borderRadius: 8, border: "1px solid #e2e8f0" }}>
+              <div style={{ fontWeight: 600, fontSize: "0.78rem", color: "#374151", marginBottom: 10 }}>Ajouter une entrée</div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8, flexWrap: "wrap" }}>
+                <label style={{ fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 4 }}>
+                  <input type="radio" name="ttType" value="header" checked={ttForm.type === "header"} onChange={() => setTtForm((f) => ({ ...f, type: "header" }))} />
+                  En-tête
+                </label>
+                <label style={{ fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 4 }}>
+                  <input type="radio" name="ttType" value="event" checked={ttForm.type === "event"} onChange={() => setTtForm((f) => ({ ...f, type: "event" }))} />
+                  Épreuve
+                </label>
+              </div>
+              {ttForm.type === "header" ? (
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <select
+                    value={ttForm.label}
+                    onChange={(e) => setTtForm((f) => ({ ...f, label: e.target.value }))}
+                    style={{ ...inp }}
+                  >
+                    <option value="PRE-PROGRAM">PRE-PROGRAM</option>
+                    <option value="MAIN-PROGRAM">MAIN-PROGRAM</option>
+                  </select>
+                  <button
+                    className="btn btn--secondary"
+                    disabled={timetableSaving}
+                    onClick={handleAddTimetableEntry}
+                    style={{ fontSize: "0.8rem" }}
+                  >Ajouter</button>
+                </div>
+              ) : (
+                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                  <input
+                    type="text"
+                    placeholder="16:06"
+                    value={ttForm.time}
+                    onChange={(e) => setTtForm((f) => ({ ...f, time: e.target.value }))}
+                    style={{ ...inp, width: 64 }}
+                  />
+                  <select
+                    value={ttForm.gender}
+                    onChange={(e) => setTtForm((f) => ({ ...f, gender: e.target.value }))}
+                    style={{ ...inp }}
+                  >
+                    <option value="WOMEN">WOMEN</option>
+                    <option value="MEN">MEN</option>
+                    <option value="">—</option>
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="60M HEATS"
+                    value={ttForm.event}
+                    onChange={(e) => setTtForm((f) => ({ ...f, event: e.target.value }))}
+                    style={{ ...inp, flex: 1, minWidth: 120 }}
+                  />
+                  <label style={{ fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
+                    <input type="checkbox" checked={ttForm.isField} onChange={(e) => setTtForm((f) => ({ ...f, isField: e.target.checked }))} />
+                    Field event
+                  </label>
+                  <button
+                    className="btn btn--secondary"
+                    disabled={timetableSaving || !ttForm.time.trim() || !ttForm.event.trim()}
+                    onClick={handleAddTimetableEntry}
+                    style={{ fontSize: "0.8rem" }}
+                  >Ajouter</button>
+                </div>
+              )}
+            </div>
+          </div>
+
+        </div>
+      )}
     </Panel>
   );
 }
