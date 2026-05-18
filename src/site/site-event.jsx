@@ -67,6 +67,7 @@ export function SiteEvent() {
   ];
 
   const timetable = latestEdition?.timetable || [];
+  const timetableVisible = latestEdition?.timetableStatus === "visible";
   const disciplines = latestEdition?.disciplines || [];
 
   return (
@@ -212,7 +213,7 @@ export function SiteEvent() {
             lead="Approximate schedule for competition day. Times may be adjusted — please check the official programme closer to the event."
           />
 
-          {timetable.length > 0 ? (
+          {timetableVisible && timetable.length > 0 ? (
             <div style={{ overflow: "hidden", borderRadius: "var(--site-radius)", border: "1px solid var(--site-border)" }}>
               {timetable.map((entry, i) =>
                 entry.type === "header" ? (
@@ -235,7 +236,7 @@ export function SiteEvent() {
                     key={entry.id || i}
                     style={{
                       display: "grid",
-                      gridTemplateColumns: "80px 100px 1fr",
+                      gridTemplateColumns: "80px 100px 1fr auto",
                       alignItems: "center",
                       borderBottom: "1px solid var(--site-border)",
                       background: entry.isField ? "#1e3a8a" : "var(--site-card)",
@@ -270,6 +271,17 @@ export function SiteEvent() {
                     }}>
                       {entry.event}
                     </div>
+                    {entry.round && (
+                      <div style={{
+                        padding: "14px 16px",
+                        fontSize: "0.75rem",
+                        fontWeight: 500,
+                        color: entry.isField ? "rgba(255,255,255,0.6)" : "var(--site-text-muted)",
+                        whiteSpace: "nowrap",
+                      }}>
+                        {entry.round}
+                      </div>
+                    )}
                   </div>
                 )
               )}

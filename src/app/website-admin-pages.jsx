@@ -796,6 +796,10 @@ const CANONICAL_DISCIPLINES = [
   "Shot Put", "Weight Throw",
 ];
 
+const FIELD_EVENTS = new Set(["High Jump", "Pole Vault", "Long Jump", "Triple Jump", "Shot Put", "Weight Throw"]);
+
+const ROUND_OPTIONS = ["Final", "Final A", "Final B", "Final 1", "Final 2", "Heats", "Heats combinées", "Semi-Final"];
+
 export function WebsiteEditionPage({ Panel }) {
   const { editions, loading: editionsLoading } = useMeetingEditions();
 
@@ -819,8 +823,9 @@ export function WebsiteEditionPage({ Panel }) {
   const [disciplinesSaving, setDisciplinesSaving] = useState(false);
 
   // Timetable
-  const [ttForm, setTtForm] = useState({ type: "event", time: "", gender: "WOMEN", event: "", isField: false, label: "PRE-PROGRAM" });
+  const [ttForm, setTtForm] = useState({ type: "event", time: "", gender: "WOMEN", event: "", round: "Final", isField: false, label: "PRE-PROGRAM" });
   const [timetableSaving, setTimetableSaving] = useState(false);
+  const [timetableStatusSaving, setTimetableStatusSaving] = useState(false);
 
   function getDisc(event) {
     return (selectedEdition?.disciplines || []).find((d) => d.event === event)
@@ -844,12 +849,18 @@ export function WebsiteEditionPage({ Panel }) {
     const current = selectedEdition?.timetable || [];
     const entry = ttForm.type === "header"
       ? { id: newTtId(), type: "header", label: ttForm.label }
-      : { id: newTtId(), type: "event", time: ttForm.time.trim(), gender: ttForm.gender, event: ttForm.event.trim(), isField: ttForm.isField };
+      : { id: newTtId(), type: "event", time: ttForm.time.trim(), gender: ttForm.gender, event: ttForm.event.trim(), round: ttForm.round, isField: ttForm.isField };
     setTimetableSaving(true);
     try {
       await updateEdition(effectiveYear, { timetable: [...current, entry] });
-      setTtForm((f) => ({ ...f, time: "", event: "" }));
+      setTtForm((f) => ({ ...f, time: "" }));
     } finally { setTimetableSaving(false); }
+  }
+
+  async function handleTimetableStatusChange(value) {
+    setTimetableStatusSaving(true);
+    try { await updateEdition(effectiveYear, { timetableStatus: value }); }
+    finally { setTimetableStatusSaving(false); }
   }
 
   async function handleRemoveTimetableEntry(id) {
@@ -871,6 +882,18 @@ export function WebsiteEditionPage({ Panel }) {
     finally { setTimetableSaving(false); }
   }
 
+  const [creatingYear, setCreatingYear] = useState(false);
+  const nextYear = editions.length > 0 ? Math.max(...editions.map((e) => e.year)) + 1 : new Date().getFullYear() + 1;
+  const nextYearExists = editions.some((e) => e.year === nextYear);
+
+  async function handleCreateEdition() {
+    setCreatingYear(true);
+    try {
+      await updateEdition(nextYear, { year: nextYear });
+      setSelectedYear(nextYear);
+    } finally { setCreatingYear(false); }
+  }
+
   const inp = { padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: "0.8rem", fontFamily: "inherit" };
 
   return (
@@ -883,17 +906,29 @@ export function WebsiteEditionPage({ Panel }) {
         {editionsLoading ? (
           <p style={{ color: "#546770", fontSize: "0.875rem" }}>Chargement…</p>
         ) : (
-          <select
-            value={effectiveYear ?? ""}
-            onChange={(e) => setSelectedYear(Number(e.target.value))}
-            style={{ ...inp, minWidth: 140 }}
-          >
-            {editions.filter((e) => !e.cancelled).map((e) => (
-              <option key={e.year} value={e.year}>
-                {e.year}{e.isClosed ? " ✓" : ""}
-              </option>
-            ))}
-          </select>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <select
+              value={effectiveYear ?? ""}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              style={{ ...inp, minWidth: 140 }}
+            >
+              {editions.filter((e) => !e.cancelled).map((e) => (
+                <option key={e.year} value={e.year}>
+                  {e.year}{e.isClosed ? " ✓" : ""}
+                </option>
+              ))}
+            </select>
+            {!nextYearExists && (
+              <button
+                className="btn btn--secondary"
+                onClick={handleCreateEdition}
+                disabled={creatingYear}
+                style={{ fontSize: "0.8rem", whiteSpace: "nowrap" }}
+              >
+                {creatingYear ? "Création…" : `+ Créer l'édition ${nextYear}`}
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -1101,65 +1136,121 @@ export function WebsiteEditionPage({ Panel }) {
 
           {/* ── Timetable ── */}
           <div style={{ padding: "16px 20px", background: "#f8fafc", borderRadius: 10, border: "1px solid #e2e8f0" }}>
-            <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#374151", marginBottom: 4 }}>
-              Timetable
-              {timetableSaving && <span style={{ marginLeft: 8, fontSize: "0.75rem", color: "#6b7280", fontWeight: 400 }}>Sauvegarde…</span>}
+            {/* Header + status toggle */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#374151" }}>
+                  Timetable
+                  {(timetableSaving || timetableStatusSaving) && <span style={{ marginLeft: 8, fontSize: "0.75rem", color: "#6b7280", fontWeight: 400 }}>Sauvegarde…</span>}
+                </div>
+                <p style={{ fontSize: "0.75rem", color: "#6b7280", margin: "2px 0 0" }}>
+                  {(selectedEdition.timetable || []).length} entrée(s)
+                </p>
+              </div>
+              {/* Draft / Visible toggle */}
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: "0.75rem", color: "#6b7280", fontWeight: 600 }}>Visibilité :</span>
+                <button
+                  onClick={() => handleTimetableStatusChange("draft")}
+                  disabled={timetableStatusSaving}
+                  style={{
+                    padding: "4px 10px", borderRadius: 6, fontSize: "0.75rem", fontWeight: 600, cursor: "pointer",
+                    border: "1px solid #d1d5db",
+                    background: (selectedEdition.timetableStatus || "draft") === "draft" ? "#374151" : "#f3f4f6",
+                    color: (selectedEdition.timetableStatus || "draft") === "draft" ? "#fff" : "#6b7280",
+                  }}
+                >Brouillon</button>
+                <button
+                  onClick={() => handleTimetableStatusChange("visible")}
+                  disabled={timetableStatusSaving}
+                  style={{
+                    padding: "4px 10px", borderRadius: 6, fontSize: "0.75rem", fontWeight: 600, cursor: "pointer",
+                    border: "1px solid #d1d5db",
+                    background: selectedEdition.timetableStatus === "visible" ? "#16a34a" : "#f3f4f6",
+                    color: selectedEdition.timetableStatus === "visible" ? "#fff" : "#6b7280",
+                  }}
+                >Visible sur le site</button>
+              </div>
             </div>
-            <p style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: 12 }}>
-              {(selectedEdition.timetable || []).length} entrée(s)
-            </p>
+
+            {selectedEdition.timetableStatus !== "visible" && (
+              <div style={{ padding: "6px 10px", background: "#fef3c7", borderRadius: 6, border: "1px solid #fcd34d", fontSize: "0.75rem", color: "#92400e", marginBottom: 12 }}>
+                ⚠️ Brouillon — la timetable n'est pas encore visible sur le site public.
+              </div>
+            )}
 
             {/* Existing entries */}
             {(selectedEdition.timetable || []).length > 0 && (
               <div style={{ marginBottom: 20, border: "1px solid #e2e8f0", borderRadius: 8, overflow: "hidden" }}>
-                {(selectedEdition.timetable || []).map((entry, idx) => (
-                  <div
-                    key={entry.id}
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr auto",
-                      alignItems: "center",
-                      padding: "8px 12px",
-                      borderBottom: "1px solid #f1f5f9",
-                      background: entry.type === "header" ? "#1e3a5f" : (entry.isField ? "#1e3a8a" : "#f8fafc"),
-                      color: entry.type === "header" || entry.isField ? "#fff" : "#111827",
-                    }}
-                  >
-                    <span style={{ fontSize: "0.82rem", fontWeight: entry.type === "header" ? 700 : 400 }}>
-                      {entry.type === "header"
-                        ? `▶ ${entry.label}`
-                        : `${entry.time}${entry.gender ? ` · ${entry.gender}` : ""} · ${entry.event}${entry.isField ? " (field)" : ""}`
-                      }
-                    </span>
-                    <div style={{ display: "flex", gap: 4 }}>
-                      <button
-                        onClick={() => handleMoveTimetableEntry(entry.id, -1)}
-                        disabled={idx === 0 || timetableSaving}
-                        style={{ padding: "2px 6px", borderRadius: 4, border: "1px solid rgba(0,0,0,0.15)", background: "rgba(255,255,255,0.15)", cursor: "pointer", fontSize: "0.75rem", color: "inherit" }}
-                      >↑</button>
-                      <button
-                        onClick={() => handleMoveTimetableEntry(entry.id, 1)}
-                        disabled={idx === (selectedEdition.timetable || []).length - 1 || timetableSaving}
-                        style={{ padding: "2px 6px", borderRadius: 4, border: "1px solid rgba(0,0,0,0.15)", background: "rgba(255,255,255,0.15)", cursor: "pointer", fontSize: "0.75rem", color: "inherit" }}
-                      >↓</button>
-                      <button
-                        onClick={() => handleRemoveTimetableEntry(entry.id)}
-                        disabled={timetableSaving}
-                        style={{ padding: "2px 6px", borderRadius: 4, border: "1px solid rgba(220,38,38,0.3)", background: "rgba(220,38,38,0.1)", cursor: "pointer", fontSize: "0.75rem", color: "#dc2626" }}
-                      >×</button>
+                {/* Column headers */}
+                <div style={{ display: "grid", gridTemplateColumns: "52px 72px 80px 1fr 90px auto", alignItems: "center", padding: "5px 10px", background: "#f1f5f9", borderBottom: "1px solid #e2e8f0" }}>
+                  {["#", "Heure", "Genre", "Épreuve", "Round", ""].map((h) => (
+                    <span key={h} style={{ fontSize: "0.68rem", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</span>
+                  ))}
+                </div>
+                {(selectedEdition.timetable || []).map((entry, idx) => {
+                  const isHeader = entry.type === "header";
+                  const isRedHeader = isHeader && entry.label === "PRE-PROGRAM";
+                  const rowBg = isHeader
+                    ? (isRedHeader ? "#b91c1c" : "#1e3a5f")
+                    : (entry.isField ? "#1e3a8a" : "#fff");
+                  const rowColor = isHeader || entry.isField ? "#fff" : "#111827";
+                  return (
+                    <div
+                      key={entry.id}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "52px 72px 80px 1fr 90px auto",
+                        alignItems: "center",
+                        padding: "6px 10px",
+                        borderBottom: "1px solid #f1f5f9",
+                        background: rowBg,
+                        color: rowColor,
+                      }}
+                    >
+                      {isHeader ? (
+                        <>
+                          <span style={{ fontSize: "0.75rem", fontWeight: 700, gridColumn: "1 / 6" }}>▶ {entry.label}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span style={{ fontSize: "0.72rem", color: entry.isField ? "rgba(255,255,255,0.5)" : "#9ca3af" }}>{idx + 1}</span>
+                          <span style={{ fontSize: "0.82rem", fontWeight: 600 }}>{entry.time || "—"}</span>
+                          <span style={{ fontSize: "0.75rem", opacity: 0.85 }}>{entry.gender || "—"}</span>
+                          <span style={{ fontSize: "0.82rem" }}>{entry.event}</span>
+                          <span style={{ fontSize: "0.72rem", opacity: 0.8 }}>{entry.round || ""}</span>
+                        </>
+                      )}
+                      <div style={{ display: "flex", gap: 3, justifyContent: "flex-end" }}>
+                        <button
+                          onClick={() => handleMoveTimetableEntry(entry.id, -1)}
+                          disabled={idx === 0 || timetableSaving}
+                          style={{ padding: "2px 5px", borderRadius: 4, border: "1px solid rgba(0,0,0,0.15)", background: "rgba(255,255,255,0.15)", cursor: "pointer", fontSize: "0.72rem", color: "inherit" }}
+                        >↑</button>
+                        <button
+                          onClick={() => handleMoveTimetableEntry(entry.id, 1)}
+                          disabled={idx === (selectedEdition.timetable || []).length - 1 || timetableSaving}
+                          style={{ padding: "2px 5px", borderRadius: 4, border: "1px solid rgba(0,0,0,0.15)", background: "rgba(255,255,255,0.15)", cursor: "pointer", fontSize: "0.72rem", color: "inherit" }}
+                        >↓</button>
+                        <button
+                          onClick={() => handleRemoveTimetableEntry(entry.id)}
+                          disabled={timetableSaving}
+                          style={{ padding: "2px 5px", borderRadius: 4, border: "1px solid rgba(220,38,38,0.3)", background: "rgba(220,38,38,0.1)", cursor: "pointer", fontSize: "0.72rem", color: entry.isField || isHeader ? "#fca5a5" : "#dc2626" }}
+                        >×</button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 
             {/* Add form */}
             <div style={{ padding: "12px 16px", background: "#fff", borderRadius: 8, border: "1px solid #e2e8f0" }}>
               <div style={{ fontWeight: 600, fontSize: "0.78rem", color: "#374151", marginBottom: 10 }}>Ajouter une entrée</div>
-              <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
                 <label style={{ fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 4 }}>
                   <input type="radio" name="ttType" value="header" checked={ttForm.type === "header"} onChange={() => setTtForm((f) => ({ ...f, type: "header" }))} />
-                  En-tête
+                  En-tête de section
                 </label>
                 <label style={{ fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 4 }}>
                   <input type="radio" name="ttType" value="event" checked={ttForm.type === "event"} onChange={() => setTtForm((f) => ({ ...f, type: "event" }))} />
@@ -1184,37 +1275,71 @@ export function WebsiteEditionPage({ Panel }) {
                   >Ajouter</button>
                 </div>
               ) : (
-                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                  <input
-                    type="text"
-                    placeholder="16:06"
-                    value={ttForm.time}
-                    onChange={(e) => setTtForm((f) => ({ ...f, time: e.target.value }))}
-                    style={{ ...inp, width: 64 }}
-                  />
-                  <select
-                    value={ttForm.gender}
-                    onChange={(e) => setTtForm((f) => ({ ...f, gender: e.target.value }))}
-                    style={{ ...inp }}
-                  >
-                    <option value="WOMEN">WOMEN</option>
-                    <option value="MEN">MEN</option>
-                    <option value="">—</option>
-                  </select>
-                  <input
-                    type="text"
-                    placeholder="60M HEATS"
-                    value={ttForm.event}
-                    onChange={(e) => setTtForm((f) => ({ ...f, event: e.target.value }))}
-                    style={{ ...inp, flex: 1, minWidth: 120 }}
-                  />
-                  <label style={{ fontSize: "0.78rem", display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
-                    <input type="checkbox" checked={ttForm.isField} onChange={(e) => setTtForm((f) => ({ ...f, isField: e.target.checked }))} />
-                    Field event
-                  </label>
+                <div style={{ display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap" }}>
+                  {/* Time */}
+                  <div>
+                    <div style={{ fontSize: "0.7rem", color: "#6b7280", marginBottom: 3 }}>Heure</div>
+                    <input
+                      type="text"
+                      placeholder="16:06"
+                      value={ttForm.time}
+                      onChange={(e) => setTtForm((f) => ({ ...f, time: e.target.value }))}
+                      style={{ ...inp, width: 68 }}
+                    />
+                  </div>
+                  {/* Gender */}
+                  <div>
+                    <div style={{ fontSize: "0.7rem", color: "#6b7280", marginBottom: 3 }}>Genre</div>
+                    <select
+                      value={ttForm.gender}
+                      onChange={(e) => setTtForm((f) => ({ ...f, gender: e.target.value }))}
+                      style={{ ...inp }}
+                    >
+                      <option value="WOMEN">WOMEN</option>
+                      <option value="MEN">MEN</option>
+                      <option value="">—</option>
+                    </select>
+                  </div>
+                  {/* Discipline — dropdown from configured disciplines */}
+                  <div style={{ flex: "1 1 140px" }}>
+                    <div style={{ fontSize: "0.7rem", color: "#6b7280", marginBottom: 3 }}>Épreuve</div>
+                    <select
+                      value={ttForm.event}
+                      onChange={(e) => {
+                        const ev = e.target.value;
+                        setTtForm((f) => ({ ...f, event: ev, isField: FIELD_EVENTS.has(ev) }));
+                      }}
+                      style={{ ...inp, width: "100%" }}
+                    >
+                      <option value="">— Choisir —</option>
+                      {/* Configured disciplines first */}
+                      {(selectedEdition?.disciplines || []).length > 0 && (
+                        <optgroup label="Disciplines configurées">
+                          {CANONICAL_DISCIPLINES
+                            .filter((d) => (selectedEdition.disciplines || []).some((x) => x.event === d))
+                            .map((d) => <option key={d} value={d}>{d}{FIELD_EVENTS.has(d) ? " 🏟" : ""}</option>)
+                          }
+                        </optgroup>
+                      )}
+                      <optgroup label="Toutes les disciplines">
+                        {CANONICAL_DISCIPLINES.map((d) => <option key={d} value={d}>{d}{FIELD_EVENTS.has(d) ? " 🏟" : ""}</option>)}
+                      </optgroup>
+                    </select>
+                  </div>
+                  {/* Round */}
+                  <div>
+                    <div style={{ fontSize: "0.7rem", color: "#6b7280", marginBottom: 3 }}>Round</div>
+                    <select
+                      value={ttForm.round}
+                      onChange={(e) => setTtForm((f) => ({ ...f, round: e.target.value }))}
+                      style={{ ...inp }}
+                    >
+                      {ROUND_OPTIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                  </div>
                   <button
                     className="btn btn--secondary"
-                    disabled={timetableSaving || !ttForm.time.trim() || !ttForm.event.trim()}
+                    disabled={timetableSaving || !ttForm.time.trim() || !ttForm.event}
                     onClick={handleAddTimetableEntry}
                     style={{ fontSize: "0.8rem" }}
                   >Ajouter</button>
