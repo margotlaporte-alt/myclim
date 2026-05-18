@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import { collection, doc, onSnapshot, setDoc, serverTimestamp } from "firebase/firestore";
+import { collection, doc, onSnapshot, query, setDoc, serverTimestamp, where } from "firebase/firestore";
 import { db } from "../services/firebase";
+import { recordMatchesEdition, useActiveEdition } from "./edition";
 
 const ATHLETE_PORTAL_SETTINGS_PATH = ["appSettings", "athletePortalSettings"];
 const ATHLETES_COLLECTION = "athletes";
+const ATHLETE_TRANSPORT_LOTS_COLLECTION = "athleteTransportLots";
 
 /**
  * Permanent cross-edition athlete registry.
@@ -74,7 +76,7 @@ const FIELD_GROUPS = [
 //   outdoor    = N-1  (previous outdoor season, completed)
 // Example: CMCM 2026 → indoor 2025, indoorCurrent 2026, outdoor 2025
 const DEFAULT_PORTAL_SETTINGS = {
-  accessRoles: ["admin", "meeting_director"],
+  accessRoles: ["admin", "meeting_director", "chef_transport_athletes", "benevole_transport_athletes"],
   importerRoles: ["admin", "meeting_director"],
   // WA service base URL.
   // In production: /api/wa → proxied to the Netlify Function wa-athlete.
@@ -85,8 +87,10 @@ const DEFAULT_PORTAL_SETTINGS = {
   fieldVisibility: {
     admin:            ALL_ATHLETE_FIELDS.map((f) => f.key),
     meeting_director: ALL_ATHLETE_FIELDS.map((f) => f.key),
-    gestionnaire:     ["event", "lastName", "firstName", "nationality", "status", "heat", "lane"],
-    chef_equipe:      ["event", "lastName", "firstName", "nationality"],
+    gestionnaire:              ["event", "lastName", "firstName", "nationality", "status", "heat", "lane"],
+    chef_equipe:               ["event", "lastName", "firstName", "nationality"],
+    chef_transport_athletes:   ["event", "lastName", "firstName", "nationality", "manager", "arrivalDay", "arrivalTime", "arrivalFlight", "arrivalFrom", "departureDay", "departureTime", "departureFlight", "departureTo"],
+    benevole_transport_athletes: ["event", "lastName", "firstName", "nationality", "arrivalDay", "arrivalTime", "arrivalFlight", "arrivalFrom"],
   },
 };
 
@@ -462,6 +466,59 @@ function useAthleteRegistry(enabled = true) {
   return { registry, loading };
 }
 
+function useAthleteTransportLots(enabled = true) {
+  const [lots, setLots] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const { activeEditionId, loading: editionLoading } = useActiveEdition(enabled);
+
+  useEffect(() => {
+    if (!enabled || editionLoading) return undefined;
+    const unsubscribe = onSnapshot(
+      collection(db, ATHLETE_TRANSPORT_LOTS_COLLECTION),
+      (snapshot) => {
+        setLots(
+          snapshot.docs
+            .map((d) => ({ id: d.id, ...d.data() }))
+            .filter((lot) => recordMatchesEdition(lot, activeEditionId)),
+        );
+        setLoading(false);
+      },
+      () => setLoading(false),
+    );
+    return unsubscribe;
+  }, [enabled, activeEditionId, editionLoading]);
+
+  return { lots, loading: loading || editionLoading };
+}
+
+function useTransportVolunteers(enabled = true) {
+  const [volunteers, setVolunteers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!enabled) { setLoading(false); return undefined; }
+    const unsubscribe = onSnapshot(
+      collection(db, "users"),
+      (snapshot) => {
+        setVolunteers(
+          snapshot.docs
+            .map((d) => ({ id: d.id, ...d.data() }))
+            .filter((u) => {
+              const types = Array.isArray(u.userTypes) ? u.userTypes : [];
+              const roles = Array.isArray(u.roles) ? u.roles : [];
+              return [...types, ...roles].includes("benevole_transport_athletes");
+            }),
+        );
+        setLoading(false);
+      },
+      () => setLoading(false),
+    );
+    return unsubscribe;
+  }, [enabled]);
+
+  return { volunteers, loading };
+}
+
 export {
   useAthletePortalSettings,
   useAthletes,
@@ -481,4 +538,7 @@ export {
   ATHLETE_PORTAL_SETTINGS_PATH,
   ATHLETES_COLLECTION,
   ATHLETE_REGISTRY_COLLECTION,
+  ATHLETE_TRANSPORT_LOTS_COLLECTION,
+  useAthleteTransportLots,
+  useTransportVolunteers,
 };

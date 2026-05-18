@@ -32,6 +32,8 @@ function getDefaultRouteByRoles(roles = []) {
   if (roles.includes("gestionnaire")) return "/app/benevoles";
   if (roles.includes("gestionnaire_site")) return "/app/website";
   if (roles.includes("chef_equipe")) return "/app/equipe";
+  if (roles.includes("chef_transport_athletes")) return "/app/athlete-portal/transport";
+  if (roles.includes("benevole_transport_athletes")) return "/app/athlete-portal/mes-transport";
   if (roles.includes("benevole")) return "/app/mes-affectations";
   if (roles.includes("parent_u14")) return "/app/mes-enfants";
   return "/app";
@@ -133,6 +135,14 @@ function buildNavigationFromRoles(roles) {
     links.push(makeLink("/app/mes-enfants", "Mes enfants", "child"));
   }
 
+  if (roles.includes("chef_transport_athletes")) {
+    links.push(makeLink("/app/athlete-portal/transport", "Transport athlètes", "users"));
+  }
+
+  if (roles.includes("benevole_transport_athletes")) {
+    links.push(makeLink("/app/athlete-portal/mes-transport", "Mes transports", "pin"));
+  }
+
   links.push(makeLink("/app/profil", "Mon profil", "profile"));
 
   return links;
@@ -154,6 +164,14 @@ function buildAthletePortalNavigation(roles, portalSettings, { canImport }) {
     links.push(makeLink("/app/athlete-portal/history", "Meeting results", "calendar"));
     links.push(makeLink("/app/athlete-portal/records", "Meeting records", "star"));
     links.push(makeLink("/app/athlete-portal/winners", "Hall of winners", "trophy"));
+  }
+
+  if (roles.includes("chef_transport_athletes") || roles.includes("admin")) {
+    links.push(makeLink("/app/athlete-portal/transport", "Transport athlètes", "users"));
+  }
+
+  if (roles.includes("benevole_transport_athletes")) {
+    links.push(makeLink("/app/athlete-portal/mes-transport", "Mes transports", "pin"));
   }
 
   if (roles.includes("admin")) {
