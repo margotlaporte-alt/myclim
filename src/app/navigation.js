@@ -78,6 +78,7 @@ function buildNavigationFromRoles(roles) {
       ]),
       makeSection("Site web", [
         makeLink("/app/website", "Vue d'ensemble site", "grid"),
+        makeLink("/app/website/edition", "Edition courante", "calendar"),
         makeLink("/app/website/news", "Actualites", "spark"),
         makeLink("/app/website/sponsors", "Partenaires", "badge"),
         makeLink("/app/website/press", "Communiques presse", "folder"),
@@ -123,6 +124,7 @@ function buildNavigationFromRoles(roles) {
   if (roles.includes("gestionnaire_site")) {
     links.push(
       makeLink("/app/website", "Site web — vue d'ensemble", "grid"),
+      makeLink("/app/website/edition", "Édition courante", "calendar"),
       makeLink("/app/website/news", "Actualités", "spark"),
       makeLink("/app/website/sponsors", "Partenaires", "badge"),
       makeLink("/app/website/press", "Communiqués presse", "folder"),
