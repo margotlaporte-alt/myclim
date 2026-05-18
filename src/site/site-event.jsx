@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import { useMeetingEditions } from "../app/meeting-history-hooks";
 import volontaire1 from "../assets/site-gallery/volontaire-1.jpg";
 import coque1 from "../assets/site-gallery/Coque2026.jpg";
 import coque2 from "../assets/site-gallery/Coque2026-2.jpg";
@@ -17,39 +18,12 @@ import ticketFan1 from "../assets/site-gallery/ticket-fan-1.jpg";
 import ticketPublic4 from "../assets/site-gallery/ticket-public-4.jpg";
 import ticketPublic5 from "../assets/site-gallery/ticket-public-5.jpg";
 
-const TIMETABLE = [
-  { time: "08:00", event: "Venue opens", detail: "Athlete check-in and warm-up area available" },
-  { time: "09:00", event: "Field events start", detail: "High Jump, Long Jump, Shot Put, Pole Vault" },
-  { time: "10:30", event: "Track events begin", detail: "60 m, 60 m Hurdles, 200 m heats" },
-  { time: "12:00", event: "Doors open — public", detail: "Public access to Coque arena" },
-  { time: "13:30", event: "Afternoon session", detail: "400 m, 800 m, 1500 m, Mile" },
-  { time: "14:15", event: "VIP Tour", detail: "Exclusive backstage or venue tour (VIP ticket holders)" },
-  { time: "16:00", event: "Finals session", detail: "All sprint and hurdle finals" },
-  { time: "17:30", event: "VIP reception", detail: "Partners and VIP lounge opens" },
-  { time: "18:00", event: "Evening programme", detail: "Elite 60 m, 3000 m, Pole Vault final" },
-  { time: "20:00", event: "Medal ceremony & close", detail: "End of competition, venue closes" },
-];
-
-const INFO_CARDS = [
-  {
-    icon: "📅",
-    title: "Date",
-    content: "18 January 2026",
-    sub: "Doors open at 12:00",
-  },
-  {
-    icon: "🏟️",
-    title: "Venue",
-    content: "Coque, Luxembourg",
-    sub: "2, rue Léon Hengen, L-1745 Luxembourg",
-  },
-  {
-    icon: "🚌",
-    title: "Access",
-    content: "Bus lines 2, 18, 30",
-    sub: "Free public transport on competition day",
-  },
-];
+const ACCESS_CARD = {
+  icon: "🚌",
+  title: "Access",
+  content: "Bus lines 2, 18, 30",
+  sub: "Free public transport on competition day",
+};
 
 function InfoCard({ icon, title, content, sub }) {
   return (
@@ -73,6 +47,28 @@ function SectionTitle({ eyebrow, title, lead }) {
 }
 
 export function SiteEvent() {
+  const { editions } = useMeetingEditions();
+  const latestEdition = editions[0] || null;
+
+  const infoCards = [
+    {
+      icon: "📅",
+      title: "Date",
+      content: latestEdition?.date || "À confirmer",
+      sub: "Doors open at 12:00",
+    },
+    {
+      icon: "🏟️",
+      title: "Venue",
+      content: latestEdition?.venue || "À confirmer",
+      sub: "Luxembourg",
+    },
+    ACCESS_CARD,
+  ];
+
+  const timetable = latestEdition?.timetable || [];
+  const disciplines = latestEdition?.disciplines || [];
+
   return (
     <>
       {/* ── Hero ─────────────────────────────────────────── */}
@@ -85,7 +81,7 @@ export function SiteEvent() {
           </p>
 
           <div className="site-event-info-grid">
-            {INFO_CARDS.map((card) => (
+            {infoCards.map((card) => (
               <InfoCard key={card.title} {...card} />
             ))}
           </div>
@@ -140,7 +136,6 @@ export function SiteEvent() {
 
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               {[
-                ["Disciplines", "Sprint (60m, 200m, 400m), hurdles, middle distance, throws, jumps"],
                 ["Competition format", "Heats and finals across all disciplines in a single day"],
                 ["Athletes", "International elite athletes + national champions"],
                 ["Broadcast", "Livestream available — check our social media for links"],
@@ -172,6 +167,42 @@ export function SiteEvent() {
         </div>
       </section>
 
+      {/* ── Disciplines ───────────────────────────────────── */}
+      {disciplines.length > 0 && (
+        <section className="site-section" id="disciplines">
+          <div className="site-container">
+            <SectionTitle
+              eyebrow="Programme"
+              title="Events for this edition"
+            />
+            <div className="site-card" style={{ overflow: "hidden", maxWidth: 640 }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.88rem" }}>
+                <thead>
+                  <tr style={{ background: "#1e3a5f", color: "#fff" }}>
+                    <th style={{ padding: "10px 20px", textAlign: "center", width: "30%", fontWeight: 700, fontSize: "0.78rem", letterSpacing: "0.08em" }}>WOMEN</th>
+                    <th style={{ padding: "10px 20px", textAlign: "center", fontWeight: 700, fontSize: "0.78rem", letterSpacing: "0.08em" }}>EVENT</th>
+                    <th style={{ padding: "10px 20px", textAlign: "center", width: "30%", fontWeight: 700, fontSize: "0.78rem", letterSpacing: "0.08em" }}>MEN</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {disciplines.map((d, i) => (
+                    <tr key={d.event} style={{ borderBottom: "1px solid var(--site-border)", background: i % 2 === 0 ? "var(--site-card)" : "#f8fafc" }}>
+                      <td style={{ padding: "10px 20px", textAlign: "center", color: d.womenPrize ? "var(--site-text-muted)" : "#d1d5db", fontSize: "0.8rem" }}>
+                        {d.womenPrize ? `Prize ${d.womenPrize}` : ""}
+                      </td>
+                      <td style={{ padding: "10px 20px", textAlign: "center", fontWeight: 700, color: "var(--site-text)" }}>{d.event}</td>
+                      <td style={{ padding: "10px 20px", textAlign: "center", color: d.menPrize ? "var(--site-text-muted)" : "#d1d5db", fontSize: "0.8rem" }}>
+                        {d.menPrize ? `Prize ${d.menPrize}` : ""}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* ── Timetable ─────────────────────────────────────── */}
       <section className="site-section site-section--alt" id="timetable">
         <div className="site-container">
@@ -181,19 +212,81 @@ export function SiteEvent() {
             lead="Approximate schedule for competition day. Times may be adjusted — please check the official programme closer to the event."
           />
 
-          <div className="site-card" style={{ overflow: "hidden" }}>
-            <div className="site-timetable">
-              {TIMETABLE.map((row, i) => (
-                <div key={i} className="site-timetable__row">
-                  <div className="site-timetable__time">{row.time}</div>
-                  <div className="site-timetable__event">
-                    <strong>{row.event}</strong>
-                    <span>{row.detail}</span>
+          {timetable.length > 0 ? (
+            <div style={{ overflow: "hidden", borderRadius: "var(--site-radius)", border: "1px solid var(--site-border)" }}>
+              {timetable.map((entry, i) =>
+                entry.type === "header" ? (
+                  <div
+                    key={entry.id || i}
+                    style={{
+                      padding: "10px 24px",
+                      background: entry.label === "PRE-PROGRAM" ? "var(--site-red)" : "#1e3a5f",
+                      color: "#fff",
+                      fontWeight: 800,
+                      fontSize: "0.8rem",
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {entry.label}
                   </div>
-                </div>
-              ))}
+                ) : (
+                  <div
+                    key={entry.id || i}
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "80px 100px 1fr",
+                      alignItems: "center",
+                      borderBottom: "1px solid var(--site-border)",
+                      background: entry.isField ? "#1e3a8a" : "var(--site-card)",
+                    }}
+                  >
+                    <div style={{
+                      padding: "14px 16px",
+                      fontWeight: 700,
+                      fontSize: "0.875rem",
+                      color: entry.isField ? "#93c5fd" : "var(--site-blue-dark)",
+                      fontVariantNumeric: "tabular-nums",
+                      borderRight: `2px solid ${entry.isField ? "#3b82f6" : "var(--site-blue)"}`,
+                    }}>
+                      {entry.time}
+                    </div>
+                    <div style={{
+                      padding: "14px 12px",
+                      fontSize: "0.78rem",
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.06em",
+                      color: entry.isField ? "#bfdbfe" : "var(--site-text-muted)",
+                      borderRight: "1px solid var(--site-border)",
+                    }}>
+                      {entry.gender || ""}
+                    </div>
+                    <div style={{
+                      padding: "14px 20px",
+                      fontWeight: 600,
+                      fontSize: "0.9rem",
+                      color: entry.isField ? "#fff" : "var(--site-text)",
+                    }}>
+                      {entry.event}
+                    </div>
+                  </div>
+                )
+              )}
             </div>
-          </div>
+          ) : (
+            <div style={{
+              textAlign: "center",
+              padding: "48px 32px",
+              background: "var(--site-card)",
+              border: "1px solid var(--site-border)",
+              borderRadius: "var(--site-radius)",
+              color: "var(--site-text-muted)",
+            }}>
+              <div style={{ fontSize: "2rem", marginBottom: 12 }}>📋</div>
+              <p style={{ fontSize: "0.9rem" }}>Le programme détaillé sera disponible prochainement.</p>
+            </div>
+          )}
         </div>
       </section>
 

@@ -293,43 +293,98 @@ export function SiteHome() {
       </section>
 
       {/* ════════════════════════════════════════════════
-          LIVE RESULTS
+          LIVE STREAMING (shown only when streamingUrl is set)
+      ════════════════════════════════════════════════ */}
+      {latestEdition?.streamingUrl && (
+        <section className="site-section site-section--dark" id="live-stream" style={{ background: "#0a0a0a" }}>
+          <div className="site-container" style={{ maxWidth: 960 }}>
+            <div className="site-section-header site-section-header--center" style={{ marginBottom: 32 }}>
+              <span className="site-eyebrow" style={{ color: "var(--site-red)" }}>● Live</span>
+              <h2 className="site-heading" style={{ color: "#fff" }}>Watch Live</h2>
+            </div>
+            <div style={{
+              position: "relative",
+              paddingBottom: "56.25%",
+              height: 0,
+              borderRadius: "var(--site-radius-lg)",
+              overflow: "hidden",
+              boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
+            }}>
+              <iframe
+                src={latestEdition.streamingUrl}
+                title="CMCM Luxembourg Indoor Meeting — Live Stream"
+                width="100%"
+                height="100%"
+                style={{ position: "absolute", inset: 0, border: "none" }}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ════════════════════════════════════════════════
+          LIVE RESULTS (URL configurable depuis le backoffice)
       ════════════════════════════════════════════════ */}
       <section className="site-section site-section--alt" id="live-results">
         <div className="site-container">
           <div className="site-section-header site-section-header--center" style={{ marginBottom: 40 }}>
             <span className="site-eyebrow" style={{ color: "var(--site-red)" }}>● Live</span>
             <h2 className="site-heading">Results &amp; Live Ranking</h2>
-            <p className="site-lead">
-              Follow the competition in real time. Results are updated live throughout the day.
-            </p>
+            {latestEdition?.resultsUrl && (
+              <p className="site-lead">
+                Follow the competition in real time. Results are updated live throughout the day.
+              </p>
+            )}
           </div>
-          <div style={{
-            borderRadius: "var(--site-radius-lg)",
-            overflow: "hidden",
-            border: "1px solid var(--site-border)",
-            boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
-            background: "#fff",
-          }}>
-            <iframe
-              src="https://fla.laportal.net/Competitions/Details/18079"
-              title="CMCM Luxembourg Indoor Meeting 2026 — Live Results"
-              width="100%"
-              height="700"
-              style={{ display: "block", border: "none" }}
-              loading="lazy"
-            />
-          </div>
-          <div style={{ textAlign: "center", marginTop: 20 }}>
-            <a
-              href="https://fla.laportal.net/Competitions/Details/18079"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="site-btn site-btn--secondary site-btn--sm"
-            >
-              Open full results page →
-            </a>
-          </div>
+          {latestEdition?.resultsUrl ? (
+            <>
+              <div style={{
+                borderRadius: "var(--site-radius-lg)",
+                overflow: "hidden",
+                border: "1px solid var(--site-border)",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
+                background: "#fff",
+              }}>
+                <iframe
+                  src={latestEdition.resultsUrl}
+                  title="CMCM Luxembourg Indoor Meeting — Live Results"
+                  width="100%"
+                  height="700"
+                  style={{ display: "block", border: "none" }}
+                  loading="lazy"
+                />
+              </div>
+              <div style={{ textAlign: "center", marginTop: 20 }}>
+                <a
+                  href={latestEdition.resultsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="site-btn site-btn--secondary site-btn--sm"
+                >
+                  Open full results page →
+                </a>
+              </div>
+            </>
+          ) : (
+            <div style={{
+              textAlign: "center",
+              padding: "64px 32px",
+              background: "var(--site-card)",
+              border: "1px solid var(--site-border)",
+              borderRadius: "var(--site-radius-lg)",
+              color: "var(--site-text-muted)",
+            }}>
+              <div style={{ fontSize: "2.5rem", marginBottom: 16 }}>🏁</div>
+              <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--site-text)", marginBottom: 8 }}>
+                Bientôt disponible
+              </h3>
+              <p style={{ fontSize: "0.9rem", maxWidth: 400, margin: "0 auto" }}>
+                Les résultats live seront accessibles ici le jour de la compétition.
+              </p>
+            </div>
+          )}
         </div>
       </section>
 
