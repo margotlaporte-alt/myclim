@@ -871,6 +871,18 @@ export function WebsiteEditionPage({ Panel }) {
     finally { setTimetableSaving(false); }
   }
 
+  const [creatingYear, setCreatingYear] = useState(false);
+  const nextYear = editions.length > 0 ? Math.max(...editions.map((e) => e.year)) + 1 : new Date().getFullYear() + 1;
+  const nextYearExists = editions.some((e) => e.year === nextYear);
+
+  async function handleCreateEdition() {
+    setCreatingYear(true);
+    try {
+      await updateEdition(nextYear, { year: nextYear });
+      setSelectedYear(nextYear);
+    } finally { setCreatingYear(false); }
+  }
+
   const inp = { padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: "0.8rem", fontFamily: "inherit" };
 
   return (
@@ -883,17 +895,29 @@ export function WebsiteEditionPage({ Panel }) {
         {editionsLoading ? (
           <p style={{ color: "#546770", fontSize: "0.875rem" }}>Chargement…</p>
         ) : (
-          <select
-            value={effectiveYear ?? ""}
-            onChange={(e) => setSelectedYear(Number(e.target.value))}
-            style={{ ...inp, minWidth: 140 }}
-          >
-            {editions.filter((e) => !e.cancelled).map((e) => (
-              <option key={e.year} value={e.year}>
-                {e.year}{e.isClosed ? " ✓" : ""}
-              </option>
-            ))}
-          </select>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <select
+              value={effectiveYear ?? ""}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              style={{ ...inp, minWidth: 140 }}
+            >
+              {editions.filter((e) => !e.cancelled).map((e) => (
+                <option key={e.year} value={e.year}>
+                  {e.year}{e.isClosed ? " ✓" : ""}
+                </option>
+              ))}
+            </select>
+            {!nextYearExists && (
+              <button
+                className="btn btn--secondary"
+                onClick={handleCreateEdition}
+                disabled={creatingYear}
+                style={{ fontSize: "0.8rem", whiteSpace: "nowrap" }}
+              >
+                {creatingYear ? "Création…" : `+ Créer l'édition ${nextYear}`}
+              </button>
+            )}
+          </div>
         )}
       </div>
 
