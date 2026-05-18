@@ -218,6 +218,8 @@ const platformRoleOptions = [
   { value: "chef_equipe", label: "Chef d'équipe" },
   { value: "benevole", label: "Bénévole" },
   { value: "parent_u14", label: "Parent U14" },
+  { value: "benevole_transport_athletes", label: "Bénévole Transport Athlètes" },
+  { value: "chef_transport_athletes", label: "Chef Transport Athlètes" },
 ];
 
 const TEAM_CONFIGURATION_DOC_PATH = ["appSettings", "teamsConfiguration"];

@@ -25,12 +25,14 @@ import {
 import { db } from "../services/firebase";
 
 const PLATFORM_ROLES = [
-  { key: "admin",            label: "Administrator" },
-  { key: "meeting_director", label: "Meeting Director" },
-  { key: "gestionnaire",     label: "Manager (Gestionnaire)" },
-  { key: "chef_equipe",      label: "Team Leader (Chef d'équipe)" },
-  { key: "benevole",         label: "Volunteer (Bénévole)" },
-  { key: "parent_u14",       label: "U14 Parent" },
+  { key: "admin",                      label: "Administrator" },
+  { key: "meeting_director",           label: "Meeting Director" },
+  { key: "gestionnaire",               label: "Manager (Gestionnaire)" },
+  { key: "chef_equipe",                label: "Team Leader (Chef d'équipe)" },
+  { key: "benevole",                   label: "Volunteer (Bénévole)" },
+  { key: "parent_u14",                 label: "U14 Parent" },
+  { key: "chef_transport_athletes",    label: "Chef du Transport Athlètes" },
+  { key: "benevole_transport_athletes", label: "Bénévole Transport Athlètes" },
 ];
 
 // ─── Travel entry parser ──────────────────────────────────────────────────────

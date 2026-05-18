@@ -1,6 +1,8 @@
 import { Suspense, lazy } from "react";
 import {
   addDoc,
+  arrayRemove,
+  arrayUnion,
   doc,
   getDocs,
   serverTimestamp,
@@ -78,6 +80,8 @@ const AthletesListPageScreen = lazyNamed(() => import("./app/athlete-portal-page
 const AthleteImportPageScreen = lazyNamed(() => import("./app/athlete-portal-pages"), "AthleteImportPage");
 const AthletePortalSettingsPageScreen = lazyNamed(() => import("./app/athlete-portal-pages"), "AthletePortalSettingsPage");
 const AthleteRegistryPageScreen = lazyNamed(() => import("./app/athlete-portal-pages"), "AthleteRegistryPage");
+const AthleteTransportChiefPageScreen = lazyNamed(() => import("./app/athlete-transport-pages"), "AthleteTransportChiefPage");
+const AthleteTransportVolunteerPageScreen = lazyNamed(() => import("./app/athlete-transport-pages"), "AthleteTransportVolunteerPage");
 const MeetingHistoryPageScreen = lazyNamed(() => import("./app/meeting-history-pages"), "MeetingHistoryPage");
 const MeetingRecordsPageScreen = lazyNamed(() => import("./app/meeting-history-pages"), "MeetingRecordsPage");
 const MeetingWinnersPageScreen = lazyNamed(() => import("./app/meeting-history-pages"), "MeetingWinnersPage");
@@ -109,6 +113,9 @@ async function syncVolunteerAssignmentToUserProfile(volunteer) {
         : [],
   );
 
+  const isTransport = assignedRoles.some((r) => r.toLowerCase() === "transport");
+  const isTransportChief = isTransport && volunteer?.teamRole === "Chef d'équipe";
+
   await setDoc(
     doc(db, "users", userId),
     {
@@ -123,6 +130,23 @@ async function syncVolunteerAssignmentToUserProfile(volunteer) {
     },
     { merge: true },
   );
+
+  // Sync transport platform roles based on team assignment
+  const rolesToAdd = [
+    ...(isTransport ? ["benevole_transport_athletes"] : []),
+    ...(isTransportChief ? ["chef_transport_athletes"] : []),
+  ];
+  const rolesToRemove = [
+    ...(!isTransport ? ["benevole_transport_athletes"] : []),
+    ...(!isTransportChief ? ["chef_transport_athletes"] : []),
+  ];
+
+  if (rolesToAdd.length) {
+    await updateDoc(doc(db, "users", userId), { userTypes: arrayUnion(...rolesToAdd) });
+  }
+  if (rolesToRemove.length) {
+    await updateDoc(doc(db, "users", userId), { userTypes: arrayRemove(...rolesToRemove) });
+  }
 }
 
 function isExternalDocumentLink(value) {
@@ -272,6 +296,14 @@ function AthletePortalSettingsPage() {
 
 function AthleteRegistryPage() {
   return <AthleteRegistryPageScreen Panel={Panel} />;
+}
+
+function AthleteTransportChiefPage() {
+  return <AthleteTransportChiefPageScreen Panel={Panel} />;
+}
+
+function AthleteTransportVolunteerPage() {
+  return <AthleteTransportVolunteerPageScreen Panel={Panel} />;
 }
 
 function MeetingHistoryPage() {
@@ -473,6 +505,12 @@ export default function App() {
                 </Route>
                 <Route element={<RequireRouteAccess allowedRoles={["admin"]} />}>
                   <Route path="settings" element={<AthletePortalSettingsPage />} />
+                </Route>
+                <Route element={<RequireRouteAccess allowedRoles={["admin", "chef_transport_athletes"]} />}>
+                  <Route path="transport" element={<AthleteTransportChiefPage />} />
+                </Route>
+                <Route element={<RequireRouteAccess allowedRoles={["benevole_transport_athletes"]} />}>
+                  <Route path="mes-transport" element={<AthleteTransportVolunteerPage />} />
                 </Route>
               </Route>
               <Route element={<RequireRouteAccess allowedRoles={["admin", "gestionnaire", "gestionnaire_site"]} />}>
