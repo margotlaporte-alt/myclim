@@ -30,10 +30,7 @@ function buildNavigation(profile) {
 function getDefaultRouteByRoles(roles = []) {
   if (roles.includes("admin")) return "/app";
   if (roles.includes("gestionnaire")) return "/app/benevoles";
-  if (roles.includes("gestionnaire_site")) return "/app/website";
   if (roles.includes("chef_equipe")) return "/app/equipe";
-  if (roles.includes("chef_transport_athletes")) return "/app/athlete-portal/transport";
-  if (roles.includes("benevole_transport_athletes")) return "/app/athlete-portal/mes-transport";
   if (roles.includes("benevole")) return "/app/mes-affectations";
   if (roles.includes("parent_u14")) return "/app/mes-enfants";
   return "/app";
@@ -71,24 +68,15 @@ function buildNavigationFromRoles(roles) {
         makeLink("/app/postes", "Equipes et postes", "grid"),
         makeLink("/app/presences", "Presences", "check"),
         makeLink("/app/u14", "Pre-programme U14", "spark"),
-        makeLink("/app/presse", "Presse", "badge"),
       ]),
       makeSection("Contenus", [
         makeLink("/app/documents", "Documents", "folder"),
         makeLink("/app/accreditations", "Accreditations", "ticket"),
         makeLink("/app/vip", "VIP", "ticket"),
       ]),
-      makeSection("Site web", [
-        makeLink("/app/website", "Vue d'ensemble site", "grid"),
-        makeLink("/app/website/edition", "Edition courante", "calendar"),
-        makeLink("/app/website/news", "Actualites", "spark"),
-        makeLink("/app/website/sponsors", "Partenaires", "badge"),
-        makeLink("/app/website/press", "Communiques presse", "folder"),
-      ]),
       ...(moduleLinks.length ? [makeSection("Modules", moduleLinks)] : []),
       makeSection("Parametres", [
         makeLink("/app/roles", "Roles plateforme", "shield"),
-        makeLink("/app/invitations", "Invitations", "spark"),
         makeLink("/app/profil", "Mon profil", "profile"),
       ]),
     ];
@@ -104,7 +92,6 @@ function buildNavigationFromRoles(roles) {
       makeLink("/app/documents", "Documents", "folder"),
       makeLink("/app/accreditations", "Accreditations", "ticket"),
       makeLink("/app/vip", "VIP", "ticket"),
-      makeLink("/app/presse", "Presse", "badge"),
     );
   }
 
@@ -123,26 +110,8 @@ function buildNavigationFromRoles(roles) {
     );
   }
 
-  if (roles.includes("gestionnaire_site")) {
-    links.push(
-      makeLink("/app/website", "Site web — vue d'ensemble", "grid"),
-      makeLink("/app/website/edition", "Édition courante", "calendar"),
-      makeLink("/app/website/news", "Actualités", "spark"),
-      makeLink("/app/website/sponsors", "Partenaires", "badge"),
-      makeLink("/app/website/press", "Communiqués presse", "folder"),
-    );
-  }
-
   if (roles.includes("parent_u14")) {
     links.push(makeLink("/app/mes-enfants", "Mes enfants", "child"));
-  }
-
-  if (roles.includes("chef_transport_athletes")) {
-    links.push(makeLink("/app/athlete-portal/transport", "Transport athlètes", "users"));
-  }
-
-  if (roles.includes("benevole_transport_athletes")) {
-    links.push(makeLink("/app/athlete-portal/mes-transport", "Mes transports", "pin"));
   }
 
   links.push(makeLink("/app/profil", "Mon profil", "profile"));
@@ -150,43 +119,9 @@ function buildNavigationFromRoles(roles) {
   return links;
 }
 
-function buildAthletePortalNavigation(roles, portalSettings, { canImport }) {
-  const isAdmin = roles.includes("admin") || roles.includes("meeting_director");
-  const links = [
-    makeLink("/app/athlete-portal", "Overview", "dashboard"),
-    makeLink("/app/athlete-portal/athletes", "Athletes", "users"),
-  ];
-
-  if (canImport) {
-    links.push(makeLink("/app/athlete-portal/import", "Import", "spark"));
-  }
-
-  if (isAdmin) {
-    links.push(makeLink("/app/athlete-portal/registry", "Athletes database", "users"));
-    links.push(makeLink("/app/athlete-portal/history", "Meeting results", "calendar"));
-    links.push(makeLink("/app/athlete-portal/records", "Meeting records", "star"));
-    links.push(makeLink("/app/athlete-portal/winners", "Hall of winners", "trophy"));
-  }
-
-  if (roles.includes("chef_transport_athletes") || roles.includes("admin")) {
-    links.push(makeLink("/app/athlete-portal/transport", "Transport athlètes", "users"));
-  }
-
-  if (roles.includes("benevole_transport_athletes")) {
-    links.push(makeLink("/app/athlete-portal/mes-transport", "Mes transports", "pin"));
-  }
-
-  if (roles.includes("admin")) {
-    links.push(makeLink("/app/athlete-portal/settings", "Portal settings", "shield"));
-  }
-
-  return links;
-}
-
 export {
   buildNavigation,
   buildNavigationFromRoles,
-  buildAthletePortalNavigation,
   getActiveRoles,
   getDefaultRouteByRoles,
   getPrimaryRole,

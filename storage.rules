@@ -4,13 +4,13 @@ service firebase.storage {
   match /b/{bucket}/o {
 
     // Logos partenaires — lecture publique (affichés sur le site public)
-    match /sponsors/{fileName} {
+    match /sponsors/{allPaths=**} {
       allow read: if true;
       allow write: if request.auth != null;
     }
 
     // Communiqués de presse — lecture publique (téléchargeables sur le site)
-    match /press-releases/{fileName} {
+    match /press-releases/{allPaths=**} {
       allow read: if true;
       allow write: if request.auth != null;
     }
