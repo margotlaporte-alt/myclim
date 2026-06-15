@@ -1,3 +1,4 @@
+import { NavLink } from "react-router-dom";
 import { useSponsors } from "./site-hooks";
 import { SPONSOR_CATEGORY_ORDER } from "./sponsor-utils";
 import cmcmPressConference from "../assets/partner-stories/cmcm-press-conference.jpg";
@@ -380,48 +381,36 @@ const categoryOrder = [
         </div>
       </section>
 
-      <section className="site-section site-main-partners-closing-section">
-        <div className="site-container">
-          <div className="site-main-partners-closing">
-            <span className="site-eyebrow">Meeting atmosphere</span>
-            <h2 className="site-heading site-heading--sm">Partnerships that add depth to the event</h2>
-            <p className="site-lead">
-              The support of our partners is visible not only through brand visibility, but also through the quality of the welcome, the image of the meeting and the on-site experience.
-            </p>
-          </div>
-        </div>
-      </section>
-
       <section className="site-section site-section--alt site-main-partners-cta-section">
-        <div className="site-container" style={{ textAlign: "center" }}>
-          <span className="site-eyebrow">Become a partner</span>
-          <h2 className="site-heading site-heading--sm" style={{ marginBottom: 16 }}>
-            Become a partner
-          </h2>
-          <p className="site-lead" style={{ margin: "0 auto 40px" }}>
-            Associating your brand with the CMCM Luxembourg Indoor Meeting means strong visibility, a premium setting and a fast-growing international sporting event.
-          </p>
-          <div className="site-partnership-cta-grid">
-            {[
-              ["International visibility", "Exposure to spectators, media and athletes coming from many different countries."],
-              ["Premium positioning", "A presence associated with a recognised meeting on the international indoor circuit."],
-              ["Tailor-made partnerships", "Activation formats adaptable to your goals, audiences and budget."],
-            ].map(([title, description]) => (
-              <div
-                key={title}
-                className="site-partnership-cta-card"
-              >
-                <h3 style={{ fontSize: "0.95rem", fontWeight: 700, marginBottom: 8 }}>{title}</h3>
-                <p style={{ fontSize: "0.84rem", lineHeight: 1.65 }}>{description}</p>
-              </div>
-            ))}
+        <div className="site-container">
+          <div className="site-main-partners-cta-panel">
+            <div className="site-main-partners-cta-panel__copy">
+              <span className="site-eyebrow">Become a partner</span>
+              <h2 className="site-heading site-heading--sm">Become a partner</h2>
+              <p className="site-lead">
+                Associating your brand with the CMCM Luxembourg Indoor Meeting means strong visibility, a premium setting and a fast-growing international sporting event.
+              </p>
+              <NavLink to="/become-a-partner" className="site-btn site-btn--primary">
+                Explore sponsorship opportunities
+              </NavLink>
+            </div>
+
+            <div className="site-partnership-cta-grid">
+              {[
+                ["International visibility", "Exposure to spectators, media and athletes coming from many different countries."],
+                ["Premium positioning", "A presence associated with a recognised meeting on the international indoor circuit."],
+                ["Tailor-made partnerships", "Activation formats adaptable to your goals, audiences and budget."],
+              ].map(([title, description]) => (
+                <div
+                  key={title}
+                  className="site-partnership-cta-card"
+                >
+                  <h3 style={{ fontSize: "0.95rem", fontWeight: 700, marginBottom: 8 }}>{title}</h3>
+                  <p style={{ fontSize: "0.84rem", lineHeight: 1.65 }}>{description}</p>
+                </div>
+              ))}
+            </div>
           </div>
-          <a
-            href="mailto:communication@fla.lu"
-            className="site-btn site-btn--primary"
-          >
-            Contact us about partnerships
-          </a>
         </div>
       </section>
     </div>
