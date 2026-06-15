@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useMeetingEditions, useMeetingResultsForYear } from "../app/meeting-history-hooks";
 import { usePublishedNews, useSponsors } from "./site-hooks";
+import { SPONSOR_CATEGORY_LABELS, SPONSOR_CATEGORY_ORDER, sponsorCategoryLabel } from "./sponsor-utils";
 import cmcmLogo from "../assets/cmcm-logo.png";
 import heroPhoto from "../assets/hero-photo.jpg";
 import waLogo from "../assets/wa-indoor-tour-silver.png";
@@ -140,14 +141,11 @@ export function SiteHome() {
     return acc;
   }, {});
 
-  const categoryOrder = ["title", "main", "institutional", "media", "supplier"];
-  const categoryLabels = {
-    title: "Title Partner",
-    main: "Main Partners",
-    institutional: "Institutional Partners",
-    media: "Media Partners",
-    supplier: "Suppliers & Partners",
-  };
+  const categoryOrder = [
+    ...SPONSOR_CATEGORY_ORDER,
+    ...Object.keys(sponsorsByCategory).filter((cat) => !SPONSOR_CATEGORY_ORDER.includes(cat)),
+  ];
+  const categoryLabels = SPONSOR_CATEGORY_LABELS;
 
   // Winners of the latest edition — from meetingWinners collection, fallback to rank=1 from results
   const DISCIPLINE_ORDER = [
@@ -744,7 +742,7 @@ export function SiteHome() {
               .filter((cat) => sponsorsByCategory[cat]?.length)
               .map((cat) => (
                 <div key={cat} className="site-sponsors__category">
-                  <p className="site-sponsors__category-title">{categoryLabels[cat]}</p>
+                  <p className="site-sponsors__category-title">{categoryLabels[cat] || sponsorCategoryLabel(cat)}</p>
                   <div className="site-sponsors__row">
                     {sponsorsByCategory[cat].map((s) => (
                       s.website ? (

@@ -13,6 +13,7 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "../services/firebase";
+import { normalizeSponsorCategory, sponsorCategorySortIndex } from "./sponsor-utils";
 
 export const SITE_NEWS_COL = "siteNews";
 export const SITE_SPONSORS_COL = "siteSponsors";
@@ -116,11 +117,18 @@ export function useSponsors(activeOnly = true) {
       : collection(db, SITE_SPONSORS_COL);
     const unsub = onSnapshot(q, (snap) => {
       const items = snap.docs
-        .map((d) => ({ id: d.id, ...d.data() }))
+        .map((d) => {
+          const data = d.data();
+          return {
+            id: d.id,
+            ...data,
+            rawCategory: data.category ?? "",
+            category: normalizeSponsorCategory(data.category),
+          };
+        })
         .sort((a, b) => {
-          const order = ["title", "main", "institutional", "media", "supplier"];
-          const ai = order.indexOf(a.category ?? "");
-          const bi = order.indexOf(b.category ?? "");
+          const ai = sponsorCategorySortIndex(a.category);
+          const bi = sponsorCategorySortIndex(b.category);
           if (ai !== bi) return ai - bi;
           return (a.order ?? 99) - (b.order ?? 99);
         });

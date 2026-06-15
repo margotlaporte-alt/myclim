@@ -13,6 +13,7 @@ import {
   useAllPressReleases,
   useSponsors,
 } from "../site/site-hooks";
+import { SPONSOR_CATEGORY_LABELS, SPONSOR_CATEGORY_ORDER, sponsorCategorySortIndex } from "../site/sponsor-utils";
 import { updateEdition, useMeetingEditions } from "./meeting-history-hooks";
 
 /* ── Shared helpers ──────────────────────────────────────── */
@@ -295,7 +296,7 @@ export function WebsiteNewsPage({ Panel }) {
 }
 
 /* ── Sponsors admin ──────────────────────────────────────── */
-const SPONSOR_CATEGORIES = ["main", "institutional", "media", "supplier"];
+const SPONSOR_CATEGORIES = SPONSOR_CATEGORY_ORDER;
 
 function SponsorForm({ initial, onSave, onCancel }) {
   const [data, setData] = useState({
@@ -347,7 +348,7 @@ function SponsorForm({ initial, onSave, onCancel }) {
                 else set("category", e.target.value);
               }}
             >
-              {SPONSOR_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              {SPONSOR_CATEGORIES.map((c) => <option key={c} value={c}>{SPONSOR_CATEGORY_LABELS[c] || c}</option>)}
               <option value="__custom__">Autre…</option>
             </select>
             {!SPONSOR_CATEGORIES.includes(data.category) && (
@@ -471,10 +472,9 @@ export function WebsiteSponsorsPage({ Panel }) {
             <tbody>
               {sponsors
                 .sort((a, b) => {
-                  const order = ["main", "institutional", "media", "supplier"];
-                  const ai = order.indexOf(a.category ?? "");
-                  const bi = order.indexOf(b.category ?? "");
-                  if (ai !== bi) return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+                  const ai = sponsorCategorySortIndex(a.category);
+                  const bi = sponsorCategorySortIndex(b.category);
+                  if (ai !== bi) return ai - bi;
                   return (a.order ?? 99) - (b.order ?? 99);
                 })
                 .map((s) => (
