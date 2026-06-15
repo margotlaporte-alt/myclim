@@ -214,12 +214,10 @@ const supportTaskDayOptions = ["Vendredi", "Samedi", "Dimanche", "Lundi"];
 const platformRoleOptions = [
   { value: "admin", label: "Administrateur" },
   { value: "gestionnaire", label: "Gestionnaire" },
-  { value: "gestionnaire_site", label: "Gestion site internet" },
+  { value: "gestionnaire_site", label: "Gestionnaire site" },
   { value: "chef_equipe", label: "Chef d'équipe" },
   { value: "benevole", label: "Bénévole" },
   { value: "parent_u14", label: "Parent U14" },
-  { value: "benevole_transport_athletes", label: "Bénévole Transport Athlètes" },
-  { value: "chef_transport_athletes", label: "Chef Transport Athlètes" },
 ];
 
 const TEAM_CONFIGURATION_DOC_PATH = ["appSettings", "teamsConfiguration"];

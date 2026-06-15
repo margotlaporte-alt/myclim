@@ -33,6 +33,7 @@ export function FileUpload({ value, onChange, accept = "application/pdf", storag
     setError("");
     setProgress(0);
 
+    const ext = file.name.split(".").pop();
     const safeName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
     const storageRef = ref(storage, `${storagePath}/${safeName}`);
     const task = uploadBytesResumable(storageRef, file);

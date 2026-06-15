@@ -1,0 +1,165 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function currentUserDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function userTypes() {
+      return isSignedIn() && currentUserDoc().data.userTypes is list
+        ? currentUserDoc().data.userTypes
+        : [];
+    }
+
+    function isAdmin() {
+      return isSignedIn() && "admin" in userTypes();
+    }
+
+    function isAdminOrManager() {
+      return isSignedIn() &&
+        (
+          "admin" in userTypes() ||
+          "gestionnaire" in userTypes()
+        );
+    }
+
+    function isWebsiteManager() {
+      return isSignedIn() &&
+        (
+          "admin" in userTypes() ||
+          "gestionnaire" in userTypes() ||
+          "gestionnaire_site" in userTypes()
+        );
+    }
+
+    function isParentOwnerCreate() {
+      return isSignedIn() &&
+        request.resource.data.parentUserId == request.auth.uid;
+    }
+
+    function isParentOwnerExisting() {
+      return isSignedIn() &&
+        resource.data.parentUserId == request.auth.uid;
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdminOrManager();
+      allow create: if isOwner(userId) || isAdminOrManager();
+      allow update: if isOwner(userId) || isAdminOrManager();
+      allow delete: if isAdmin();
+    }
+
+    match /appSettings/platform {
+      allow read: if true;
+      allow write: if isAdminOrManager();
+    }
+
+    // ── Candidatures bénévoles ───────────────────────────────────────────────
+    // Manquait complètement → tombait dans le catch-all (admin/manager only)
+    match /volunteerApplications/{docId} {
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow read:   if isAdminOrManager() || (isSignedIn() && resource.data.uid == request.auth.uid);
+      allow update: if isAdminOrManager() || (isSignedIn() && resource.data.uid == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+
+    match /u14Children/{childId} {
+      allow create: if isParentOwnerCreate() || isAdminOrManager();
+      allow read:   if isParentOwnerExisting() || isAdminOrManager();
+      allow update: if isParentOwnerExisting() || isAdminOrManager();
+      allow delete: if isAdminOrManager();
+    }
+
+    match /u14Requests/{requestId} {
+      allow create: if isParentOwnerCreate() || isAdminOrManager();
+      allow read:   if isParentOwnerExisting() || isAdminOrManager();
+      allow update: if isParentOwnerExisting() || isAdminOrManager();
+      allow delete: if isAdminOrManager();
+    }
+
+    match /vipPublicRegistrations/{registrationId} {
+      allow create: if true;
+      allow read, update, delete: if isAdminOrManager();
+    }
+
+    match /vipInvitations/{invitationId} {
+      allow read, write: if isAdminOrManager();
+    }
+
+    // ── Invitations plateforme ───────────────────────────────────────────────
+    // Lecture publique : le token UUID fait office de secret (lien d'activation).
+    // Création/suppression réservées aux admins.
+    // Mise à jour : admins OU l'utilisateur qui accepte sa propre invitation
+    // (email auth == email invitation, statut encore pending).
+    match /invitations/{invitationId} {
+      allow read: if true;
+      allow create, delete: if isAdminOrManager();
+      allow update: if isAdminOrManager() ||
+        (isSignedIn() &&
+         resource.data.email == request.auth.token.email &&
+         resource.data.status == "pending");
+    }
+
+    match /vipAdminRegistrations/{registrationId} {
+      allow read, write: if isAdminOrManager();
+    }
+
+    match /vipPartnerPortals/{portalId} {
+      allow read: if true;
+      allow write: if isAdminOrManager();
+    }
+
+    match /vipPartnerPortals/{portalId}/entries/{entryId} {
+      allow read, create, update, delete: if true;
+    }
+
+    // ── Documents partagés ──────────────────────────────────────────────────
+    // Lecture ouverte aux bénévoles et chefs d'équipe (actuellement bloqué par catch-all)
+    match /documents/{docId} {
+      allow read:  if isSignedIn();
+      allow write: if isAdminOrManager();
+    }
+
+    // ── Configuration équipes ────────────────────────────────────────────────
+    // Lecture ouverte aux bénévoles (pour voir leurs affectations)
+    match /teamConfiguration/{docId} {
+      allow read:  if isSignedIn();
+      allow write: if isAdminOrManager();
+    }
+
+    // ── Site public (gestion contenu) ───────────────────────────────────────
+    match /siteSponsors/{docId} {
+      allow read: if true;
+      allow write: if isWebsiteManager();
+    }
+
+    match /siteNews/{docId} {
+      allow read: if true;
+      allow write: if isWebsiteManager();
+    }
+
+    match /sitePressReleases/{docId} {
+      allow read: if true;
+      allow write: if isWebsiteManager();
+    }
+
+    match /siteContent/{docId} {
+      allow read: if true;
+      allow write: if isWebsiteManager();
+    }
+
+    match /{document=**} {
+      allow read, write: if isAdminOrManager();
+    }
+  }
+}

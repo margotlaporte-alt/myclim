@@ -8,8 +8,7 @@ import {
   normalizeEditionId,
   useActiveEdition,
 } from "./edition";
-import { buildAthletePortalNavigation, buildNavigationFromRoles, getActiveRoles, getPrimaryRole } from "./navigation";
-import { canAccessAthletePortal, canImportAthletes, useAthletePortalSettings } from "./athlete-portal-hooks";
+import { buildNavigationFromRoles, getActiveRoles, getPrimaryRole } from "./navigation";
 import { useTeamConfiguration } from "./config-hooks";
 import { useDocumentsCollection } from "./documents-hooks";
 import { useVolunteerApplication, useVolunteerApplicationsList } from "./volunteer-hooks";
@@ -55,8 +54,6 @@ function AppShell(props) {
   const navigate = useNavigate();
   const roles = getActiveRoles(userProfile);
   const { activeEditionLabel } = useActiveEdition();
-  const { settings: portalSettings, loading: portalSettingsLoading } = useAthletePortalSettings();
-  const isAthletePortal = location.pathname.startsWith("/app/athlete-portal");
   const [preferredViewAsRole, setPreferredViewAsRole] = useState(() => getPrimaryRole(userProfile));
   const [isSidebarOpen, setIsSidebarOpen] = useState(() =>
     typeof window === "undefined" ? true : window.innerWidth > 1100,
@@ -70,30 +67,7 @@ function AppShell(props) {
     if (viewAsRole === "admin") return roles;
     return [viewAsRole];
   }, [roles, viewAsRole]);
-
-  const portalCanImport = useMemo(() => canImportAthletes(roles, portalSettings), [roles, portalSettings]);
-  const mainNavigation = useMemo(() => {
-    const nav = buildNavigationFromRoles(effectiveRoles);
-    if (!portalSettingsLoading && canAccessAthletePortal(roles, portalSettings)) {
-      const portalLink = { to: "/app/athlete-portal", label: "Athlete Portal", icon: "spark" };
-      if (Array.isArray(nav)) {
-        const lastSection = nav[nav.length - 1];
-        if (lastSection?.type === "section") {
-          lastSection.links = [portalLink, ...lastSection.links];
-        } else {
-          nav.splice(nav.length - 1, 0, portalLink);
-        }
-      }
-    }
-    return nav;
-  }, [effectiveRoles, roles, portalSettings, portalSettingsLoading]);
-
-  const portalNavigation = useMemo(
-    () => buildAthletePortalNavigation(roles, portalSettings, { canImport: portalCanImport }),
-    [roles, portalSettings, portalCanImport],
-  );
-
-  const navigation = isAthletePortal ? portalNavigation : mainNavigation;
+  const navigation = useMemo(() => buildNavigationFromRoles(effectiveRoles), [effectiveRoles]);
   const flatNavigation = useMemo(() => flattenNavigationItems(navigation), [navigation]);
   const displayName = getDisplayName(userProfile, currentUser?.email);
   const currentRouteLabel = useMemo(
@@ -152,39 +126,19 @@ function AppShell(props) {
 
   return (
     <div className={`shell${isSidebarOpen ? " shell--sidebar-open" : " shell--sidebar-closed"}`}>
-      <aside className={`sidebar${isSidebarOpen ? " sidebar--open" : ""}${isAthletePortal ? " sidebar--portal" : ""}`}>
+      <aside className={`sidebar${isSidebarOpen ? " sidebar--open" : ""}`}>
         <div className="sidebar-header">
-          {isAthletePortal ? (
-            <div className="sidebar-brand">
-              <div className="sidebar-brand-lockup">
-                <div className="sidebar-brand-logo-shell sidebar-brand-logo-shell--portal">
-                  <img alt="Logo CMCM Luxembourg Indoor Meeting" className="sidebar-brand-logo" src={cmcmLogo} />
-                </div>
-                <div className="sidebar-brand-copy">
-                  <h2>Athlete Portal</h2>
-                  <p className="sidebar-brand-tagline sidebar-brand-tagline--portal">CLIM {activeEditionLabel}</p>
-                </div>
+          <div className="sidebar-brand">
+            <div className="sidebar-brand-lockup">
+              <div className="sidebar-brand-logo-shell">
+                <img alt="Logo CMCM Luxembourg Indoor Meeting" className="sidebar-brand-logo" src={cmcmLogo} />
               </div>
-              <NavLink
-                className="button button--ghost button--small sidebar-portal-back"
-                to="/app"
-              >
-                ← Back to MyCLIM
-              </NavLink>
+              <div className="sidebar-brand-copy">
+                <h2>MyCLIM</h2>
+              </div>
             </div>
-          ) : (
-            <div className="sidebar-brand">
-              <a href="/" className="sidebar-brand-lockup sidebar-brand-lockup--link" title="Retour au site public">
-                <div className="sidebar-brand-logo-shell">
-                  <img alt="Logo CMCM Luxembourg Indoor Meeting" className="sidebar-brand-logo" src={cmcmLogo} />
-                </div>
-                <div className="sidebar-brand-copy">
-                  <h2>MyCLIM</h2>
-                </div>
-              </a>
-              <p className="sidebar-brand-tagline">Plateforme équipes et accès meeting.</p>
-            </div>
-          )}
+            <p className="sidebar-brand-tagline">Plateforme équipes et accès meeting.</p>
+          </div>
           <button
             className="button button--ghost sidebar-toggle sidebar-toggle--inside"
             type="button"
@@ -280,7 +234,7 @@ function AppShell(props) {
           </button>
           <span className="shell-mobile-bar__route">{currentRouteLabel}</span>
         </div>
-        {roles.includes("admin") && !isAthletePortal ? (
+        {roles.includes("admin") ? (
           <div className="content-toolbar">
             <label className="view-switcher">
               <span>Voir comme</span>
