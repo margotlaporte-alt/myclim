@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { NavLink } from "react-router-dom";
+import { formatEditionLabel, getEditionDisplayNumber } from "../app/meeting-edition-utils";
 import {
   useAllWinners,
   useMeetingEditions,
@@ -324,9 +325,14 @@ function EditionResultsPanel({ editions }) {
           value={selectedYear}
           onChange={(e) => { setSelectedYear(e.target.value); setDisciplineFilter("all"); }}
         >
-          {editions.map((e) => (
-            <option key={e.year} value={String(e.year)}>{e.year} — Edition {e.edition}</option>
-          ))}
+          {editions.map((e) => {
+            const editionLabel = formatEditionLabel(e);
+            return (
+              <option key={e.year} value={String(e.year)}>
+                {editionLabel ? `${e.year} — ${editionLabel}` : `${e.year}`}
+              </option>
+            );
+          })}
         </select>
       </div>
       <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--site-border)", display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
@@ -523,7 +529,9 @@ function EditionsPanel({ editions, winners, loading }) {
           <tbody>
             {loading ? <LoadingRows cols={4} /> : editions.map((e, i) => (
               <tr key={e.year || i}>
-                <td style={{ color: "var(--site-text-muted)", fontWeight: 600 }}>#{e.edition}</td>
+                <td style={{ color: "var(--site-text-muted)", fontWeight: 600 }}>
+                  {getEditionDisplayNumber(e) ? `#${getEditionDisplayNumber(e)}` : "—"}
+                </td>
                 <td style={{ fontWeight: 700 }}>{e.year}</td>
                 <td>{e.name}</td>
                 <td>

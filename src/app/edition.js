@@ -4,6 +4,7 @@ import { db } from "../services/firebase";
 
 const DEFAULT_ACTIVE_EDITION = "test";
 const ACTIVE_EDITION_DOC_PATH = ["appSettings", "platform"];
+const DEFAULT_SITE_EDITION_YEAR = null;
 const DEFAULT_PREPROGRAM_OPENING_BY_EDITION = {
   "2027": "2026-11-10T10:00:00+01:00",
 };
@@ -51,6 +52,13 @@ function getPreprogramOpeningDate(editionId, preprogramOpeningByEdition = DEFAUL
   return configuredOpeningDate ? new Date(configuredOpeningDate) : null;
 }
 
+function normalizeSiteEditionYear(value) {
+  if (value == null || value === "") return null;
+  const numericYear = Number(value);
+  if (!Number.isFinite(numericYear)) return null;
+  return numericYear;
+}
+
 function isPreprogramOpenForEdition(
   editionId,
   now = Date.now(),
@@ -85,6 +93,21 @@ async function setActiveEditionId(editionId) {
   );
 
   return normalizedEditionId;
+}
+
+async function setSiteEditionYear(siteEditionYear) {
+  const normalizedSiteEditionYear = normalizeSiteEditionYear(siteEditionYear);
+
+  await setDoc(
+    doc(db, ...ACTIVE_EDITION_DOC_PATH),
+    {
+      siteEditionYear: normalizedSiteEditionYear,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
+
+  return normalizedSiteEditionYear;
 }
 
 function useActiveEdition(enabled = true) {
@@ -133,10 +156,49 @@ function useActiveEdition(enabled = true) {
   };
 }
 
+function useSiteEditionYear(enabled = true) {
+  const [siteEditionYear, setSiteEditionYearState] = useState(DEFAULT_SITE_EDITION_YEAR);
+  const [loading, setLoading] = useState(Boolean(enabled));
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!enabled) {
+      setSiteEditionYearState(DEFAULT_SITE_EDITION_YEAR);
+      setLoading(false);
+      setError("");
+      return undefined;
+    }
+
+    const unsubscribe = onSnapshot(
+      doc(db, ...ACTIVE_EDITION_DOC_PATH),
+      (snapshot) => {
+        const data = snapshot.exists() ? snapshot.data() : {};
+        setSiteEditionYearState(normalizeSiteEditionYear(data?.siteEditionYear));
+        setLoading(false);
+        setError("");
+      },
+      () => {
+        setSiteEditionYearState(DEFAULT_SITE_EDITION_YEAR);
+        setLoading(false);
+        setError("Impossible de charger l'édition publique.");
+      },
+    );
+
+    return unsubscribe;
+  }, [enabled]);
+
+  return {
+    siteEditionYear,
+    loading,
+    error,
+  };
+}
+
 export {
   ACTIVE_EDITION_DOC_PATH,
   DEFAULT_ACTIVE_EDITION,
   DEFAULT_PREPROGRAM_OPENING_BY_EDITION,
+  DEFAULT_SITE_EDITION_YEAR,
   getActiveEditionId,
   getEditionLabel,
   getPreprogramOpeningDate,
@@ -144,7 +206,10 @@ export {
   isPreprogramOpenForEdition,
   normalizePreprogramOpeningByEdition,
   normalizeEditionId,
+  normalizeSiteEditionYear,
   recordMatchesEdition,
   setActiveEditionId,
+  setSiteEditionYear,
   useActiveEdition,
+  useSiteEditionYear,
 };

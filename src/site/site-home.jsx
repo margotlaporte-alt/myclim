@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink } from "react-router-dom";
+import { useSiteEditionYear } from "../app/edition";
+import { formatEditionLabel, getEditionDisplayNumber } from "../app/meeting-edition-utils";
 import { useMeetingEditions, useMeetingResultsForYear } from "../app/meeting-history-hooks";
 import { usePublishedNews, useSponsors } from "./site-hooks";
 import { SPONSOR_CATEGORY_LABELS, SPONSOR_CATEGORY_ORDER, sponsorCategoryLabel } from "./sponsor-utils";
@@ -16,6 +18,7 @@ import ambiance2 from "../assets/site-gallery/ambiance-2.jpg";
 import ambiance3 from "../assets/site-gallery/ambiance-3.jpg";
 import aboutVdw from "../assets/site-gallery/about-vdw.jpg";
 import coqueWide from "../assets/site-gallery/Coque2026.jpg";
+import meetingEditionsSeed from "../data/meetingEditions.json";
 
 /* ── Animated counter ──────────────────────────────────── */
 function AnimatedNumber({ target, suffix = "", prefix = "" }) {
@@ -112,26 +115,51 @@ function formatNewsDate(ts) {
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
 
+function formatEditionDate(value) {
+  if (!value) return "Date to be confirmed";
+  const date = value?.toDate ? value.toDate() : new Date(value);
+  if (Number.isNaN(date.getTime())) return "Date to be confirmed";
+  return date.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
 /* ── Main component ─────────────────────────────────────── */
 export function SiteHome() {
-  const { editions, loading: edLoading } = useMeetingEditions();
+  const { editions } = useMeetingEditions();
+  const { siteEditionYear } = useSiteEditionYear();
   const { news } = usePublishedNews(4);
   const { sponsors } = useSponsors(true);
 
   const latestEdition = editions[0] || null;
-  const totalEditions = editions.length;
+  const configuredSiteEdition = siteEditionYear
+    ? editions.find((edition) => Number(edition.year || edition.id) === Number(siteEditionYear)) || null
+    : null;
+  const heroEdition = configuredSiteEdition || latestEdition || null;
   const latestYear = latestEdition ? Number(latestEdition.year || latestEdition.id) || null : null;
+  const heroEditionYear = heroEdition ? Number(heroEdition.year || heroEdition.id) || null : null;
+  const seededLatestEdition = meetingEditionsSeed[meetingEditionsSeed.length - 1] || null;
+  const fallbackEdition = heroEditionYear
+    ? meetingEditionsSeed.find((edition) => Number(edition.year) === heroEditionYear) || seededLatestEdition
+    : seededLatestEdition;
+  const displayEdition = heroEdition || fallbackEdition;
+  const statsEdition = meetingEditionsSeed.find((edition) => Number(edition.year) === 2026) || fallbackEdition;
+  const statsEditionNumber = getEditionDisplayNumber(statsEdition) || 23;
+  const statsEditionYear = Number(statsEdition?.year) || 2026;
 
   const { results: latestResults } = useMeetingResultsForYear(latestYear);
 
   // Derive key stats from data
-  const totalCountries = 32; // could be computed from results
-  const totalAthletes = 200;
-  const totalSpectators = 3500;
+  const totalCountries = 41;
+  const totalAthletes = 158;
+  const totalSpectators = 2497;
+  const worldLeadingPerformances = 6;
 
-  // Next edition info (hardcoded for now — can be made configurable)
-  const nextDate = "18 January 2026";
-  const nextVenue = "Coque, Luxembourg";
+  // Next edition info from back office
+  const nextDate = formatEditionDate(displayEdition?.date || fallbackEdition?.date);
+  const nextVenue = displayEdition?.venue || fallbackEdition?.venue || "Coque, Luxembourg";
 
   // Group sponsors by category for display
   const sponsorsByCategory = sponsors.reduce((acc, s) => {
@@ -214,11 +242,11 @@ export function SiteHome() {
               </svg>
               {nextVenue}
             </div>
-            {latestEdition && (
+            {formatEditionLabel(displayEdition) && (
               <>
                 <div className="site-hero__date-sep" />
                 <div className="site-hero__date-item">
-                  Edition {latestEdition.edition ? latestEdition.edition + 1 : "24"}
+                  {formatEditionLabel(displayEdition)}
                 </div>
               </>
             )}
@@ -230,9 +258,6 @@ export function SiteHome() {
             </NavLink>
             <NavLink to="/event" className="site-btn site-btn--secondary">
               Event Information
-            </NavLink>
-            <NavLink to="/become-a-partner" className="site-btn site-btn--blue">
-              Become a Partner
             </NavLink>
             <a
               href="#aftermovie"
@@ -259,24 +284,30 @@ export function SiteHome() {
           KEY FIGURES
       ════════════════════════════════════════════════ */}
       <section className="site-stats-ribbon">
+        <div className="site-container">
+          <div className="site-stats-ribbon__intro">
+            <span className="site-eyebrow">Current benchmark</span>
+            <p>Key numbers from the {statsEditionYear} edition</p>
+          </div>
+        </div>
         <div className="site-stats-ribbon__inner">
           <div className="site-stat-item">
             <div className="site-stat-item__number">
-              <AnimatedNumber target={totalEditions || 23} />
+              <AnimatedNumber target={statsEditionNumber} />
             </div>
-            <div className="site-stat-item__label">Editions</div>
+            <div className="site-stat-item__label">Edition Number</div>
           </div>
           <div className="site-stat-item">
             <div className="site-stat-item__number site-stat-item__number--red">
-              <AnimatedNumber target={totalAthletes} suffix="+" />
+              <AnimatedNumber target={totalAthletes} />
             </div>
-            <div className="site-stat-item__label">Elite Athletes</div>
+            <div className="site-stat-item__label">Athletes</div>
           </div>
           <div className="site-stat-item">
             <div className="site-stat-item__number site-stat-item__number--blue">
               <AnimatedNumber target={totalCountries} />
             </div>
-            <div className="site-stat-item__label">Nations</div>
+            <div className="site-stat-item__label">Countries</div>
           </div>
           <div className="site-stat-item">
             <div className="site-stat-item__number site-stat-item__number--gold">
@@ -286,42 +317,9 @@ export function SiteHome() {
           </div>
           <div className="site-stat-item">
             <div className="site-stat-item__number">
-              <AnimatedNumber target={42} />
+              <AnimatedNumber target={worldLeadingPerformances} />
             </div>
-            <div className="site-stat-item__label">Meeting Records</div>
-          </div>
-        </div>
-      </section>
-
-      <section className="site-home-sponsor-promo">
-        <div className="site-container">
-          <div className="site-home-sponsor-promo__panel">
-            <div className="site-home-sponsor-promo__copy">
-              <span className="site-eyebrow">For brands & institutions</span>
-              <h2>Put your brand on Luxembourg&apos;s biggest indoor athletics stage</h2>
-              <p>
-                Reach spectators, athletes, institutions and media through a premium international event built around sport, hospitality and visibility.
-              </p>
-            </div>
-            <div className="site-home-sponsor-promo__points">
-              {[
-                "International visibility",
-                "VIP networking opportunities",
-                "Tailor-made activation formats",
-              ].map((item) => (
-                <div key={item} className="site-home-sponsor-promo__point">
-                  {item}
-                </div>
-              ))}
-            </div>
-            <div className="site-home-sponsor-promo__actions">
-              <NavLink to="/become-a-partner" className="site-btn site-btn--primary">
-                Explore sponsorship opportunities
-              </NavLink>
-              <NavLink to="/partners" className="site-btn site-btn--secondary">
-                Meet our partners
-              </NavLink>
-            </div>
+            <div className="site-stat-item__label">World Leads</div>
           </div>
         </div>
       </section>
@@ -412,10 +410,10 @@ export function SiteHome() {
             }}>
               <div style={{ fontSize: "2.5rem", marginBottom: 16 }}>🏁</div>
               <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--site-text)", marginBottom: 8 }}>
-                Bientôt disponible
+                Coming soon
               </h3>
               <p style={{ fontSize: "0.9rem", maxWidth: 400, margin: "0 auto" }}>
-                Les résultats live seront accessibles ici le jour de la compétition.
+                Live results will be available here on competition day.
               </p>
             </div>
           )}

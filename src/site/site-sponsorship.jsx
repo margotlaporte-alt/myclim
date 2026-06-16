@@ -148,25 +148,6 @@ function TrustedPartnerCard({ sponsor, fallbackName }) {
   );
 }
 
-function StickyCta() {
-  return (
-    <div className="site-sponsorship-sticky-cta">
-      <a
-        href="mailto:events@fla.lu?subject=Sponsorship%20deck%20request%20%E2%80%93%20CMCM%20Luxembourg%20Indoor%20Meeting"
-        className="site-btn site-btn--primary"
-      >
-        Receive the sponsorship deck
-      </a>
-      <a
-        href="mailto:events@fla.lu?subject=Partnership%20inquiry%20%E2%80%93%20CMCM%20Luxembourg%20Indoor%20Meeting"
-        className="site-btn site-btn--secondary"
-      >
-        Contact us
-      </a>
-    </div>
-  );
-}
-
 export function SiteSponsorship() {
   const { sponsors } = useSponsors(true);
   const trustedSponsors = TRUSTED_PARTNERS.map((name) => ({
@@ -176,8 +157,6 @@ export function SiteSponsorship() {
 
   return (
     <div className="site-sponsorship-page">
-      <StickyCta />
-
       <section className="site-sponsorship-hero">
         <div className="site-container site-sponsorship-hero__grid">
           <div className="site-sponsorship-hero__content">
