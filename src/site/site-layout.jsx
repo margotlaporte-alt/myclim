@@ -90,6 +90,9 @@ export function SiteLayout() {
           </ul>
 
           <div className="site-nav__actions">
+            <NavLink to="/become-a-partner" className="site-nav__partner">
+              Partner with us
+            </NavLink>
             {currentUser ? (
               <a href="/app" className="site-nav__login site-nav__login--myspace">
                 Mon espace →
@@ -126,6 +129,9 @@ export function SiteLayout() {
             {link.label}
           </NavLink>
         ))}
+        <NavLink to="/become-a-partner" className="site-nav__mobile-partner">
+          Partner with us
+        </NavLink>
         {currentUser ? (
           <a href="/app" className="site-nav__mobile-login">Mon espace →</a>
         ) : (
@@ -141,6 +147,27 @@ export function SiteLayout() {
       {/* ── Footer ──────────────────────────────────────── */}
       <footer className="site-footer">
         <div className="site-container">
+          <div className="site-footer__cta">
+            <div className="site-footer__cta-copy">
+              <span className="site-footer__cta-eyebrow">Partnership opportunities</span>
+              <h2>Become a partner of the CMCM Luxembourg Indoor Meeting</h2>
+              <p>
+                Join an international athletics event that combines visibility, hospitality, business relationships and Luxembourg-wide reach.
+              </p>
+            </div>
+            <div className="site-footer__cta-actions">
+              <NavLink to="/become-a-partner" className="site-btn site-btn--primary">
+                Sponsorship opportunities
+              </NavLink>
+              <a
+                href="mailto:events@fla.lu?subject=Partnership%20inquiry%20%E2%80%93%20CMCM%20Luxembourg%20Indoor%20Meeting"
+                className="site-btn site-btn--secondary"
+              >
+                Contact us
+              </a>
+            </div>
+          </div>
+
           <div className="site-footer__grid">
             <div className="site-footer__brand">
               <img src={cmcmLogo} alt="CMCM Luxembourg Indoor Meeting" />
@@ -207,8 +234,8 @@ export function SiteLayout() {
               <p className="site-footer__col-title">Contact</p>
               <ul className="site-footer__col-links">
                 <li>
-                  <a href="mailto:contact@luxembourg-indoor-meeting.lu">
-                    contact@luxembourg-indoor-meeting.lu
+                  <a href="mailto:events@fla.lu">
+                    events@fla.lu
                   </a>
                 </li>
                 <li><a href="https://fla.lu" target="_blank" rel="noopener noreferrer">Fédération Luxembourgeoise d'Athlétisme</a></li>

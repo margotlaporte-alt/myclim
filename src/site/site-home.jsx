@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useMeetingEditions, useMeetingResultsForYear } from "../app/meeting-history-hooks";
 import { usePublishedNews, useSponsors } from "./site-hooks";
+import { SPONSOR_CATEGORY_LABELS, SPONSOR_CATEGORY_ORDER, sponsorCategoryLabel } from "./sponsor-utils";
 import cmcmLogo from "../assets/cmcm-logo.png";
 import heroPhoto from "../assets/hero-photo.jpg";
 import waLogo from "../assets/wa-indoor-tour-silver.png";
@@ -140,14 +141,11 @@ export function SiteHome() {
     return acc;
   }, {});
 
-  const categoryOrder = ["title", "main", "institutional", "media", "supplier"];
-  const categoryLabels = {
-    title: "Title Partner",
-    main: "Main Partners",
-    institutional: "Institutional Partners",
-    media: "Media Partners",
-    supplier: "Suppliers & Partners",
-  };
+  const categoryOrder = [
+    ...SPONSOR_CATEGORY_ORDER,
+    ...Object.keys(sponsorsByCategory).filter((cat) => !SPONSOR_CATEGORY_ORDER.includes(cat)),
+  ];
+  const categoryLabels = SPONSOR_CATEGORY_LABELS;
 
   // Winners of the latest edition — from meetingWinners collection, fallback to rank=1 from results
   const DISCIPLINE_ORDER = [
@@ -233,6 +231,9 @@ export function SiteHome() {
             <NavLink to="/event" className="site-btn site-btn--secondary">
               Event Information
             </NavLink>
+            <NavLink to="/become-a-partner" className="site-btn site-btn--blue">
+              Become a Partner
+            </NavLink>
             <a
               href="#aftermovie"
               className="site-btn site-btn--secondary"
@@ -288,6 +289,39 @@ export function SiteHome() {
               <AnimatedNumber target={42} />
             </div>
             <div className="site-stat-item__label">Meeting Records</div>
+          </div>
+        </div>
+      </section>
+
+      <section className="site-home-sponsor-promo">
+        <div className="site-container">
+          <div className="site-home-sponsor-promo__panel">
+            <div className="site-home-sponsor-promo__copy">
+              <span className="site-eyebrow">For brands & institutions</span>
+              <h2>Put your brand on Luxembourg&apos;s biggest indoor athletics stage</h2>
+              <p>
+                Reach spectators, athletes, institutions and media through a premium international event built around sport, hospitality and visibility.
+              </p>
+            </div>
+            <div className="site-home-sponsor-promo__points">
+              {[
+                "International visibility",
+                "VIP networking opportunities",
+                "Tailor-made activation formats",
+              ].map((item) => (
+                <div key={item} className="site-home-sponsor-promo__point">
+                  {item}
+                </div>
+              ))}
+            </div>
+            <div className="site-home-sponsor-promo__actions">
+              <NavLink to="/become-a-partner" className="site-btn site-btn--primary">
+                Explore sponsorship opportunities
+              </NavLink>
+              <NavLink to="/partners" className="site-btn site-btn--secondary">
+                Meet our partners
+              </NavLink>
+            </div>
           </div>
         </div>
       </section>
@@ -744,7 +778,7 @@ export function SiteHome() {
               .filter((cat) => sponsorsByCategory[cat]?.length)
               .map((cat) => (
                 <div key={cat} className="site-sponsors__category">
-                  <p className="site-sponsors__category-title">{categoryLabels[cat]}</p>
+                  <p className="site-sponsors__category-title">{categoryLabels[cat] || sponsorCategoryLabel(cat)}</p>
                   <div className="site-sponsors__row">
                     {sponsorsByCategory[cat].map((s) => (
                       s.website ? (
@@ -804,9 +838,14 @@ export function SiteHome() {
           )}
 
           <div style={{ textAlign: "center", marginTop: 48 }}>
-            <NavLink to="/partners" className="site-btn site-btn--secondary site-btn--sm">
-              View all partners →
-            </NavLink>
+            <div className="site-home-partners__actions">
+              <NavLink to="/partners" className="site-btn site-btn--secondary site-btn--sm">
+                View all partners →
+              </NavLink>
+              <NavLink to="/become-a-partner" className="site-btn site-btn--primary site-btn--sm">
+                Become a partner
+              </NavLink>
+            </div>
           </div>
         </div>
       </section>
@@ -831,6 +870,9 @@ export function SiteHome() {
             Join us as a volunteer, apply for press accreditation, or discover our VIP packages.
           </p>
           <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
+            <NavLink to="/become-a-partner" className="site-btn" style={{ background: "#fff", color: "var(--site-red)", fontWeight: 800 }}>
+              Become a partner
+            </NavLink>
             <a href="/volunteer-apply" className="site-btn" style={{ background: "#fff", color: "var(--site-red)", fontWeight: 800 }}>
               Become a volunteer
             </a>

@@ -23,6 +23,7 @@ import { SiteEvent } from "./site/site-event";
 import { SiteStatistics } from "./site/site-statistics";
 import { SitePress } from "./site/site-press";
 import { SitePartners } from "./site/site-partners";
+import { SiteSponsorship } from "./site/site-sponsorship";
 import { SiteNewsListPage, SiteNewsArticlePage } from "./site/site-news";
 import { SitePreProgramme } from "./site/site-preprogramme";
 import { VolunteersPage as VolunteersPageScreen } from "./app/volunteers-page";
@@ -444,6 +445,7 @@ export default function App() {
             <Route path="/statistics" element={<SiteStatistics />} />
             <Route path="/press" element={<SitePress />} />
             <Route path="/partners" element={<SitePartners />} />
+            <Route path="/become-a-partner" element={<SiteSponsorship />} />
             <Route path="/news" element={<SiteNewsListPage />} />
             <Route path="/news/:slug" element={<SiteNewsArticlePage />} />
             <Route path="/programme" element={<SitePreProgramme />} />
