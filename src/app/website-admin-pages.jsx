@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { FileUpload } from "./file-upload";
+import { setSiteEditionYear, useSiteEditionYear } from "./edition";
 import {
   deleteNewsArticle,
   deletePressRelease,
@@ -21,6 +22,13 @@ function formatDate(ts) {
   if (!ts) return "—";
   const d = ts.toDate ? ts.toDate() : new Date(ts);
   return d.toLocaleDateString("fr-BE", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+function formatDateInputValue(value) {
+  if (!value) return "";
+  const d = value.toDate ? value.toDate() : new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toISOString().slice(0, 10);
 }
 
 function StatusBadge({ status }) {
@@ -802,9 +810,10 @@ const ROUND_OPTIONS = ["Final", "Final A", "Final B", "Final 1", "Final 2", "Hea
 
 export function WebsiteEditionPage({ Panel }) {
   const { editions, loading: editionsLoading } = useMeetingEditions();
+  const { siteEditionYear } = useSiteEditionYear();
 
-  // Default to the most recent non-closed edition
-  const defaultYear = editions.find((e) => !e.isClosed)?.year ?? editions[0]?.year ?? null;
+  // Default to the edition currently used on the public site
+  const defaultYear = siteEditionYear ?? editions.find((e) => !e.isClosed)?.year ?? editions[0]?.year ?? null;
   const [selectedYear, setSelectedYear] = useState(null);
   const effectiveYear = selectedYear ?? defaultYear;
   const selectedEdition = editions.find((e) => e.year === effectiveYear) ?? null;
@@ -886,10 +895,22 @@ export function WebsiteEditionPage({ Panel }) {
   const nextYear = editions.length > 0 ? Math.max(...editions.map((e) => e.year)) + 1 : new Date().getFullYear() + 1;
   const nextYearExists = editions.some((e) => e.year === nextYear);
 
+  useEffect(() => {
+    setDateInput(formatDateInputValue(selectedEdition?.date));
+    setVenueInput(selectedEdition?.venue || "");
+  }, [selectedEdition?.date, selectedEdition?.venue, effectiveYear]);
+
+  useEffect(() => {
+    if (!siteEditionYear && effectiveYear) {
+      void setSiteEditionYear(effectiveYear);
+    }
+  }, [siteEditionYear, effectiveYear]);
+
   async function handleCreateEdition() {
     setCreatingYear(true);
     try {
       await updateEdition(nextYear, { year: nextYear });
+      await setSiteEditionYear(nextYear);
       setSelectedYear(nextYear);
     } finally { setCreatingYear(false); }
   }
@@ -909,7 +930,11 @@ export function WebsiteEditionPage({ Panel }) {
           <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
             <select
               value={effectiveYear ?? ""}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              onChange={async (e) => {
+                const nextYearValue = Number(e.target.value);
+                setSelectedYear(nextYearValue);
+                await setSiteEditionYear(nextYearValue);
+              }}
               style={{ ...inp, minWidth: 140 }}
             >
               {editions.filter((e) => !e.cancelled).map((e) => (
@@ -938,15 +963,16 @@ export function WebsiteEditionPage({ Panel }) {
           {/* ── Infos de base ── */}
           <div style={{ padding: "16px 20px", background: "#f8fafc", borderRadius: 10, border: "1px solid #e2e8f0" }}>
             <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#374151", marginBottom: 14 }}>Infos de base</div>
+            <div style={{ fontSize: "0.78rem", color: "#6b7280", marginBottom: 12 }}>
+              Cette édition est celle utilisée sur la home pour la date, le lieu et le numéro affichés sous le titre.
+            </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
               <div>
                 <div style={{ fontSize: "0.72rem", color: "#6b7280", marginBottom: 4 }}>Date</div>
                 <input
-                  type="text"
-                  placeholder={selectedEdition.date || "ex : 18 January 2026"}
+                  type="date"
                   value={dateInput}
                   onChange={(e) => setDateInput(e.target.value)}
-                  onFocus={() => !dateInput && setDateInput(selectedEdition.date || "")}
                   style={{ ...inp, width: "100%", boxSizing: "border-box" }}
                 />
               </div>
@@ -957,20 +983,24 @@ export function WebsiteEditionPage({ Panel }) {
                   placeholder={selectedEdition.venue || "ex : Coque, Luxembourg"}
                   value={venueInput}
                   onChange={(e) => setVenueInput(e.target.value)}
-                  onFocus={() => !venueInput && setVenueInput(selectedEdition.venue || "")}
                   style={{ ...inp, width: "100%", boxSizing: "border-box" }}
                 />
               </div>
             </div>
             <button
               className="btn btn--secondary"
-              disabled={infoSaving || (!dateInput.trim() && !venueInput.trim())}
+              disabled={infoSaving || (!dateInput && !venueInput.trim())}
               onClick={async () => {
                 setInfoSaving(true);
                 const fields = {};
-                if (dateInput.trim()) fields.date = dateInput.trim();
+                if (dateInput) fields.date = new Date(`${dateInput}T12:00:00`);
                 if (venueInput.trim()) fields.venue = venueInput.trim();
-                try { await updateEdition(effectiveYear, fields); setDateInput(""); setVenueInput(""); }
+                try {
+                  await updateEdition(effectiveYear, fields);
+                  await setSiteEditionYear(effectiveYear);
+                  setDateInput("");
+                  setVenueInput("");
+                }
                 finally { setInfoSaving(false); }
               }}
               style={{ fontSize: "0.8rem" }}

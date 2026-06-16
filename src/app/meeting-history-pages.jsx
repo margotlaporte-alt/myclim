@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useAuth } from "../context/auth-context";
+import { formatEditionLabel } from "./meeting-edition-utils";
 import { getActiveRoles } from "./navigation";
 import {
   MEETING_EDITIONS_COL,
@@ -813,7 +814,9 @@ function MeetingHistoryPage({ Panel }) {
               }}>
                 <span>📅 {selectedEdition.date}</span>
                 <span>🏟 {selectedEdition.venue}</span>
-                {selectedEdition.edition && <span>🏆 Edition #{selectedEdition.edition}</span>}
+                {formatEditionLabel(selectedEdition, { withHash: true }) && (
+                  <span>🏆 {formatEditionLabel(selectedEdition, { withHash: true })}</span>
+                )}
                 {selectedEdition.label && <span>🏅 {selectedEdition.label}</span>}
                 {selectedEdition.isClosed && (
                   <span style={{
