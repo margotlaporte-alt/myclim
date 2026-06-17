@@ -606,7 +606,7 @@ export function SiteStatistics() {
         <div className="site-container">
           <div style={{ marginBottom: 32 }}>
             <span className="site-eyebrow" style={{ color: "var(--site-red)" }}>● Live</span>
-            <h2 className="site-heading site-heading--sm" style={{ marginBottom: 8 }}>Results &amp; Live Ranking</h2>
+            <h2 className="site-heading site-heading--sm" style={{ marginBottom: 8 }}>Live Results &amp; Live Streaming</h2>
             <p style={{ color: "var(--site-text-muted)", fontSize: "0.9rem" }}>
               Results updated live throughout competition day.
             </p>
