@@ -3,8 +3,9 @@ import { NavLink } from "react-router-dom";
 import { useSiteEditionYear } from "../app/edition";
 import { formatEditionLabel, getEditionDisplayNumber } from "../app/meeting-edition-utils";
 import { useMeetingEditions, useMeetingResultsForYear } from "../app/meeting-history-hooks";
-import { usePublishedNews, useSponsors } from "./site-hooks";
-import { SPONSOR_CATEGORY_LABELS, SPONSOR_CATEGORY_ORDER, sponsorCategoryLabel } from "./sponsor-utils";
+import { getSponsorMediaStyle } from "./sponsor-media-utils";
+import { usePublishedNews, useSponsorCategories, useSponsors } from "./site-hooks";
+import { sponsorCategoryLabel } from "./sponsor-utils";
 import cmcmLogo from "../assets/cmcm-logo.png";
 import heroPhoto from "../assets/hero-photo.jpg";
 import waLogo from "../assets/wa-indoor-tour-silver.png";
@@ -131,7 +132,8 @@ export function SiteHome() {
   const { editions } = useMeetingEditions();
   const { siteEditionYear } = useSiteEditionYear();
   const { news } = usePublishedNews(4);
-  const { sponsors } = useSponsors(true);
+  const { categories: sponsorCategories } = useSponsorCategories();
+  const { sponsors, loading: sponsorsLoading } = useSponsors(true);
 
   const latestEdition = editions[0] || null;
   const configuredSiteEdition = siteEditionYear
@@ -170,10 +172,9 @@ export function SiteHome() {
   }, {});
 
   const categoryOrder = [
-    ...SPONSOR_CATEGORY_ORDER,
-    ...Object.keys(sponsorsByCategory).filter((cat) => !SPONSOR_CATEGORY_ORDER.includes(cat)),
+    ...sponsorCategories.map((category) => category.key),
+    ...Object.keys(sponsorsByCategory).filter((cat) => !sponsorCategories.some((category) => category.key === cat)),
   ];
-  const categoryLabels = SPONSOR_CATEGORY_LABELS;
 
   // Winners of the latest edition — from meetingWinners collection, fallback to rank=1 from results
   const DISCIPLINE_ORDER = [
@@ -776,7 +777,7 @@ export function SiteHome() {
               .filter((cat) => sponsorsByCategory[cat]?.length)
               .map((cat) => (
                 <div key={cat} className="site-sponsors__category">
-                  <p className="site-sponsors__category-title">{categoryLabels[cat] || sponsorCategoryLabel(cat)}</p>
+                  <p className="site-sponsors__category-title">{sponsorCategoryLabel(cat, sponsorCategories)}</p>
                   <div className="site-sponsors__row">
                     {sponsorsByCategory[cat].map((s) => (
                       s.website ? (
@@ -789,7 +790,9 @@ export function SiteHome() {
                           title={s.name}
                         >
                           {s.logoUrl ? (
-                            <img src={s.logoUrl} alt={s.name} />
+                            <div className="site-sponsor-logo__media">
+                              <img src={s.logoUrl} alt={s.name} style={getSponsorMediaStyle(s)} />
+                            </div>
                           ) : (
                             <span className="site-sponsor-name">{s.name}</span>
                           )}
@@ -801,7 +804,9 @@ export function SiteHome() {
                           title={s.name}
                         >
                           {s.logoUrl ? (
-                            <img src={s.logoUrl} alt={s.name} />
+                            <div className="site-sponsor-logo__media">
+                              <img src={s.logoUrl} alt={s.name} style={getSponsorMediaStyle(s)} />
+                            </div>
                           ) : (
                             <span className="site-sponsor-name">{s.name}</span>
                           )}
@@ -811,6 +816,10 @@ export function SiteHome() {
                   </div>
                 </div>
               ))
+          ) : sponsorsLoading ? (
+            <div style={{ textAlign: "center", color: "rgba(255,255,255,0.75)", fontSize: "0.95rem" }}>
+              Loading partners…
+            </div>
           ) : (
             /* Placeholder when no sponsors configured */
             <div style={{ textAlign: "center" }}>
@@ -875,7 +884,7 @@ export function SiteHome() {
               Become a volunteer
             </a>
             <NavLink to="/pre-programme" className="site-btn" style={{ background: "#fff", color: "var(--site-red)", fontWeight: 800 }}>
-              Pre-programme (U12/U14)
+              Pre-program inscription
             </NavLink>
             <NavLink to="/press" className="site-btn" style={{ background: "rgba(255,255,255,0.15)", color: "#fff", border: "1.5px solid rgba(255,255,255,0.35)" }}>
               Press registration

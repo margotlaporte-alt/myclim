@@ -4,21 +4,29 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDocs,
   onSnapshot,
   orderBy,
   query,
   serverTimestamp,
   setDoc,
   updateDoc,
+  writeBatch,
   where,
 } from "firebase/firestore";
 import { db } from "../services/firebase";
-import { normalizeSponsorCategory, sponsorCategorySortIndex } from "./sponsor-utils";
+import { getSponsorMediaSettings } from "./sponsor-media-utils";
+import {
+  normalizeSponsorCategories,
+  normalizeSponsorCategory,
+  sponsorCategorySortIndex,
+} from "./sponsor-utils";
 
 export const SITE_NEWS_COL = "siteNews";
 export const SITE_SPONSORS_COL = "siteSponsors";
 export const SITE_PRESS_RELEASES_COL = "sitePressReleases";
 export const SITE_CONTENT_COL = "siteContent";
+export const SITE_SPONSOR_CATEGORIES_DOC = "sponsorCategories";
 
 // ─── News ───────────────────────────────────────────────────────────────────
 
@@ -111,21 +119,30 @@ export function useSponsors(activeOnly = true) {
   const [sponsors, setSponsors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [retryKey, setRetryKey] = useState(0);
+
+  function isSponsorActive(value) {
+    if (typeof value === "boolean") return value;
+    if (typeof value === "string") return value.trim().toLowerCase() === "true";
+    if (typeof value === "number") return value === 1;
+    return false;
+  }
+
   useEffect(() => {
-    const q = activeOnly
-      ? query(collection(db, SITE_SPONSORS_COL), where("active", "==", true))
-      : collection(db, SITE_SPONSORS_COL);
+    const q = collection(db, SITE_SPONSORS_COL);
     const unsub = onSnapshot(q, (snap) => {
-      const items = snap.docs
+      let items = snap.docs
         .map((d) => {
           const data = d.data();
           return {
             id: d.id,
             ...data,
+            active: isSponsorActive(data.active),
             rawCategory: data.category ?? "",
             category: normalizeSponsorCategory(data.category),
+            ...getSponsorMediaSettings(data),
           };
         })
+        .filter((sponsor) => (activeOnly ? sponsor.active : true))
         .sort((a, b) => {
           const ai = sponsorCategorySortIndex(a.category);
           const bi = sponsorCategorySortIndex(b.category);
@@ -157,6 +174,64 @@ export async function saveSponsor(id, data) {
 
 export async function deleteSponsor(id) {
   await deleteDoc(doc(db, SITE_SPONSORS_COL, id));
+}
+
+export async function renameSponsorCategoryKey(previousKey, nextKey) {
+  const trimmedPreviousKey = String(previousKey || "").trim();
+  const trimmedNextKey = String(nextKey || "").trim();
+  if (!trimmedPreviousKey || !trimmedNextKey || trimmedPreviousKey === trimmedNextKey) return;
+
+  const snapshot = await getDocs(collection(db, SITE_SPONSORS_COL));
+  const matchingDocs = snapshot.docs.filter((entry) => String(entry.data()?.category || "").trim() === trimmedPreviousKey);
+  if (matchingDocs.length === 0) return;
+
+  const batch = writeBatch(db);
+  matchingDocs.forEach((entry) => {
+    batch.update(doc(db, SITE_SPONSORS_COL, entry.id), {
+      category: trimmedNextKey,
+      updatedAt: serverTimestamp(),
+    });
+  });
+  await batch.commit();
+}
+
+export function useSponsorCategories() {
+  const [categories, setCategories] = useState(normalizeSponsorCategories([]));
+  const [loading, setLoading] = useState(true);
+  const [retryKey, setRetryKey] = useState(0);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      doc(db, SITE_CONTENT_COL, SITE_SPONSOR_CATEGORIES_DOC),
+      (snapshot) => {
+        const nextCategories = snapshot.exists()
+          ? normalizeSponsorCategories(snapshot.data()?.categories)
+          : normalizeSponsorCategories([]);
+        setCategories(nextCategories);
+        setLoading(false);
+      },
+      () => {
+        setLoading(false);
+        const t = setTimeout(() => setRetryKey((current) => current + 1), 3000);
+        return () => clearTimeout(t);
+      },
+    );
+
+    return unsubscribe;
+  }, [retryKey]);
+
+  return { categories, loading };
+}
+
+export async function saveSponsorCategories(categories) {
+  await setDoc(
+    doc(db, SITE_CONTENT_COL, SITE_SPONSOR_CATEGORIES_DOC),
+    {
+      categories: normalizeSponsorCategories(categories),
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
 }
 
 // ─── Press releases ──────────────────────────────────────────────────────────
