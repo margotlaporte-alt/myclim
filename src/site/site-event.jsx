@@ -1,4 +1,9 @@
 import { NavLink } from "react-router-dom";
+import { useSiteEditionYear } from "../app/edition";
+import {
+  createPrizeMoneySystemsDraft,
+  formatPrizeMoneyAmount,
+} from "../app/prize-money-utils";
 import { useMeetingEditions } from "../app/meeting-history-hooks";
 import volontaire1 from "../assets/site-gallery/volontaire-1.jpg";
 import coque1 from "../assets/site-gallery/Coque2026.jpg";
@@ -46,29 +51,51 @@ function SectionTitle({ eyebrow, title, lead }) {
   );
 }
 
+function formatEditionDate(value) {
+  if (!value) return "To be confirmed";
+  const date = value?.toDate ? value.toDate() : new Date(value);
+  if (Number.isNaN(date.getTime())) return "To be confirmed";
+  return date.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
 export function SiteEvent() {
+  const { siteEditionYear } = useSiteEditionYear();
   const { editions } = useMeetingEditions();
   const latestEdition = editions[0] || null;
+  const configuredEdition = siteEditionYear
+    ? editions.find((edition) => Number(edition.year || edition.id) === Number(siteEditionYear)) || null
+    : null;
+  const currentEdition = configuredEdition || latestEdition || null;
 
   const infoCards = [
     {
       icon: "📅",
       title: "Date",
-      content: latestEdition?.date || "À confirmer",
+      content: formatEditionDate(currentEdition?.date),
       sub: "Doors open at 12:00",
     },
     {
       icon: "🏟️",
       title: "Venue",
-      content: latestEdition?.venue || "À confirmer",
+      content: currentEdition?.venue || "To be confirmed",
       sub: "Luxembourg",
     },
     ACCESS_CARD,
   ];
 
-  const timetable = latestEdition?.timetable || [];
-  const timetableVisible = latestEdition?.timetableStatus === "visible";
-  const disciplines = latestEdition?.disciplines || [];
+  const timetable = Array.isArray(currentEdition?.timetable) ? currentEdition.timetable : [];
+  const timetableVisible = currentEdition?.timetableStatus === "visible";
+  const disciplines = Array.isArray(currentEdition?.disciplines) ? currentEdition.disciplines : [];
+  const prizeMoneySystems = createPrizeMoneySystemsDraft(currentEdition?.prizeMoneySystems);
+  const usedPrizeSystemKeys = Array.from(
+    new Set(
+      disciplines.flatMap((discipline) => [discipline.womenPrize, discipline.menPrize]).filter(Boolean),
+    ),
+  );
 
   return (
     <>
@@ -174,31 +201,81 @@ export function SiteEvent() {
           <div className="site-container">
             <SectionTitle
               eyebrow="Programme"
-              title="Events for this edition"
+              title="Events & prize money for this edition"
             />
-            <div className="site-card" style={{ overflow: "hidden", maxWidth: 640 }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.88rem" }}>
-                <thead>
-                  <tr style={{ background: "#1e3a5f", color: "#fff" }}>
-                    <th style={{ padding: "10px 20px", textAlign: "center", width: "30%", fontWeight: 700, fontSize: "0.78rem", letterSpacing: "0.08em" }}>WOMEN</th>
-                    <th style={{ padding: "10px 20px", textAlign: "center", fontWeight: 700, fontSize: "0.78rem", letterSpacing: "0.08em" }}>EVENT</th>
-                    <th style={{ padding: "10px 20px", textAlign: "center", width: "30%", fontWeight: 700, fontSize: "0.78rem", letterSpacing: "0.08em" }}>MEN</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {disciplines.map((d, i) => (
-                    <tr key={d.event} style={{ borderBottom: "1px solid var(--site-border)", background: i % 2 === 0 ? "var(--site-card)" : "#f8fafc" }}>
-                      <td style={{ padding: "10px 20px", textAlign: "center", color: d.womenPrize ? "var(--site-text-muted)" : "#d1d5db", fontSize: "0.8rem" }}>
-                        {d.womenPrize ? `Prize ${d.womenPrize}` : ""}
-                      </td>
-                      <td style={{ padding: "10px 20px", textAlign: "center", fontWeight: 700, color: "var(--site-text)" }}>{d.event}</td>
-                      <td style={{ padding: "10px 20px", textAlign: "center", color: d.menPrize ? "var(--site-text-muted)" : "#d1d5db", fontSize: "0.8rem" }}>
-                        {d.menPrize ? `Prize ${d.menPrize}` : ""}
-                      </td>
+            <div style={{ display: "grid", gridTemplateColumns: usedPrizeSystemKeys.length > 0 ? "minmax(0, 1.5fr) minmax(300px, 0.9fr)" : "minmax(0, 1fr)", gap: 24, alignItems: "start" }}>
+              <div className="site-card" style={{ overflow: "hidden", maxWidth: 760 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.88rem" }}>
+                  <thead>
+                    <tr style={{ background: "#1e3a5f", color: "#fff" }}>
+                      <th style={{ padding: "10px 20px", textAlign: "center", width: "30%", fontWeight: 700, fontSize: "0.78rem", letterSpacing: "0.08em" }}>WOMEN</th>
+                      <th style={{ padding: "10px 20px", textAlign: "center", fontWeight: 700, fontSize: "0.78rem", letterSpacing: "0.08em" }}>EVENT</th>
+                      <th style={{ padding: "10px 20px", textAlign: "center", width: "30%", fontWeight: 700, fontSize: "0.78rem", letterSpacing: "0.08em" }}>MEN</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {disciplines.map((d, i) => (
+                      <tr key={d.event} style={{ borderBottom: "1px solid var(--site-border)", background: i % 2 === 0 ? "var(--site-card)" : "#f8fafc" }}>
+                        <td style={{ padding: "10px 20px", textAlign: "center", color: d.womenPrize ? "var(--site-text-muted)" : "#d1d5db", fontSize: "0.8rem" }}>
+                          {d.womenPrize ? `Prize ${d.womenPrize}` : ""}
+                        </td>
+                        <td style={{ padding: "10px 20px", textAlign: "center", fontWeight: 700, color: "var(--site-text)" }}>{d.event}</td>
+                        <td style={{ padding: "10px 20px", textAlign: "center", color: d.menPrize ? "var(--site-text-muted)" : "#d1d5db", fontSize: "0.8rem" }}>
+                          {d.menPrize ? `Prize ${d.menPrize}` : ""}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {usedPrizeSystemKeys.length > 0 && (
+                <div style={{ display: "grid", gap: 16 }}>
+                  {usedPrizeSystemKeys.map((systemKey) => {
+                    const rows = prizeMoneySystems[systemKey] || [];
+                    return (
+                      <div key={systemKey} className="site-card" style={{ padding: "24px 24px 18px" }}>
+                        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
+                          <div>
+                            <div className="site-eyebrow" style={{ marginBottom: 6 }}>Prize money</div>
+                            <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--site-text)" }}>System {systemKey}</h3>
+                          </div>
+                          <span style={{ fontSize: "0.74rem", color: "var(--site-text-muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                            EUR
+                          </span>
+                        </div>
+
+                        {rows.length > 0 ? (
+                          <div style={{ display: "grid", gap: 8 }}>
+                            {rows.map((row) => (
+                              <div
+                                key={`${systemKey}-${row.place}`}
+                                style={{
+                                  display: "grid",
+                                  gridTemplateColumns: "1fr auto",
+                                  gap: 12,
+                                  alignItems: "center",
+                                  padding: "10px 0",
+                                  borderTop: "1px solid var(--site-border)",
+                                }}
+                              >
+                                <span style={{ fontSize: "0.88rem", color: "var(--site-text)" }}>{row.place}</span>
+                                <strong style={{ fontSize: "0.9rem", color: "var(--site-red)" }}>
+                                  {formatPrizeMoneyAmount(row.amount, row.currency)}
+                                </strong>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p style={{ margin: 0, color: "var(--site-text-muted)", fontSize: "0.88rem", lineHeight: 1.6 }}>
+                            Prize money details for system {systemKey} will be published soon.
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </section>

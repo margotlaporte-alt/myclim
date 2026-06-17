@@ -44,6 +44,14 @@ export function SiteLayout() {
   const location = useLocation();
   const mobileRef = useRef(null);
   const { currentUser } = useAuth();
+  const showFooterCta = location.pathname !== "/become-a-partner";
+  const pageClassName = [
+    "site-page",
+    location.pathname === "/partners" ? "site-page--partners" : "",
+    location.pathname === "/become-a-partner" ? "site-page--sponsorship" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -61,7 +69,7 @@ export function SiteLayout() {
   }, [mobileOpen]);
 
   return (
-    <div className="site-page">
+    <div className={pageClassName}>
       {/* ── Navigation ─────────────────────────────────── */}
       <nav className={`site-nav${scrolled || mobileOpen ? " site-nav--scrolled" : ""}`}>
         <div className="site-nav__inner">
@@ -147,26 +155,28 @@ export function SiteLayout() {
       {/* ── Footer ──────────────────────────────────────── */}
       <footer className="site-footer">
         <div className="site-container">
-          <div className="site-footer__cta">
-            <div className="site-footer__cta-copy">
-              <span className="site-footer__cta-eyebrow">Partnership opportunities</span>
-              <h2>Become a partner of the CMCM Luxembourg Indoor Meeting</h2>
-              <p>
-                Join an international athletics event that combines visibility, hospitality, business relationships and Luxembourg-wide reach.
-              </p>
+          {showFooterCta && (
+            <div className="site-footer__cta">
+              <div className="site-footer__cta-copy">
+                <span className="site-footer__cta-eyebrow">Partnership opportunities</span>
+                <h2>Become a partner of the CMCM Luxembourg Indoor Meeting</h2>
+                <p>
+                  Join an international athletics event that combines visibility, hospitality, business relationships and Luxembourg-wide reach.
+                </p>
+              </div>
+              <div className="site-footer__cta-actions">
+                <NavLink to="/become-a-partner" className="site-btn site-btn--primary">
+                  Sponsorship opportunities
+                </NavLink>
+                <a
+                  href="mailto:events@fla.lu?subject=Partnership%20inquiry%20%E2%80%93%20CMCM%20Luxembourg%20Indoor%20Meeting"
+                  className="site-btn site-btn--secondary"
+                >
+                  Contact us
+                </a>
+              </div>
             </div>
-            <div className="site-footer__cta-actions">
-              <NavLink to="/become-a-partner" className="site-btn site-btn--primary">
-                Sponsorship opportunities
-              </NavLink>
-              <a
-                href="mailto:events@fla.lu?subject=Partnership%20inquiry%20%E2%80%93%20CMCM%20Luxembourg%20Indoor%20Meeting"
-                className="site-btn site-btn--secondary"
-              >
-                Contact us
-              </a>
-            </div>
-          </div>
+          )}
 
           <div className="site-footer__grid">
             <div className="site-footer__brand">

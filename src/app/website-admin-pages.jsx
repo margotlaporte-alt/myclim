@@ -7,14 +7,32 @@ import {
   deletePressRelease,
   deleteSponsor,
   generateSlug,
+  renameSponsorCategoryKey,
+  saveSponsorCategories,
   saveNewsArticle,
   savePressRelease,
   saveSponsor,
   useAllNews,
   useAllPressReleases,
+  useSponsorCategories,
   useSponsors,
 } from "../site/site-hooks";
-import { SPONSOR_CATEGORY_LABELS, SPONSOR_CATEGORY_ORDER, sponsorCategorySortIndex } from "../site/sponsor-utils";
+import {
+  DEFAULT_SPONSOR_MEDIA_SETTINGS,
+  getSponsorMediaSettings,
+  getSponsorMediaStyle,
+} from "../site/sponsor-media-utils";
+import {
+  sponsorCategoryLabel,
+  sponsorCategorySortIndex,
+  toSponsorCategoryKey,
+} from "../site/sponsor-utils";
+import {
+  createPrizeMoneySystemsDraft,
+  formatPrizeMoneyAmount,
+  getPrizeMoneySystemKeys,
+  serializePrizeMoneySystems,
+} from "./prize-money-utils";
 import { updateEdition, useMeetingEditions } from "./meeting-history-hooks";
 
 /* ── Shared helpers ──────────────────────────────────────── */
@@ -304,26 +322,211 @@ export function WebsiteNewsPage({ Panel }) {
 }
 
 /* ── Sponsors admin ──────────────────────────────────────── */
-const SPONSOR_CATEGORIES = SPONSOR_CATEGORY_ORDER;
+function SponsorCategoryManager({ categories, sponsors }) {
+  const [draftLabel, setDraftLabel] = useState("");
+  const [savingKey, setSavingKey] = useState("");
+  const [error, setError] = useState("");
+  const [labelsByKey, setLabelsByKey] = useState({});
+  const [keysByCategory, setKeysByCategory] = useState({});
 
-function SponsorForm({ initial, onSave, onCancel }) {
+  useEffect(() => {
+    setLabelsByKey(Object.fromEntries(categories.map((category) => [category.key, category.label])));
+    setKeysByCategory(Object.fromEntries(categories.map((category) => [category.key, category.key])));
+  }, [categories]);
+
+  const usageByCategory = sponsors.reduce((accumulator, sponsor) => {
+    const key = sponsor.category || "";
+    accumulator[key] = (accumulator[key] || 0) + 1;
+    return accumulator;
+  }, {});
+
+  async function persistCategories(nextCategories, key = "") {
+    setSavingKey(key);
+    setError("");
+    try {
+      await saveSponsorCategories(nextCategories);
+    } catch (saveError) {
+      setError(saveError.message || "Failed to save categories.");
+    } finally {
+      setSavingKey("");
+    }
+  }
+
+  async function handleAddCategory() {
+    const trimmedLabel = draftLabel.trim();
+    if (!trimmedLabel) {
+      setError("Category label is required.");
+      return;
+    }
+
+    const nextKey = toSponsorCategoryKey(trimmedLabel);
+    if (categories.some((category) => category.key === nextKey)) {
+      setError("A category with the same key already exists.");
+      return;
+    }
+
+    const nextCategories = [...categories, { key: nextKey, label: trimmedLabel, order: categories.length }];
+    await persistCategories(nextCategories, "new");
+    setDraftLabel("");
+  }
+
+  async function handleSaveCategory(categoryKey) {
+    const nextLabel = String(labelsByKey[categoryKey] || "").trim();
+    const nextKey = toSponsorCategoryKey(keysByCategory[categoryKey] || categoryKey);
+    if (!nextLabel) {
+      setError("Category label cannot be empty.");
+      return;
+    }
+    if (!nextKey) {
+      setError("Category key cannot be empty.");
+      return;
+    }
+    if (categories.some((category) => category.key !== categoryKey && category.key === nextKey)) {
+      setError("Another category already uses this key.");
+      return;
+    }
+
+    const nextCategories = categories.map((category) => {
+      if (category.key !== categoryKey) return category;
+      return { ...category, key: nextKey, label: nextLabel };
+    });
+
+    setSavingKey(categoryKey);
+    setError("");
+    try {
+      if (nextKey !== categoryKey) {
+        await renameSponsorCategoryKey(categoryKey, nextKey);
+      }
+      await saveSponsorCategories(nextCategories);
+    } catch (saveError) {
+      setError(saveError.message || "Failed to save categories.");
+    } finally {
+      setSavingKey("");
+    }
+  }
+
+  async function handleMoveCategory(categoryKey, direction) {
+    const currentIndex = categories.findIndex((category) => category.key === categoryKey);
+    const targetIndex = currentIndex + direction;
+    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= categories.length) return;
+
+    const nextCategories = [...categories];
+    [nextCategories[currentIndex], nextCategories[targetIndex]] = [nextCategories[targetIndex], nextCategories[currentIndex]];
+
+    await persistCategories(
+      nextCategories.map((category, index) => ({ ...category, order: index })),
+      categoryKey,
+    );
+  }
+
+  async function handleDeleteCategory(categoryKey) {
+    if (usageByCategory[categoryKey]) {
+      setError("This category is still used by one or more sponsors.");
+      return;
+    }
+
+    const nextCategories = categories
+      .filter((category) => category.key !== categoryKey)
+      .map((category, index) => ({ ...category, order: index }));
+
+    await persistCategories(nextCategories, categoryKey);
+  }
+
+  return (
+    <div style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 16, padding: 24, display: "grid", gap: 16 }}>
+      <div>
+        <h3 style={{ fontSize: "1rem", marginBottom: 6 }}>Sponsor categories</h3>
+        <p style={{ fontSize: "0.84rem", color: "#546770" }}>
+          Create the category list once here, then sponsors can only be assigned to these categories.
+        </p>
+      </div>
+
+      <div style={{ display: "grid", gap: 12 }}>
+        {categories.map((category, index) => (
+          <div key={category.key} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 140px auto", gap: 12, alignItems: "center", padding: 14, borderRadius: 12, border: "1px solid rgba(15,23,42,0.08)", background: "#f8fafc" }}>
+            <div style={{ display: "grid", gap: 8 }}>
+              <input
+                value={labelsByKey[category.key] ?? category.label}
+                onChange={(e) => setLabelsByKey((current) => ({ ...current, [category.key]: e.target.value }))}
+                style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid rgba(0,0,0,0.15)", fontSize: "0.9rem", fontFamily: "inherit" }}
+              />
+              <input
+                value={keysByCategory[category.key] ?? category.key}
+                onChange={(e) => setKeysByCategory((current) => ({ ...current, [category.key]: e.target.value }))}
+                style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(0,0,0,0.12)", fontSize: "0.82rem", fontFamily: "monospace" }}
+                placeholder="category-key"
+              />
+            </div>
+            <div style={{ fontSize: "0.82rem", color: "#546770", textAlign: "center" }}>
+              {usageByCategory[category.key] || 0} sponsor(s)
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+              <button type="button" className="btn btn-secondary" disabled={savingKey === category.key} onClick={() => handleSaveCategory(category.key)}>
+                Save
+              </button>
+              <button type="button" className="btn btn-ghost" disabled={index === 0 || savingKey === category.key} onClick={() => handleMoveCategory(category.key, -1)}>
+                ↑
+              </button>
+              <button type="button" className="btn btn-ghost" disabled={index === categories.length - 1 || savingKey === category.key} onClick={() => handleMoveCategory(category.key, 1)}>
+                ↓
+              </button>
+              <button type="button" className="btn btn-danger" disabled={Boolean(usageByCategory[category.key]) || savingKey === category.key} onClick={() => handleDeleteCategory(category.key)}>
+                Delete
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: 12 }}>
+        <input
+          value={draftLabel}
+          onChange={(e) => setDraftLabel(e.target.value)}
+          placeholder="New category label"
+          style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid rgba(0,0,0,0.15)", fontSize: "0.9rem", fontFamily: "inherit" }}
+        />
+        <button type="button" className="btn btn-primary" disabled={savingKey === "new"} onClick={handleAddCategory}>
+          {savingKey === "new" ? "Saving…" : "Add category"}
+        </button>
+      </div>
+
+      {error && (
+        <div style={{ background: "#fff0f0", border: "1px solid #f87171", borderRadius: 8, padding: "12px 16px", color: "#b91c1c", fontSize: "0.875rem" }}>
+          {error}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SponsorForm({ initial, categories, onSave, onCancel }) {
   const [data, setData] = useState({
     name: "",
     logoUrl: "",
     website: "",
-    category: "main",
+    category: categories[0]?.key || "title",
     order: 10,
     active: true,
     description: "",
+    ...DEFAULT_SPONSOR_MEDIA_SETTINGS,
     ...initial,
+    ...getSponsorMediaSettings(initial),
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   const set = (field, value) => setData((p) => ({ ...p, [field]: value }));
 
+  useEffect(() => {
+    if (!categories.length) return;
+    if (!categories.some((category) => category.key === data.category)) {
+      set("category", categories[0].key);
+    }
+  }, [categories, data.category]);
+
   async function handleSave() {
     if (!data.name.trim()) { setError("Name is required."); return; }
+    if (!categories.some((category) => category.key === data.category)) { setError("Please choose a valid category."); return; }
     setSaving(true);
     setError("");
     try {
@@ -337,6 +540,7 @@ function SponsorForm({ initial, onSave, onCancel }) {
 
   const labelStyle = { fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#546770", display: "block", marginBottom: 6 };
   const inputStyle = { width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid rgba(0,0,0,0.15)", fontSize: "0.9rem", fontFamily: "inherit" };
+  const previewSponsor = { ...data, ...getSponsorMediaSettings(data) };
 
   return (
     <div style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 16, padding: 32, maxWidth: 640 }}>
@@ -350,24 +554,13 @@ function SponsorForm({ initial, onSave, onCancel }) {
             <label style={labelStyle}>Category</label>
             <select
               style={inputStyle}
-              value={SPONSOR_CATEGORIES.includes(data.category) ? data.category : "__custom__"}
-              onChange={(e) => {
-                if (e.target.value === "__custom__") set("category", "");
-                else set("category", e.target.value);
-              }}
+              value={data.category}
+              onChange={(e) => set("category", e.target.value)}
             >
-              {SPONSOR_CATEGORIES.map((c) => <option key={c} value={c}>{SPONSOR_CATEGORY_LABELS[c] || c}</option>)}
-              <option value="__custom__">Autre…</option>
+              {categories.map((category) => (
+                <option key={category.key} value={category.key}>{category.label}</option>
+              ))}
             </select>
-            {!SPONSOR_CATEGORIES.includes(data.category) && (
-              <input
-                style={{ ...inputStyle, marginTop: 8 }}
-                value={data.category}
-                onChange={(e) => set("category", e.target.value)}
-                placeholder="Nom de la nouvelle catégorie"
-                autoFocus
-              />
-            )}
           </div>
           <div>
             <label style={labelStyle}>Display order</label>
@@ -381,6 +574,103 @@ function SponsorForm({ initial, onSave, onCancel }) {
           accept="image/png,image/svg+xml,image/webp,image/jpeg"
           storagePath="sponsors"
         />
+        <div style={{ padding: 16, borderRadius: 12, border: "1px solid rgba(15,23,42,0.08)", background: "#f8fafc", display: "grid", gap: 14 }}>
+          <div>
+            <label style={labelStyle}>Logo framing inside cards</label>
+            <p style={{ fontSize: "0.8rem", color: "#546770", lineHeight: 1.5 }}>
+              Useful when a sponsor sends a very wide logo or a photo-like visual. You can fill the rectangle more, move it and zoom it.
+            </p>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 160px", gap: 16, alignItems: "start" }}>
+            <div style={{ display: "grid", gap: 12 }}>
+              <div>
+                <label style={labelStyle}>Fit mode</label>
+                <select
+                  style={inputStyle}
+                  value={data.logoFit}
+                  onChange={(e) => set("logoFit", e.target.value)}
+                >
+                  <option value="contain">Contain the full logo</option>
+                  <option value="cover">Cover the full rectangle</option>
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>Zoom: {previewSponsor.logoScale}%</label>
+                <input
+                  type="range"
+                  min="60"
+                  max="200"
+                  step="5"
+                  value={previewSponsor.logoScale}
+                  onChange={(e) => set("logoScale", Number(e.target.value))}
+                  style={{ width: "100%" }}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Horizontal position: {previewSponsor.logoPositionX}%</label>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={previewSponsor.logoPositionX}
+                  onChange={(e) => set("logoPositionX", Number(e.target.value))}
+                  style={{ width: "100%" }}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Vertical position: {previewSponsor.logoPositionY}%</label>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={previewSponsor.logoPositionY}
+                  onChange={(e) => set("logoPositionY", Number(e.target.value))}
+                  style={{ width: "100%" }}
+                />
+              </div>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    set("logoFit", DEFAULT_SPONSOR_MEDIA_SETTINGS.logoFit);
+                    set("logoScale", DEFAULT_SPONSOR_MEDIA_SETTINGS.logoScale);
+                    set("logoPositionX", DEFAULT_SPONSOR_MEDIA_SETTINGS.logoPositionX);
+                    set("logoPositionY", DEFAULT_SPONSOR_MEDIA_SETTINGS.logoPositionY);
+                  }}
+                >
+                  Reset framing
+                </button>
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: "0.72rem", color: "#6b7280", marginBottom: 8, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                Preview
+              </div>
+              <div style={{ minWidth: 160, minHeight: 96, borderRadius: 12, border: "1px solid rgba(0,0,0,0.08)", background: "#fff", padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {data.logoUrl ? (
+                  <div style={{ width: 128, height: 60, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <img
+                      src={data.logoUrl}
+                      alt={data.name || "Sponsor logo preview"}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        display: "block",
+                        transition: "transform 0.2s ease",
+                        ...getSponsorMediaStyle(previewSponsor),
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <span style={{ fontSize: "0.78rem", color: "#94a3b8", textAlign: "center" }}>Upload a logo to preview the framing</span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
         <div>
           <label style={labelStyle}>Website URL</label>
           <input style={inputStyle} value={data.website} onChange={(e) => set("website", e.target.value)} placeholder="https://…" />
@@ -418,6 +708,7 @@ function SponsorForm({ initial, onSave, onCancel }) {
 
 export function WebsiteSponsorsPage({ Panel }) {
   const { sponsors, loading } = useSponsors(false);
+  const { categories, loading: categoriesLoading } = useSponsorCategories();
   const [editing, setEditing] = useState(null);
   const [creating, setCreating] = useState(false);
 
@@ -437,6 +728,7 @@ export function WebsiteSponsorsPage({ Panel }) {
       <Panel title={editing ? "Edit partner" : "Add partner"}>
         <SponsorForm
           initial={editing || {}}
+          categories={categories}
           onSave={handleSave}
           onCancel={() => { setEditing(null); setCreating(false); }}
         />
@@ -454,6 +746,14 @@ export function WebsiteSponsorsPage({ Panel }) {
         </button>
       }
     >
+      <div style={{ marginBottom: 24 }}>
+        {categoriesLoading ? (
+          <p>Loading categories…</p>
+        ) : (
+          <SponsorCategoryManager categories={categories} sponsors={sponsors} />
+        )}
+      </div>
+
       {loading ? (
         <p>Loading…</p>
       ) : sponsors.length === 0 ? (
@@ -480,8 +780,8 @@ export function WebsiteSponsorsPage({ Panel }) {
             <tbody>
               {sponsors
                 .sort((a, b) => {
-                  const ai = sponsorCategorySortIndex(a.category);
-                  const bi = sponsorCategorySortIndex(b.category);
+                  const ai = sponsorCategorySortIndex(a.category, categories);
+                  const bi = sponsorCategorySortIndex(b.category, categories);
                   if (ai !== bi) return ai - bi;
                   return (a.order ?? 99) - (b.order ?? 99);
                 })
@@ -489,13 +789,26 @@ export function WebsiteSponsorsPage({ Panel }) {
                   <tr key={s.id}>
                     <td style={{ fontWeight: 600 }}>{s.name}</td>
                     <td>
-                      <span className="badge-status badge-status--blue">{s.category}</span>
+                      <span className="badge-status badge-status--blue">{sponsorCategoryLabel(s.category, categories)}</span>
                     </td>
                     <td>{s.order ?? "—"}</td>
                     <td>{s.active ? "✅" : "❌"}</td>
                     <td>
                       {s.logoUrl
-                        ? <img src={s.logoUrl} alt={s.name} style={{ height: 28, maxWidth: 80, objectFit: "contain" }} />
+                        ? (
+                          <div style={{ width: 80, height: 28, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <img
+                              src={s.logoUrl}
+                              alt={s.name}
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                display: "block",
+                                ...getSponsorMediaStyle(s),
+                              }}
+                            />
+                          </div>
+                        )
                         : <span style={{ color: "#ccc", fontSize: "0.8rem" }}>—</span>}
                     </td>
                     <td style={{ fontSize: "0.78rem" }}>
@@ -830,6 +1143,8 @@ export function WebsiteEditionPage({ Panel }) {
 
   // Disciplines
   const [disciplinesSaving, setDisciplinesSaving] = useState(false);
+  const [prizeMoneyDraft, setPrizeMoneyDraft] = useState(createPrizeMoneySystemsDraft());
+  const [prizeMoneySaving, setPrizeMoneySaving] = useState(false);
 
   // Timetable
   const [ttForm, setTtForm] = useState({ type: "event", time: "", gender: "WOMEN", event: "", round: "Final", isField: false, label: "PRE-PROGRAM" });
@@ -901,6 +1216,10 @@ export function WebsiteEditionPage({ Panel }) {
   }, [selectedEdition?.date, selectedEdition?.venue, effectiveYear]);
 
   useEffect(() => {
+    setPrizeMoneyDraft(createPrizeMoneySystemsDraft(selectedEdition?.prizeMoneySystems));
+  }, [selectedEdition?.prizeMoneySystems, effectiveYear]);
+
+  useEffect(() => {
     if (!siteEditionYear && effectiveYear) {
       void setSiteEditionYear(effectiveYear);
     }
@@ -913,6 +1232,45 @@ export function WebsiteEditionPage({ Panel }) {
       await setSiteEditionYear(nextYear);
       setSelectedYear(nextYear);
     } finally { setCreatingYear(false); }
+  }
+
+  const prizeMoneySystemKeys = getPrizeMoneySystemKeys(prizeMoneyDraft);
+
+  function handlePrizeMoneyDraftChange(systemKey, rowIndex, field, value) {
+    setPrizeMoneyDraft((current) => ({
+      ...current,
+      [systemKey]: (current[systemKey] || []).map((row, index) => (
+        index === rowIndex ? { ...row, [field]: value } : row
+      )),
+    }));
+  }
+
+  function handlePrizeMoneyRowAdd(systemKey) {
+    setPrizeMoneyDraft((current) => ({
+      ...current,
+      [systemKey]: [
+        ...(current[systemKey] || []),
+        { place: "", amount: "", currency: "EUR" },
+      ],
+    }));
+  }
+
+  function handlePrizeMoneyRowRemove(systemKey, rowIndex) {
+    setPrizeMoneyDraft((current) => ({
+      ...current,
+      [systemKey]: (current[systemKey] || []).filter((_, index) => index !== rowIndex),
+    }));
+  }
+
+  async function handlePrizeMoneySave() {
+    setPrizeMoneySaving(true);
+    try {
+      await updateEdition(effectiveYear, {
+        prizeMoneySystems: serializePrizeMoneySystems(prizeMoneyDraft),
+      });
+    } finally {
+      setPrizeMoneySaving(false);
+    }
   }
 
   const inp = { padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: "0.8rem", fontFamily: "inherit" };
@@ -1113,6 +1471,84 @@ export function WebsiteEditionPage({ Panel }) {
           {/* ── Disciplines ── */}
           <div style={{ padding: "16px 20px", background: "#f8fafc", borderRadius: 10, border: "1px solid #e2e8f0" }}>
             <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#374151", marginBottom: 4 }}>
+              Prize money systems
+              {prizeMoneySaving && <span style={{ marginLeft: 8, fontSize: "0.75rem", color: "#6b7280", fontWeight: 400 }}>Sauvegarde…</span>}
+            </div>
+            <p style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: 16 }}>
+              Configure here the prize money grids used by the discipline programme. The discipline selectors below assign system A, B, or another configured system to women and men.
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 16, marginBottom: 18 }}>
+              {prizeMoneySystemKeys.map((systemKey) => (
+                <div key={systemKey} style={{ background: "#fff", border: "1px solid #dbe4ee", borderRadius: 10, padding: 16 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: "0.82rem", color: "#111827" }}>System {systemKey}</div>
+                      <div style={{ fontSize: "0.72rem", color: "#6b7280" }}>
+                        {(prizeMoneyDraft[systemKey] || []).length} row(s)
+                      </div>
+                    </div>
+                    <button
+                      className="btn btn--secondary"
+                      type="button"
+                      onClick={() => handlePrizeMoneyRowAdd(systemKey)}
+                      style={{ fontSize: "0.78rem", padding: "6px 10px" }}
+                    >
+                      + Add row
+                    </button>
+                  </div>
+
+                  <div style={{ display: "grid", gap: 8 }}>
+                    {(prizeMoneyDraft[systemKey] || []).map((row, rowIndex) => (
+                      <div key={`${systemKey}-${rowIndex}`} style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr auto", gap: 8, alignItems: "center" }}>
+                        <input
+                          type="text"
+                          value={row.place}
+                          onChange={(e) => handlePrizeMoneyDraftChange(systemKey, rowIndex, "place", e.target.value)}
+                          placeholder="Place label"
+                          style={{ ...inp, width: "100%" }}
+                        />
+                        <input
+                          type="number"
+                          min="0"
+                          step="50"
+                          value={row.amount}
+                          onChange={(e) => handlePrizeMoneyDraftChange(systemKey, rowIndex, "amount", e.target.value)}
+                          placeholder="Amount"
+                          style={{ ...inp, width: "100%" }}
+                        />
+                        <button
+                          className="btn btn--secondary"
+                          type="button"
+                          onClick={() => handlePrizeMoneyRowRemove(systemKey, rowIndex)}
+                          style={{ fontSize: "0.78rem", padding: "6px 10px" }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {(prizeMoneyDraft[systemKey] || []).length > 0 && (
+                    <div style={{ marginTop: 12, fontSize: "0.74rem", color: "#6b7280" }}>
+                      Preview: {(prizeMoneyDraft[systemKey] || [])
+                        .map((row) => `${row.place || "Place"} ${formatPrizeMoneyAmount(row.amount || 0) || "EUR 0"}`)
+                        .join(" · ")}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <button
+              className="btn btn--secondary"
+              type="button"
+              onClick={handlePrizeMoneySave}
+              disabled={prizeMoneySaving}
+              style={{ fontSize: "0.8rem", marginBottom: 20 }}
+            >
+              {prizeMoneySaving ? "Saving…" : "Save prize money systems"}
+            </button>
+
+            <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#374151", marginBottom: 4 }}>
               Disciplines
               {disciplinesSaving && <span style={{ marginLeft: 8, fontSize: "0.75rem", color: "#6b7280", fontWeight: 400 }}>Sauvegarde…</span>}
             </div>
@@ -1140,8 +1576,9 @@ export function WebsiteEditionPage({ Panel }) {
                             style={{ padding: "3px 6px", borderRadius: 4, border: "1px solid #d1d5db", fontSize: "0.78rem", background: d.womenPrize ? "#dcfce7" : "#fff" }}
                           >
                             <option value="">—</option>
-                            <option value="A">Prize A</option>
-                            <option value="B">Prize B</option>
+                            {prizeMoneySystemKeys.map((systemKey) => (
+                              <option key={systemKey} value={systemKey}>Prize {systemKey}</option>
+                            ))}
                           </select>
                         </td>
                         <td style={{ padding: "6px 12px", textAlign: "center", fontWeight: 600, color: "#111827" }}>{disc}</td>
@@ -1152,8 +1589,9 @@ export function WebsiteEditionPage({ Panel }) {
                             style={{ padding: "3px 6px", borderRadius: 4, border: "1px solid #d1d5db", fontSize: "0.78rem", background: d.menPrize ? "#dcfce7" : "#fff" }}
                           >
                             <option value="">—</option>
-                            <option value="A">Prize A</option>
-                            <option value="B">Prize B</option>
+                            {prizeMoneySystemKeys.map((systemKey) => (
+                              <option key={systemKey} value={systemKey}>Prize {systemKey}</option>
+                            ))}
                           </select>
                         </td>
                       </tr>

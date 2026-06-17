@@ -1,6 +1,7 @@
 import { NavLink } from "react-router-dom";
-import { useSponsors } from "./site-hooks";
-import { SPONSOR_CATEGORY_ORDER } from "./sponsor-utils";
+import { getSponsorMediaStyle } from "./sponsor-media-utils";
+import { useSponsorCategories, useSponsors } from "./site-hooks";
+import { sponsorCategoryLabel } from "./sponsor-utils";
 import cmcmPressConference from "../assets/partner-stories/cmcm-press-conference.jpg";
 import villeWinnerBoard from "../assets/partner-stories/ville-winner-board.jpg";
 import raceActionTrack from "../assets/partner-stories/race-action-track.jpg";
@@ -9,15 +10,6 @@ import luxembourgWinnerBoard from "../assets/partner-stories/luxembourg-winner-b
 import ambiance1 from "../assets/site-gallery/ambiance-1.jpg";
 import ambiance2 from "../assets/site-gallery/ambiance-2.jpg";
 import galleryWinner from "../assets/site-gallery/gallery-winner.jpg";
-
-const PARTNER_CATEGORY_LABELS = {
-  title: "Title partner",
-  main: "Main partners",
-  institutional: "Institutional partners",
-  media: "Media partners",
-  event: "Event sponsors",
-  supplier: "Suppliers & partners",
-};
 
 const MAIN_PARTNERS = [
   {
@@ -46,8 +38,8 @@ const MAIN_PARTNERS = [
     backdropUrl: ambiance1,
     photoPosition: "center 18%",
     photoUrl: cmcmPressConference,
-    photoAlt: "Patrizia Van der Weken and Madame la Ministre Martine Hansen at the CMCM Luxembourg Indoor Meeting press conference",
-    photoCaption: "Patrizia Van der Weken and Madame la Ministre Martine Hansen during the CMCM Luxembourg Indoor Meeting press conference.",
+    photoAlt: "Athletes and organisers during the 2026 CMCM Luxembourg Indoor Meeting press conference",
+    photoCaption: "A moment from the 2026 CMCM Luxembourg Indoor Meeting press conference.",
   },
   {
     key: "ville",
@@ -103,8 +95,10 @@ const MAIN_PARTNERS = [
     mediaPosition: "right",
     backdropUrl: ambiance2,
     photoUrl: luxembourgWinnerBoard,
-    photoAlt: "Winners ceremony with Luxembourg - Let's Make It Happen",
-    photoCaption: "A partnership that carries Luxembourg's image far beyond the arena.",
+    photoAlt: "Patrizia Van der Weken and Madame la Ministre Martine Hansen with Luxembourg - Let's Make It Happen",
+    photoCaption: "Patrizia Van der Weken and Madame la Ministre Martine Hansen representing Luxembourg - Let's Make It Happen.",
+    photoPosition: "center top",
+    photoAspectRatio: "4 / 5",
   },
 ];
 
@@ -126,15 +120,13 @@ function resolvePartnerSponsor(partner, sponsors) {
   }) || null;
 }
 
-function getPartnerCategoryLabel(category) {
-  return PARTNER_CATEGORY_LABELS[category] || String(category || "").trim() || "Partners";
-}
-
 function PartnerLogo({ sponsor, fallbackName, compact = false }) {
   return (
     <div className={`site-main-partner-logo${compact ? " site-main-partner-logo--compact" : ""}`}>
       {sponsor?.logoUrl ? (
-        <img src={sponsor.logoUrl} alt={fallbackName} />
+        <div className="site-main-partner-logo__media">
+          <img src={sponsor.logoUrl} alt={fallbackName} style={getSponsorMediaStyle(sponsor)} />
+        </div>
       ) : (
         <span>{fallbackName}</span>
       )}
@@ -162,7 +154,9 @@ function SponsorLogoCard({ sponsor }) {
   const inner = (
     <div className="site-main-partners-sponsor-card" title={sponsor.name}>
       {sponsor.logoUrl ? (
-        <img src={sponsor.logoUrl} alt={sponsor.name} />
+        <div className="site-main-partners-sponsor-card__media">
+          <img src={sponsor.logoUrl} alt={sponsor.name} style={getSponsorMediaStyle(sponsor)} />
+        </div>
       ) : (
         <span className="site-main-partners-sponsor-card__name">{sponsor.name}</span>
       )}
@@ -255,7 +249,10 @@ function PartnerSection({ partner, sponsor }) {
           <img
             src={partner.photoUrl}
             alt={partner.photoAlt}
-            style={partner.photoPosition ? { objectPosition: partner.photoPosition } : undefined}
+            style={{
+              ...(partner.photoPosition ? { objectPosition: partner.photoPosition } : {}),
+              ...(partner.photoAspectRatio ? { aspectRatio: partner.photoAspectRatio } : {}),
+            }}
           />
           <figcaption>{partner.photoCaption}</figcaption>
         </figure>
@@ -274,6 +271,7 @@ function PartnerSection({ partner, sponsor }) {
 }
 
 export function SitePartners() {
+  const { categories: sponsorCategories } = useSponsorCategories();
   const { sponsors, loading } = useSponsors(true);
   const partnerSponsors = MAIN_PARTNERS.map((partner) => ({
     partner,
@@ -290,8 +288,8 @@ export function SitePartners() {
   Object.values(sponsorsByCategory).forEach((entries) => entries.sort((left, right) => (left.order ?? 99) - (right.order ?? 99)));
 
 const categoryOrder = [
-    ...SPONSOR_CATEGORY_ORDER,
-    ...Object.keys(sponsorsByCategory).filter((category) => !SPONSOR_CATEGORY_ORDER.includes(category)),
+    ...sponsorCategories.map((category) => category.key),
+    ...Object.keys(sponsorsByCategory).filter((category) => !sponsorCategories.some((entry) => entry.key === category)),
   ];
 
   return (
@@ -367,7 +365,7 @@ const categoryOrder = [
               {categoryOrder.filter((category) => sponsorsByCategory[category]?.length).map((category) => (
                 <section key={category} className="site-main-partners-sponsor-group">
                   <div className="site-main-partners-sponsor-group__header">
-                    <p className="site-main-partners-sponsor-group__eyebrow">{getPartnerCategoryLabel(category)}</p>
+                    <p className="site-main-partners-sponsor-group__eyebrow">{sponsorCategoryLabel(category, sponsorCategories)}</p>
                   </div>
                   <div className="site-main-partners-sponsor-grid">
                     {sponsorsByCategory[category].map((sponsor) => (
