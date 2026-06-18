@@ -364,7 +364,7 @@ export function SiteHome() {
         <div className="site-container">
           <div className="site-section-header site-section-header--center" style={{ marginBottom: 40 }}>
             <span className="site-eyebrow" style={{ color: "var(--site-red)" }}>● Live</span>
-            <h2 className="site-heading">Results &amp; Live Ranking</h2>
+            <h2 className="site-heading">Live Results &amp; Live Streaming</h2>
             {latestEdition?.resultsUrl && (
               <p className="site-lead">
                 Follow the competition in real time. Results are updated live throughout the day.
