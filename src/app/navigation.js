@@ -43,6 +43,10 @@ function getDefaultRouteByRoles(roles = []) {
 
 function buildNavigationFromRoles(roles) {
   const isAdminNavigation = roles.includes("admin");
+  const preProgrammeLinks = [
+    makeLink("/app/u14", "U12 / U14", "spark"),
+    makeLink("/app/u14/porte-panier", "Porte-panier", "child"),
+  ];
 
   if (isAdminNavigation) {
     return [
@@ -62,7 +66,7 @@ function buildNavigationFromRoles(roles) {
         makeLink("/app/presse", "Presse", "badge"),
         makeLink("/app/vip", "VIP", "ticket"),
       ]),
-      makeSection("Pré-programme", [makeLink("/app/u14", "U12 / U14", "spark")]),
+      makeSection("Pré-programme", preProgrammeLinks),
       makeSection("Site web", [
         makeLink("/app/website", "Vue d’ensemble", "grid"),
         makeLink("/app/website/edition", "Édition courante", "calendar"),
@@ -113,7 +117,7 @@ function buildNavigationFromRoles(roles) {
         makeLink("/app/presse", "Presse", "badge"),
         makeLink("/app/vip", "VIP", "ticket"),
       ]),
-      makeSection("Pré-programme", [makeLink("/app/u14", "U12 / U14", "spark")]),
+      makeSection("Pré-programme", preProgrammeLinks),
     ];
 
     if (roles.includes("gestionnaire_site")) {
@@ -191,10 +195,6 @@ function buildAthletePortalNavigation(roles, portalSettings, { canImport }) {
     makeLink("/app/athlete-portal", "Vue d’ensemble", "dashboard"),
     makeLink("/app/athlete-portal/athletes", "Athlètes", "users"),
   ];
-
-  if (canImport) {
-    links.push(makeLink("/app/athlete-portal/import", "Import", "spark"));
-  }
 
   if (isAdmin) {
     links.push(makeLink("/app/athlete-portal/registry", "Base athlètes", "users"));

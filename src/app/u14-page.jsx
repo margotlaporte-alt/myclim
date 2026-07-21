@@ -47,6 +47,41 @@ function getU14TabFromPath(pathname) {
   return "preprogram";
 }
 
+function getU14PageHeader(activeTab, basketRequestsCount) {
+  switch (activeTab) {
+    case "basket":
+      return {
+        eyebrow: "Module Pré-programme",
+        title: "Porte-panier",
+        description: `Gestion séparée des demandes porte-panier et du suivi parent (${basketRequestsCount} demande(s)).`,
+      };
+    case "protected":
+      return {
+        eyebrow: "Module Pré-programme",
+        title: "Places protégées",
+        description: "Gestion des places réservées par course et des invitations parent associées.",
+      };
+    case "timeline":
+      return {
+        eyebrow: "Module Pré-programme",
+        title: "Chronologie",
+        description: "Vue chronologique de toutes les demandes pré-programme et porte-panier.",
+      };
+    case "practical":
+      return {
+        eyebrow: "Module Pré-programme",
+        title: "Infos pratiques",
+        description: "Messages pratiques envoyés aux familles pour le pré-programme et le porte-panier.",
+      };
+    default:
+      return {
+        eyebrow: "Module U12 / U14",
+        title: "U12 / U14",
+        description: "Gestion des demandes U12 / U14, des places protégées et du suivi parent.",
+      };
+  }
+}
+
 function U14Page(props) {
   const {
     AuthFormField,
@@ -181,6 +216,10 @@ function U14Page(props) {
         .filter((request) => request.requestType === "porte_panier")
         .sort((left, right) => left.submittedAtMs - right.submittedAtMs),
     [requestRecords],
+  );
+  const pageHeader = useMemo(
+    () => getU14PageHeader(activeU14Tab, basketRequests.length),
+    [activeU14Tab, basketRequests.length],
   );
   const chronologicalRequests = useMemo(
     () =>
@@ -585,9 +624,9 @@ function U14Page(props) {
     <div className="page">
       <section className="page-header">
         <div>
-          <p className="eyebrow">Module U12 / U14</p>
-          <h1>U12 / U14</h1>
-          <p>Gestion des demandes U12 / U14, du porte-panier, des places protégées et du suivi parent.</p>
+          <p className="eyebrow">{pageHeader.eyebrow}</p>
+          <h1>{pageHeader.title}</h1>
+          <p>{pageHeader.description}</p>
         </div>
       </section>
 

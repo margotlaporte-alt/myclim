@@ -38,7 +38,7 @@ function getVolunteerApplicationSubmissionErrorMessage(error) {
     case "volunteer/application-write-failed":
       return error.message;
     case "auth/email-already-in-use":
-      return "Un compte existe déjà avec cette adresse email.";
+      return "Cette adresse a déjà un compte. Connectez-vous ci-dessus ou utilisez « Mot de passe oublié » avec cette adresse email.";
     case "auth/invalid-email":
       return "L'adresse email indiquée n'est pas valide.";
     case "auth/missing-password":
@@ -186,6 +186,9 @@ function VolunteerAccessPage() {
     try { await createVolunteerApplication(formData); navigate("/app"); }
     catch (submissionError) {
       console.error("Volunteer application submission failed", submissionError);
+      if (submissionError?.code === "auth/email-already-in-use") {
+        setLoginEmail(formData.email);
+      }
       setApplicationError(getVolunteerApplicationSubmissionErrorMessage(submissionError));
     } finally { setIsApplicationSubmitting(false); }
   }
