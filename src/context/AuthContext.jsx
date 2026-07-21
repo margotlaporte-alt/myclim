@@ -159,18 +159,18 @@ function createRegistrationStepError(code, message, cause) {
 function buildFirestoreWriteFailureMessage(stepLabel, cause, cleanupSucceeded) {
   const causeCode = String(cause?.code || "").trim();
   const retryMessage = cleanupSucceeded
-    ? " Le compte incomplet a été supprimé automatiquement, vous pouvez réessayer avec la même adresse email."
-    : " Le compte partiellement créé existe peut-être encore, et une suppression manuelle peut être nécessaire avant une nouvelle tentative.";
+    ? " Le compte incomplet a ete supprime automatiquement, vous pouvez reessayer avec la meme adresse email."
+    : " Le compte partiellement cree existe peut-etre encore, et une suppression manuelle peut etre necessaire avant une nouvelle tentative.";
 
   switch (causeCode) {
     case "permission-denied":
     case "firestore/permission-denied":
-      return `L'enregistrement du ${stepLabel} a été refusé par les règles d'accès Firestore.${retryMessage}`;
+      return `L'enregistrement du ${stepLabel} a ete refuse par les regles d'acces Firestore.${retryMessage}`;
     case "unavailable":
     case "firestore/unavailable":
-      return `L'enregistrement du ${stepLabel} a échoué car Firestore est momentanément indisponible.${retryMessage}`;
+      return `L'enregistrement du ${stepLabel} a echoue car Firestore est momentanement indisponible.${retryMessage}`;
     default:
-      return `L'enregistrement du ${stepLabel} dans Firestore a échoué.${retryMessage}`;
+      return `L'enregistrement du ${stepLabel} dans Firestore a echoue.${retryMessage}`;
   }
 }
 
@@ -394,7 +394,7 @@ export function AuthProvider({ children }) {
       );
       throw createRegistrationStepError(
         "volunteer/users-write-failed",
-        buildFirestoreWriteFailureMessage("profil bénévole", error, cleanupSucceeded),
+        buildFirestoreWriteFailureMessage("profil benevole", error, cleanupSucceeded),
         error,
       );
     }
@@ -465,7 +465,7 @@ export function AuthProvider({ children }) {
       );
       throw createRegistrationStepError(
         "volunteer/application-write-failed",
-        buildFirestoreWriteFailureMessage("candidature bénévole", error, cleanupSucceeded),
+        buildFirestoreWriteFailureMessage("candidature benevole", error, cleanupSucceeded),
         error,
       );
     }

@@ -60,6 +60,36 @@ function getVolunteerApplicationSubmissionErrorMessage(error) {
   }
 }
 
+function getVolunteerApplicationSubmissionErrorMessage(error) {
+  switch (error?.code) {
+    case "underage-volunteer":
+      return "Désolée, nous ne pouvons malheureusement pas prendre de bénévole de moins de 14 ans sauf pour le rôle de porte-panier dans la mesure des places disponibles.";
+    case "volunteer/users-write-failed":
+    case "volunteer/application-write-failed":
+      return error.message;
+    case "auth/email-already-in-use":
+      return "Un compte existe déjà avec cette adresse email.";
+    case "auth/invalid-email":
+      return "L'adresse email indiquée n'est pas valide.";
+    case "auth/missing-password":
+      return "Le mot de passe est manquant.";
+    case "auth/weak-password":
+      return "Le mot de passe doit contenir au moins 6 caractères.";
+    case "auth/network-request-failed":
+      return "La création du compte a échoué à cause d'un problème réseau. Réessaie dans un instant.";
+    case "permission-denied":
+    case "firestore/permission-denied":
+      return "La création du compte a été refusée par les règles d'accès Firestore.";
+    case "unavailable":
+    case "firestore/unavailable":
+      return "Le service d'inscription est momentanément indisponible. Réessaie plus tard.";
+    default:
+      return error?.message
+        ? `La candidature n'a pas pu être enregistrée : ${error.message}`
+        : "La candidature n'a pas pu être enregistrée. Vérifiez les champs obligatoires ou utilisez un autre email si un compte existe déjà.";
+  }
+}
+
 function LoginPage() {
   const { login, requestPasswordReset } = useAuth();
   const { t } = useLanguage();
