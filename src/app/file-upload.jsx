@@ -12,7 +12,15 @@ import { storage } from "../services/firebase";
  *   storagePath  string   Firebase Storage folder, e.g. "press-releases"
  *   label        string   field label
  */
-export function FileUpload({ value, onChange, accept = "application/pdf", storagePath = "uploads", label = "File" }) {
+export function FileUpload({
+  value,
+  onChange,
+  onUploadComplete,
+  accept = "application/pdf",
+  storagePath = "uploads",
+  label = "File",
+  helperText = "PDF files only · Max 20 MB",
+}) {
   const [progress, setProgress] = useState(null);
   const [error, setError] = useState("");
   const [dragging, setDragging] = useState(false);
@@ -45,6 +53,12 @@ export function FileUpload({ value, onChange, accept = "application/pdf", storag
       async () => {
         const url = await getDownloadURL(task.snapshot.ref);
         onChange(url);
+        onUploadComplete?.({
+          url,
+          fileName: file.name,
+          filePath: task.snapshot.ref.fullPath,
+          mimeType: file.type || "",
+        });
         setProgress(null);
       },
     );
@@ -120,7 +134,7 @@ export function FileUpload({ value, onChange, accept = "application/pdf", storag
               Click to select or drag &amp; drop
             </div>
             <div style={{ fontSize: "0.78rem", color: "#999", marginTop: 4 }}>
-              PDF files only · Max 20 MB
+              {helperText}
             </div>
           </div>
         )}
