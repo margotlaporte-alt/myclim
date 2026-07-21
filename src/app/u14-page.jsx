@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { collection } from "firebase/firestore";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   U14_PRACTICAL_INFO_DOC_PATH,
   U14_RACE_DEFINITIONS,
@@ -28,6 +29,24 @@ import {
 } from "./u14-hooks";
 import { db } from "../services/firebase";
 
+const U14_TAB_PATHS = {
+  preprogram: "/app/u14",
+  protected: "/app/u14/places-protegees",
+  basket: "/app/u14/porte-panier",
+  timeline: "/app/u14/chronologie",
+  practical: "/app/u14/infos-pratiques",
+};
+
+function getU14TabFromPath(pathname) {
+  const normalizedPath = String(pathname || "").replace(/\/+$/, "") || "/app/u14";
+
+  if (normalizedPath.endsWith("/porte-panier")) return "basket";
+  if (normalizedPath.endsWith("/places-protegees")) return "protected";
+  if (normalizedPath.endsWith("/chronologie")) return "timeline";
+  if (normalizedPath.endsWith("/infos-pratiques")) return "practical";
+  return "preprogram";
+}
+
 function U14Page(props) {
   const {
     AuthFormField,
@@ -42,6 +61,8 @@ function U14Page(props) {
     syncU14RaceAllocations,
     updateDoc,
   } = props;
+  const location = useLocation();
+  const navigate = useNavigate();
   const { requests, loading: requestsLoading, error: requestsError } = useU14RequestsList(true);
   const { children, loading: childrenLoading, error: childrenError } = useU14ChildrenList(true);
   const {
@@ -56,7 +77,7 @@ function U14Page(props) {
     error: practicalInfoError,
   } = useU14PracticalInfoConfiguration(true);
   const [selectedRaceCode, setSelectedRaceCode] = useState(U14_RACE_DEFINITIONS[0]?.code || "");
-  const [activeU14Tab, setActiveU14Tab] = useState("preprogram");
+  const [activeU14Tab, setActiveU14Tab] = useState(() => getU14TabFromPath(location.pathname));
   const [practicalInfoForm, setPracticalInfoForm] = useState({ preprogram: "", porte_panier: "" });
   const [requestSearch, setRequestSearch] = useState("");
   const [requestStatusFilter, setRequestStatusFilter] = useState("Tous");
@@ -84,6 +105,20 @@ function U14Page(props) {
 
     return () => window.clearTimeout(timeoutId);
   }, [basketPracticalInfo, preprogramPracticalInfo]);
+
+  useEffect(() => {
+    const nextTab = getU14TabFromPath(location.pathname);
+    if (nextTab === activeU14Tab) return;
+    setActiveU14Tab(nextTab);
+  }, [activeU14Tab, location.pathname]);
+
+  function openU14Tab(tabId) {
+    const nextPath = U14_TAB_PATHS[tabId] || U14_TAB_PATHS.preprogram;
+    setActiveU14Tab(tabId);
+    if (location.pathname !== nextPath) {
+      navigate(nextPath);
+    }
+  }
   const dataLoading = requestsLoading || childrenLoading || protectedEntriesLoading;
   const { requestRecords, raceSummaries } = useMemo(
     () => buildU14AllocationSnapshot({ requests, children, protectedEntries }),
@@ -550,9 +585,9 @@ function U14Page(props) {
     <div className="page">
       <section className="page-header">
         <div>
-          <p className="eyebrow">Module Pré-programme</p>
-          <h1>Pré-programme</h1>
-          <p>Attribution des demandes pré-programme, gestion des places protégées et suivi des confirmations parents.</p>
+          <p className="eyebrow">Module U12 / U14</p>
+          <h1>U12 / U14</h1>
+          <p>Gestion des demandes U12 / U14, du porte-panier, des places protégées et du suivi parent.</p>
         </div>
       </section>
 
@@ -561,41 +596,41 @@ function U14Page(props) {
       ) : null}
       {statusMessage ? <p className="panel-note panel-note--success">{statusMessage}</p> : null}
       {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
-      {dataLoading ? <p className="status-note">Chargement du module Pré-programme...</p> : null}
+      {dataLoading ? <p className="status-note">Chargement du module U12 / U14...</p> : null}
 
       <div className="admin-subtabs" role="tablist" aria-label="Navigation du module Pré-programme">
         <button
           className={`admin-subtab ${activeU14Tab === "preprogram" ? "admin-subtab--active" : ""}`}
           type="button"
-          onClick={() => setActiveU14Tab("preprogram")}
+          onClick={() => openU14Tab("preprogram")}
         >
           Pré-programme
         </button>
         <button
           className={`admin-subtab ${activeU14Tab === "protected" ? "admin-subtab--active" : ""}`}
           type="button"
-          onClick={() => setActiveU14Tab("protected")}
+          onClick={() => openU14Tab("protected")}
         >
           Places protégées
         </button>
         <button
           className={`admin-subtab ${activeU14Tab === "basket" ? "admin-subtab--active" : ""}`}
           type="button"
-          onClick={() => setActiveU14Tab("basket")}
+          onClick={() => openU14Tab("basket")}
         >
           Porte-panier ({basketRequests.length})
         </button>
         <button
           className={`admin-subtab ${activeU14Tab === "timeline" ? "admin-subtab--active" : ""}`}
           type="button"
-          onClick={() => setActiveU14Tab("timeline")}
+          onClick={() => openU14Tab("timeline")}
         >
           Chronologie
         </button>
         <button
           className={`admin-subtab ${activeU14Tab === "practical" ? "admin-subtab--active" : ""}`}
           type="button"
-          onClick={() => setActiveU14Tab("practical")}
+          onClick={() => openU14Tab("practical")}
         >
           Infos pratiques
         </button>

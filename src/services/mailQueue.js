@@ -1,3 +1,5 @@
+import { getAppBaseUrl } from "./app-url";
+
 function getMailFunctionUrl() {
   const env = typeof import.meta !== "undefined" && import.meta.env ? import.meta.env : {};
   const configuredUrl = String(env.VITE_MAIL_FUNCTION_URL || "").trim();
@@ -8,20 +10,6 @@ function getMailRequestTimeoutMs() {
   const env = typeof import.meta !== "undefined" && import.meta.env ? import.meta.env : {};
   const configuredTimeout = Number(env.VITE_MAIL_REQUEST_TIMEOUT_MS || 8000);
   return Number.isFinite(configuredTimeout) && configuredTimeout > 0 ? configuredTimeout : 8000;
-}
-
-function getAppBaseUrl() {
-  const env = typeof import.meta !== "undefined" && import.meta.env ? import.meta.env : {};
-  const configuredUrl = String(env.VITE_APP_BASE_URL || "").trim();
-  if (configuredUrl) {
-    return configuredUrl.replace(/\/$/, "");
-  }
-
-  if (typeof window !== "undefined" && window.location?.origin) {
-    return window.location.origin.replace(/\/$/, "");
-  }
-
-  return "https://myclim.app";
 }
 
 function getMeetingLogoUrl() {

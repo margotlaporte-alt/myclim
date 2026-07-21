@@ -1,6 +1,16 @@
 const REMEMBER_ME_STORAGE_KEY = "myclim-remember-me";
 const DEFAULT_PHONE_COUNTRY_CODE = "+352";
-const VOLUNTEER_LANGUAGE_OPTIONS = ["Français", "Anglais", "Allemand", "Belge", "Luxembourgeois", "Autre"];
+const VOLUNTEER_LANGUAGE_OPTIONS = [
+  "Français",
+  "Anglais",
+  "Allemand",
+  "Luxembourgeois",
+  "Portugais",
+  "Italien",
+  "Espagnol",
+  "Néerlandais",
+  "Autre",
+];
 const VOLUNTEER_MEETING_DAY_LABEL = "Meeting - dimanche 17/01/2027 9h30-19h00 (obligatoire)";
 const PHONE_COUNTRY_OPTIONS = [
   { code: "+352", label: "Luxembourg" },

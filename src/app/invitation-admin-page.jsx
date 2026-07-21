@@ -11,14 +11,8 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { db } from "../services/firebase";
+import { getAppBaseUrl } from "../services/app-url";
 import { platformRoleOptions } from "./seed-data";
-
-function getAppBaseUrl() {
-  if (typeof window !== "undefined" && window.location?.origin) {
-    return window.location.origin.replace(/\/$/, "");
-  }
-  return "https://myclim.netlify.app";
-}
 
 const ROLE_LABEL = Object.fromEntries(platformRoleOptions.map((r) => [r.value, r.label]));
 const STATUS_LABEL = { pending: "En attente", accepted: "Acceptée", cancelled: "Annulée" };

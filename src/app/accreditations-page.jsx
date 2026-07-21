@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { collection, doc, onSnapshot, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
+import { useLocation, useNavigate } from "react-router-dom";
 import accreditationQrEmagazineAthleteUrl from "../assets/accreditation-qr-emagazine-athlete.png";
 import accreditationQrPhotosLiveAthleteUrl from "../assets/accreditation-qr-photos-live-athlete.png";
 import accreditationQrResultsLiveAthleteUrl from "../assets/accreditation-qr-results-live-athlete.png";
@@ -54,6 +55,32 @@ const NON_NOMINATIVE_RESOURCE_CARDS = [
   },
 ];
 
+const ACCREDITATION_TAB_PATHS = {
+  roles: "/app/accreditations",
+  people: "/app/accreditations/benevoles",
+  print: "/app/accreditations/impressions",
+  tracking: "/app/accreditations/suivi",
+  history: "/app/accreditations/historique",
+  judges: "/app/accreditations/juges",
+  press: "/app/accreditations/presse",
+};
+
+function getAccreditationTabFromPath(pathname, availableTabs) {
+  const normalizedPath = String(pathname || "").replace(/\/+$/, "") || "/app/accreditations";
+
+  if (normalizedPath.endsWith("/benevoles") && availableTabs.includes("people")) return "people";
+  if (normalizedPath.endsWith("/impressions") && availableTabs.includes("print")) return "print";
+  if (normalizedPath.endsWith("/suivi") && availableTabs.includes("tracking")) return "tracking";
+  if (normalizedPath.endsWith("/historique") && availableTabs.includes("history")) return "history";
+  if (normalizedPath.endsWith("/juges") && availableTabs.includes("judges")) return "judges";
+  if (normalizedPath.endsWith("/presse") && availableTabs.includes("press")) return "press";
+  if (normalizedPath.endsWith("/roles") && availableTabs.includes("roles")) return "roles";
+  if (normalizedPath === "/app/accreditations" && availableTabs.includes("roles")) return "roles";
+  if (normalizedPath === "/app/accreditations" && availableTabs.includes("people")) return "people";
+
+  return availableTabs[0] || "print";
+}
+
 function AccreditationsPage(props) {
   const {
     ACCREDITATION_CONFIGURATION_DOC_PATH,
@@ -63,6 +90,8 @@ function AccreditationsPage(props) {
     normalizeSubRoles,
   } = props;
   const { userProfile } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const activeRoles = getActiveRoles(userProfile);
   const canManageAccreditationConfiguration = activeRoles.includes("admin");
   const canOperatePrinting = activeRoles.includes("admin") || activeRoles.includes("gestionnaire");
@@ -79,9 +108,6 @@ function AccreditationsPage(props) {
     loading: accreditationLoading,
     error: accreditationError,
   } = useAccreditationConfiguration(roles);
-  const [activeAccreditationTab, setActiveAccreditationTab] = useState(
-    activeRoles.includes("admin") ? "roles" : "print",
-  );
   const [isZoneLibraryExpanded, setIsZoneLibraryExpanded] = useState(false);
   const [users, setUsers] = useState([]);
   const [usersLoading, setUsersLoading] = useState(true);
@@ -110,6 +136,7 @@ function AccreditationsPage(props) {
   const [printHistoryBatchOpenById, setPrintHistoryBatchOpenById] = useState({});
   const [selectedPrintHistoryBatchId, setSelectedPrintHistoryBatchId] = useState("");
   const [judgeSearch, setJudgeSearch] = useState("");
+  const [roleSearch, setRoleSearch] = useState("");
   const [visibleListCountByKey, setVisibleListCountByKey] = useState({});
   const zones = Array.isArray(storedZones) ? storedZones : [];
   const roleZoneAssignments = storedRoleZoneAssignments && typeof storedRoleZoneAssignments === "object"
@@ -721,6 +748,21 @@ function AccreditationsPage(props) {
     );
   }
 
+  function setRoleZoneSelection(roleId, nextZoneIds, successMessage = "Accès par rôle mis à jour.") {
+    persistAccreditationConfiguration(
+      {
+        zones,
+        roleZoneAssignments: {
+          ...roleZoneAssignments,
+          [roleId]: nextZoneIds,
+        },
+        volunteerOverrides,
+        printHistory,
+      },
+      successMessage,
+    );
+  }
+
   function updateVolunteerOverride(volunteer, field, zoneId) {
     const nextOverride = buildUpdatedVolunteerOverride(
       volunteer,
@@ -1051,6 +1093,14 @@ function AccreditationsPage(props) {
   }
 
   const selectedRoleZoneIds = selectedRole ? getRoleZoneIds(selectedRole.id) : [];
+  const normalizedRoleSearch = roleSearch.trim().toLowerCase();
+  const filteredRoles = useMemo(
+    () => roles.filter((role) => role.roleName.toLowerCase().includes(normalizedRoleSearch)),
+    [normalizedRoleSearch, roles],
+  );
+  const selectedRoleZoneLabels = sortedZones
+    .filter((zone) => selectedRoleZoneIds.includes(zone.id))
+    .map((zone) => formatZoneLabel(zone));
   const selectedVolunteerOverride = selectedVolunteer
     ? getVolunteerOverride(selectedVolunteer.id)
     : {
@@ -1140,11 +1190,24 @@ function AccreditationsPage(props) {
     ...(canManageAccreditationConfiguration ? ["roles"] : []),
     ...(canOperatePrinting ? ["people", "print", "tracking", "history", "judges", "press"] : []),
   ];
+  const [activeAccreditationTab, setActiveAccreditationTab] = useState(() =>
+    getAccreditationTabFromPath(location.pathname, availableAccreditationTabs),
+  );
 
   useEffect(() => {
-    if (availableAccreditationTabs.includes(activeAccreditationTab)) return;
-    setActiveAccreditationTab(availableAccreditationTabs[0] || "print");
-  }, [activeAccreditationTab, availableAccreditationTabs]);
+    const nextTab = getAccreditationTabFromPath(location.pathname, availableAccreditationTabs);
+    if (nextTab === activeAccreditationTab) return;
+    setActiveAccreditationTab(nextTab);
+  }, [activeAccreditationTab, availableAccreditationTabs, location.pathname]);
+
+  function openAccreditationTab(tabId) {
+    if (!availableAccreditationTabs.includes(tabId)) return;
+    const nextPath = ACCREDITATION_TAB_PATHS[tabId] || ACCREDITATION_TAB_PATHS.roles;
+    setActiveAccreditationTab(tabId);
+    if (location.pathname !== nextPath) {
+      navigate(nextPath);
+    }
+  }
 
   useEffect(() => {
     const invalidVolunteerUpdates = volunteers
@@ -1261,7 +1324,7 @@ function AccreditationsPage(props) {
   ]);
 
   return (
-    <div className="page">
+    <div className="page accreditation-page">
       <section className="page-header">
         <div>
           <p className="eyebrow">Accreditations</p>
@@ -1278,7 +1341,7 @@ function AccreditationsPage(props) {
           <button
             className={`admin-subtab ${activeAccreditationTab === "roles" ? "admin-subtab--active" : ""}`}
             type="button"
-            onClick={() => setActiveAccreditationTab("roles")}
+            onClick={() => openAccreditationTab("roles")}
           >
             Zones par role
           </button>
@@ -1288,42 +1351,42 @@ function AccreditationsPage(props) {
             <button
               className={`admin-subtab ${activeAccreditationTab === "people" ? "admin-subtab--active" : ""}`}
               type="button"
-              onClick={() => setActiveAccreditationTab("people")}
+              onClick={() => openAccreditationTab("people")}
             >
               Préparation badges
             </button>
             <button
               className={`admin-subtab ${activeAccreditationTab === "print" ? "admin-subtab--active" : ""}`}
               type="button"
-              onClick={() => setActiveAccreditationTab("print")}
+              onClick={() => openAccreditationTab("print")}
             >
               Impressions
             </button>
             <button
               className={`admin-subtab ${activeAccreditationTab === "tracking" ? "admin-subtab--active" : ""}`}
               type="button"
-              onClick={() => setActiveAccreditationTab("tracking")}
+              onClick={() => openAccreditationTab("tracking")}
             >
               Suivi accréditation
             </button>
             <button
               className={`admin-subtab ${activeAccreditationTab === "history" ? "admin-subtab--active" : ""}`}
               type="button"
-              onClick={() => setActiveAccreditationTab("history")}
+              onClick={() => openAccreditationTab("history")}
             >
               Historique
             </button>
             <button
               className={`admin-subtab ${activeAccreditationTab === "judges" ? "admin-subtab--active" : ""}`}
               type="button"
-              onClick={() => setActiveAccreditationTab("judges")}
+              onClick={() => openAccreditationTab("judges")}
             >
               Juges
             </button>
             <button
               className={`admin-subtab ${activeAccreditationTab === "press" ? "admin-subtab--active" : ""}`}
               type="button"
-              onClick={() => setActiveAccreditationTab("press")}
+              onClick={() => openAccreditationTab("press")}
             >
               Presse
             </button>
@@ -1395,64 +1458,155 @@ function AccreditationsPage(props) {
               </>
             ) : (
               <div className="accreditation-zone-collapsed">
-                <p className="panel-note">
-                  {sortedZones.length} zone(s) disponibles. Dépliez la bibliothèque pour les modifier.
-                </p>
+                <div className="accreditation-zone-library-preview">
+                  <div className="team-summary-pill">
+                    <strong>{sortedZones.length}</strong>
+                    <span>Zone(s) disponibles</span>
+                  </div>
+                  <div className="accreditation-tag-list">
+                    {sortedZones.slice(0, 4).map((zone) => (
+                      <span key={zone.id} className="accreditation-tag">
+                        {formatZoneLabel(zone)}
+                      </span>
+                    ))}
+                    {sortedZones.length > 4 ? (
+                      <span className="accreditation-tag">+ {sortedZones.length - 4} autres</span>
+                    ) : null}
+                  </div>
+                </div>
               </div>
             )}
           </Panel>
 
-          <section className="admin-split">
-            <div className="admin-split__nav">
-              {roles.map((role) => (
-                <button
-                  key={role.id}
-                  className={`role-chip ${effectiveSelectedRoleId === role.id ? "role-chip--active" : ""}`}
-                  type="button"
-                  onClick={() => setSelectedRoleId(role.id)}
-                >
-                  <strong>{role.roleName}</strong>
-                  <span>{getRoleZoneIds(role.id).length} zone(s) par défaut</span>
-                </button>
-              ))}
-            </div>
+          <section className="admin-split accreditation-role-layout">
+            <Panel title="Rôles" subtitle="Choisissez un rôle pour régler ses accès par défaut.">
+              <div className="admin-split__nav accreditation-role-nav">
+                <label className="field accreditation-role-search">
+                  <span>Rechercher un rôle</span>
+                  <input
+                    placeholder="Ex: VIP, presse, tribune..."
+                    value={roleSearch}
+                    onChange={(event) => setRoleSearch(event.target.value)}
+                  />
+                </label>
+                <div className="accreditation-role-nav__meta">
+                  <span>{filteredRoles.length} rôle(s) visible(s)</span>
+                  <span>{roles.length} au total</span>
+                </div>
+                <div className="accreditation-role-list">
+                  {filteredRoles.map((role) => {
+                    const roleZoneCount = getRoleZoneIds(role.id).length;
+
+                    return (
+                      <button
+                        key={role.id}
+                        className={`role-chip ${effectiveSelectedRoleId === role.id ? "role-chip--active" : ""}`}
+                        type="button"
+                        onClick={() => setSelectedRoleId(role.id)}
+                      >
+                        <span className="accreditation-role-list__label">{role.roleName}</span>
+                        <span className="accreditation-role-list__count">
+                          {roleZoneCount} zone{roleZoneCount > 1 ? "s" : ""}
+                        </span>
+                      </button>
+                    );
+                  })}
+                  {!filteredRoles.length ? (
+                    <p className="panel-note">Aucun rôle ne correspond à la recherche.</p>
+                  ) : null}
+                </div>
+              </div>
+            </Panel>
 
             {selectedRole ? (
               <div className="admin-stack">
                 <Panel
                   title={`Zones par défaut - ${selectedRole.roleName}`}
                   subtitle="Cochez les accès qui doivent être donnés automatiquement à toute personne affectée à ce rôle."
+                  actions={
+                    <div className="panel-actions accreditation-role-actions">
+                      <button
+                        className="button button--secondary button--small"
+                        type="button"
+                        onClick={() => setRoleZoneSelection(selectedRole.id, sortedZones.map((zone) => zone.id), "Toutes les zones ont été attribuées au rôle.")}
+                      >
+                        Tout cocher
+                      </button>
+                      <button
+                        className="button button--secondary button--small"
+                        type="button"
+                        onClick={() => setRoleZoneSelection(selectedRole.id, [], "Toutes les zones par défaut ont été retirées du rôle.")}
+                      >
+                        Vider
+                      </button>
+                    </div>
+                  }
                 >
+                  <div className="accreditation-person-summary">
+                    <div className="team-summary-pill">
+                      <strong>{selectedRoleZoneIds.length}</strong>
+                      <span>Zone(s) attribuée(s)</span>
+                    </div>
+                    <div className="team-summary-pill">
+                      <strong>{sortedZones.length - selectedRoleZoneIds.length}</strong>
+                      <span>Zone(s) non attribuée(s)</span>
+                    </div>
+                    <div className="team-summary-pill">
+                      <strong>{roles.findIndex((role) => role.id === selectedRole.id) + 1}</strong>
+                      <span>Position dans la liste des rôles</span>
+                    </div>
+                  </div>
                   <div className="choice-grid choice-grid--2">
                     {sortedZones.map((zone) => (
-                      <label key={zone.id} className="selection-card selection-card--compact">
+                      <label key={zone.id} className="selection-card selection-card--compact accreditation-zone-option">
                         <input
                           type="checkbox"
                           checked={selectedRoleZoneIds.includes(zone.id)}
                           onChange={() => toggleRoleZone(selectedRole.id, zone.id)}
                         />
                         <div>
-                          <strong>{formatZoneLabel(zone)}</strong>
-                          <p>Accès hérité automatiquement pour ce rôle</p>
+                          <div className="accreditation-zone-option__top">
+                            <strong>{formatZoneLabel(zone)}</strong>
+                            <span className={`accreditation-tag ${selectedRoleZoneIds.includes(zone.id) ? "accreditation-tag--active" : ""}`}>
+                              {selectedRoleZoneIds.includes(zone.id) ? "Attribuée" : "Inactive"}
+                            </span>
+                          </div>
+                          <p>Accès hérité automatiquement pour toute personne affectée à ce rôle.</p>
                         </div>
                       </label>
                     ))}
                   </div>
                 </Panel>
 
-                <Panel title="Résumé du rôle">
-                  <div className="accreditation-tag-list">
-                    {selectedRoleZoneIds.length ? (
-                      sortedZones
-                        .filter((zone) => selectedRoleZoneIds.includes(zone.id))
-                        .map((zone) => (
-                          <span key={zone.id} className="accreditation-tag accreditation-tag--active">
-                            {formatZoneLabel(zone)}
-                          </span>
-                        ))
-                    ) : (
-                      <p className="panel-note">Aucune zone par défaut définie pour ce rôle.</p>
-                    )}
+                <Panel title="Résumé du rôle" subtitle="Vue rapide de la configuration actuellement enregistrée.">
+                  <div className="accreditation-role-summary">
+                    <div className="accreditation-inline-panel">
+                      <strong>Rôle sélectionné</strong>
+                      <div className="accreditation-role-summary__stats">
+                        <div>
+                          <span>Nom</span>
+                          <strong>{selectedRole.roleName}</strong>
+                        </div>
+                        <div>
+                          <span>Zones actives</span>
+                          <strong>{selectedRoleZoneIds.length}</strong>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="accreditation-inline-panel">
+                      <strong>Zones attribuées</strong>
+                      {selectedRoleZoneLabels.length ? (
+                        <div className="accreditation-tag-list">
+                          {selectedRoleZoneLabels.map((label) => (
+                            <span key={label} className="accreditation-tag accreditation-tag--active">
+                              {label}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="panel-note accreditation-role-summary__empty">Aucune zone par défaut définie pour ce rôle.</p>
+                      )}
+                    </div>
                   </div>
                 </Panel>
               </div>

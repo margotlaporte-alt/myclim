@@ -480,10 +480,10 @@ export default function App() {
               </Route>
               <Route element={<RequireRouteAccess allowedRoles={["admin", "gestionnaire"]} />}>
                 <Route path="benevoles" element={<VolunteersPage />} />
-                <Route path="u14" element={<U14Page />} />
+                <Route path="u14/*" element={<U14Page />} />
               </Route>
               <Route element={<RequireRouteAccess allowedRoles={["admin", "gestionnaire"]} />}>
-                <Route path="accreditations" element={<AccreditationsPage />} />
+                <Route path="accreditations/*" element={<AccreditationsPage />} />
               </Route>
               <Route element={<RequireRouteAccess allowedRoles={["admin", "gestionnaire"]} />}>
                 <Route path="documents" element={<DocumentsPage />} />

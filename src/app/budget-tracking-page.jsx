@@ -118,7 +118,7 @@ function buildBudgetFromTemplate(templateBudget, nextEditionId) {
       ...row,
       referenceForecast: row.currentForecast ?? row.referenceForecast,
       referenceActual: row.currentActual ?? row.currentForecast ?? row.referenceActual,
-      currentForecast: row.currentForecast ?? row.referenceForecast,
+      currentForecast: row.currentActual ?? row.currentForecast ?? row.referenceForecast,
       currentActual: null,
       actualReference: "",
       comment: "",
@@ -817,6 +817,12 @@ function BudgetTrackingPage({ Panel }) {
   const hasPersistedBudget = Boolean(persistedBudget);
   const hasUnsavedChanges = isBudgetEditable && (Boolean(budgetDiff.length) || !hasPersistedBudget);
   const totals = useMemo(() => (draftBudget ? getBudgetTotals(draftBudget) : null), [draftBudget]);
+  const hasCurrentActualValues = useMemo(
+    () => (draftBudget
+      ? [...draftBudget.expenses, ...draftBudget.revenues].some((row) => row?.currentActual != null && row.currentActual !== "")
+      : false),
+    [draftBudget],
+  );
   const hasComparison = useMemo(
     () => hasComparisonEdition(draftBudget?.referenceEditionId),
     [draftBudget?.referenceEditionId],
@@ -1228,6 +1234,8 @@ function BudgetTrackingPage({ Panel }) {
   }
 
   const currentYearLabel = getBudgetDocumentLabel(draftBudget);
+  const topbarSummaryField = !isBudgetLocked && !hasCurrentActualValues ? "currentForecast" : "currentActual";
+  const topbarSummaryLabel = topbarSummaryField === "currentForecast" ? "Prévisionnel" : (isBudgetLocked ? "Définitif" : "Réalisé");
 
   return (
     <div className="page budget-page">
@@ -1313,6 +1321,24 @@ function BudgetTrackingPage({ Panel }) {
             <span>{formatDateTime(draftBudget.updatedAt)}</span>
             <span>{draftBudget.updatedByName || actorName}</span>
           </div>
+        </div>
+
+        <div className="budget-inline-summary budget-inline-summary--topbar" aria-label={`Synthèse ${topbarSummaryLabel.toLowerCase()} du budget`}>
+          <span className="budget-inline-summary__context">{topbarSummaryLabel} {draftBudget.currentEditionId}</span>
+          <span className="budget-inline-summary__item">
+            <strong>Dépenses</strong>
+            <span>{formatCurrency(totals.expenses[topbarSummaryField])}</span>
+          </span>
+          <span className="budget-inline-summary__item">
+            <strong>Recettes</strong>
+            <span>{formatCurrency(totals.revenues[topbarSummaryField])}</span>
+          </span>
+          <span className="budget-inline-summary__item budget-inline-summary__item--balance">
+            <strong>Bilan</strong>
+            <span className={getBalanceToneClass(totals.balance[topbarSummaryField])}>
+              {formatCurrency(totals.balance[topbarSummaryField])}
+            </span>
+          </span>
         </div>
 
         {budgetSeedLog.length ? <BudgetSeedLog lines={budgetSeedLog} /> : null}

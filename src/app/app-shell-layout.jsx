@@ -95,15 +95,18 @@ function AppShell(props) {
     return [viewAsRole];
   }, [roles, viewAsRole]);
 
-  const portalCanImport = useMemo(() => canImportAthletes(roles, portalSettings), [roles, portalSettings]);
+  const portalCanImport = useMemo(
+    () => canImportAthletes(effectiveRoles, portalSettings),
+    [effectiveRoles, portalSettings],
+  );
   const portalSection = useMemo(() => {
-    if (portalSettingsLoading || !canAccessAthletePortal(roles, portalSettings)) return null;
+    if (portalSettingsLoading || !canAccessAthletePortal(effectiveRoles, portalSettings)) return null;
     return {
       type: "section",
       title: "Athlete Portal",
-      links: buildAthletePortalNavigation(roles, portalSettings, { canImport: portalCanImport }),
+      links: buildAthletePortalNavigation(effectiveRoles, portalSettings, { canImport: portalCanImport }),
     };
-  }, [portalCanImport, portalSettings, portalSettingsLoading, roles]);
+  }, [effectiveRoles, portalCanImport, portalSettings, portalSettingsLoading]);
 
   const mainNavigation = useMemo(() => {
     const nav = buildNavigationFromRoles(effectiveRoles);
