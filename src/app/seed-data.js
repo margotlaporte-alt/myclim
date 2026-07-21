@@ -83,7 +83,7 @@ const volunteerAdminSeed = [
     age: 17,
     email: "emma.dupont@email.com",
     phone: "+352 661 114 550",
-    languages: ["Français", "Belge"],
+    languages: ["Français", "Anglais"],
     workflowStatus: "Affecté",
     assignedRole: "VIP",
     assignmentStatus: "Proposé",

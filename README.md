@@ -26,6 +26,7 @@ Dans l'interface Netlify, definir:
 Optionnel en local:
 
 - `VITE_MAIL_FUNCTION_URL`
+- `VITE_APP_BASE_URL` pour forcer l'URL publique de l'app dans les liens et e-mails
 
 ## Lancement local
 

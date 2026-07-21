@@ -819,6 +819,8 @@
 }
 
 .vip-admin-form__actions {
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
   justify-content: flex-end;
   align-items: end;
 }
@@ -2739,6 +2741,62 @@ tr.row--warning > td {
   margin-top: 18px;
 }
 
+.accreditation-zone-library-preview {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(160px, 220px) minmax(0, 1fr);
+  align-items: start;
+}
+
+.accreditation-page .page-header h1 {
+  font-size: 2.1rem;
+}
+
+.accreditation-page .page-header p:last-child {
+  max-width: 760px;
+}
+
+.accreditation-page .panel {
+  padding: 18px 20px;
+  border-radius: 24px;
+}
+
+.accreditation-page .panel-head {
+  gap: 10px;
+}
+
+.accreditation-page .panel-head h3 {
+  font-size: 1.55rem;
+}
+
+.accreditation-page .panel-head p,
+.accreditation-page .panel-note,
+.accreditation-page .field span {
+  font-size: 0.88rem;
+}
+
+.accreditation-page .field input,
+.accreditation-page .field select,
+.accreditation-page .field textarea {
+  min-height: 42px;
+  padding: 0.72rem 0.9rem;
+  border-radius: 14px;
+}
+
+.accreditation-page .button--small,
+.accreditation-page .admin-subtab {
+  min-height: 40px;
+}
+
+.accreditation-page .admin-subtabs {
+  gap: 10px;
+}
+
+.accreditation-page .admin-subtab {
+  padding: 0.62rem 0.92rem;
+  font-size: 0.92rem;
+}
+
 .accreditation-zone-list,
 .accreditation-person-list {
   display: grid;
@@ -2800,6 +2858,186 @@ tr.row--warning > td {
   border-radius: 20px;
   border: 1px solid #dfe8ee;
   background: rgba(244, 249, 252, 0.92);
+}
+
+.accreditation-role-nav {
+  gap: 14px;
+}
+
+.accreditation-role-search {
+  margin: 0;
+}
+
+.accreditation-role-nav__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: #5f727b;
+  font-size: 0.85rem;
+}
+
+.accreditation-role-list {
+  display: grid;
+  gap: 8px;
+}
+
+.accreditation-role-layout {
+  gap: 14px;
+  grid-template-columns: 210px minmax(0, 1fr);
+}
+
+.accreditation-role-layout .panel {
+  padding: 16px 18px;
+}
+
+.accreditation-role-layout .admin-split__nav {
+  gap: 10px;
+}
+
+.accreditation-role-actions {
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.accreditation-zone-option {
+  gap: 12px;
+  border-color: #d5e4ef;
+  background: linear-gradient(180deg, rgba(247, 251, 255, 0.98), rgba(255, 255, 255, 1));
+}
+
+.accreditation-zone-option__top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.accreditation-role-summary {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(240px, 0.8fr) minmax(0, 1.2fr);
+  align-items: start;
+}
+
+.accreditation-role-summary__stats {
+  display: grid;
+  gap: 10px;
+}
+
+.accreditation-role-summary__stats div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 10px;
+  border-top: 1px solid #e3ecef;
+}
+
+.accreditation-role-summary__stats span {
+  color: #5f727b;
+}
+
+.accreditation-role-summary__stats strong {
+  color: #102a35;
+  text-align: right;
+}
+
+.accreditation-role-summary__empty {
+  margin: 0;
+}
+
+.accreditation-page .accreditation-zone-library-preview {
+  gap: 10px;
+  grid-template-columns: minmax(130px, 180px) minmax(0, 1fr);
+}
+
+.accreditation-page .accreditation-zone-row {
+  padding: 12px 14px;
+  border-radius: 16px;
+}
+
+.accreditation-page .accreditation-tag-list {
+  gap: 8px;
+}
+
+.accreditation-page .accreditation-tag {
+  padding: 0.32rem 0.68rem;
+  font-size: 0.78rem;
+}
+
+.accreditation-page .accreditation-person-summary {
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.accreditation-page .accreditation-inline-panel {
+  gap: 8px;
+  padding: 13px 14px;
+  border-radius: 16px;
+}
+
+.accreditation-page .team-summary-pill {
+  padding: 11px 13px;
+  border-radius: 14px;
+  gap: 4px;
+}
+
+.accreditation-page .team-summary-pill strong {
+  font-size: 1.1rem;
+}
+
+.accreditation-page .team-summary-pill span {
+  font-size: 0.82rem;
+}
+
+.accreditation-page .role-chip {
+  padding: 9px 10px;
+  border-radius: 14px;
+  gap: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 0;
+}
+
+.accreditation-role-list__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #173544;
+}
+
+.accreditation-role-list__count {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0.2rem 0.48rem;
+  background: #eef5fa;
+  border: 1px solid #d7e5ef;
+  color: #5b7486;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.accreditation-page .accreditation-zone-option {
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+}
+
+.accreditation-page .accreditation-zone-option p {
+  margin: 0;
+  font-size: 0.84rem;
+}
+
+.accreditation-page .accreditation-role-summary {
+  gap: 12px;
 }
 
 .accreditation-warning-panel {
@@ -3344,7 +3582,9 @@ tr.row--warning > td {
   .accreditation-person-summary,
   .admin-split,
   .team-composition-summary,
-  .admin-preview {
+  .admin-preview,
+  .accreditation-role-summary,
+  .accreditation-zone-library-preview {
     grid-template-columns: 1fr;
   }
 
@@ -4389,6 +4629,39 @@ tr.row--warning > td {
   font-size: 0.84rem;
 }
 
+.budget-inline-summary--topbar {
+  gap: 6px 16px;
+  padding: 8px 0 0;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 0;
+  background: transparent;
+  font-size: 0.8rem;
+}
+
+.budget-inline-summary__context {
+  color: rgba(15, 23, 42, 0.54);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.budget-inline-summary__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.budget-inline-summary__item strong {
+  font-size: inherit;
+  font-weight: 700;
+  color: rgba(15, 23, 42, 0.62);
+}
+
+.budget-inline-summary__item--balance .budget-balance {
+  font-weight: 700;
+}
+
 .budget-overview-table .budget-col--label {
   width: 145px;
 }
@@ -4527,6 +4800,10 @@ tr.row--warning > td {
 
   .budget-toolbar-actions {
     justify-content: flex-start;
+  }
+
+  .budget-inline-summary--topbar {
+    gap: 6px 12px;
   }
 
   .budget-section-card__header {

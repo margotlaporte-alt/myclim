@@ -34,6 +34,8 @@ const PRESS_COPY = {
     requestTypePhotographer: "Photographe — Mixed Zone + Infield",
     commentLabel: "Commentaire ou informations complémentaires",
     commentPlaceholder: "Nom du média, liens vers des publications, informations utiles...",
+    rgpdDisclaimer:
+      "En envoyant ce formulaire, vous acceptez que vos données personnelles soient traitées par la Fédération Luxembourgeoise d'Athlétisme uniquement dans le cadre de votre demande d'accréditation presse et des communications associées.",
     privacyLabel: "J'accepte que mes données personnelles soient utilisées dans le cadre de la gestion des accréditations presse du CMCM Luxembourg Indoor Meeting.",
     submitButton: "Envoyer ma demande",
     submitting: "Envoi en cours...",
@@ -71,6 +73,8 @@ const PRESS_COPY = {
     requestTypePhotographer: "Photographer — Mixed Zone + Infield",
     commentLabel: "Comment or additional information",
     commentPlaceholder: "Media name, links to publications, useful information...",
+    rgpdDisclaimer:
+      "By submitting this form, you agree that your personal data may be processed by the Luxembourg Athletics Federation solely for your press accreditation request and related communications.",
     privacyLabel:
       "I agree that my personal data may be used for the management of press accreditations for the CMCM Luxembourg Indoor Meeting.",
     submitButton: "Submit my request",
@@ -263,6 +267,8 @@ function PressRegistrationPage({ loadMailQueueModule }) {
               onChange={handleChange}
             />
           </AuthFormField>
+
+          <p className="panel-note">{copy.rgpdDisclaimer}</p>
 
           <label className="selection-card">
             <input
