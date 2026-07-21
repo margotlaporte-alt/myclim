@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { addDoc, collection, doc, onSnapshot, serverTimestamp, setDoc, writeBatch } from "firebase/firestore";
 import { db } from "../services/firebase";
 import { useAuth } from "../context/auth-context";
-import { extractRolesFromProfile, getDisplayName } from "./utils";
+import { getDisplayName } from "./utils";
 import { useActiveEdition } from "./edition";
 import {
   BUDGET_COLLECTION,
@@ -810,8 +810,6 @@ function BudgetTrackingPage({ Panel }) {
   }, [selectedEditionId]);
 
   const actorName = useMemo(() => getDisplayName(userProfile, currentUser?.email), [currentUser?.email, userProfile]);
-  const activeRoles = useMemo(() => extractRolesFromProfile(userProfile), [userProfile]);
-  const canSyncBudgets = activeRoles.includes("admin");
   const budgetDiff = useMemo(
     () => (draftBudget && selectedBudget ? buildBudgetDiff(selectedBudget, draftBudget) : []),
     [draftBudget, selectedBudget],
@@ -1275,11 +1273,6 @@ function BudgetTrackingPage({ Panel }) {
             ) : (
               <span className="status-pill">Firebase</span>
             )}
-            {canSyncBudgets ? (
-              <button className="button button--secondary" type="button" onClick={handleSeedBudgets} disabled={isSeedingBudgets}>
-                {isSeedingBudgets ? "Synchronisation..." : "Synchroniser Firebase"}
-              </button>
-            ) : null}
             {isBudgetEditable ? (
               <>
                 {!isEditMode ? (
