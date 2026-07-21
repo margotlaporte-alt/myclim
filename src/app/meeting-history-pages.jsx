@@ -50,6 +50,22 @@ function compareDisciplineGender(a, b) {
   return (a.gender === "W" ? 0 : 1) - (b.gender === "W" ? 0 : 1);
 }
 
+function formatEditionDate(value) {
+  if (!value) return "—";
+
+  if (typeof value === "string") return value;
+
+  if (typeof value?.toDate === "function") {
+    return value.toDate().toLocaleDateString("fr-LU");
+  }
+
+  if (typeof value?.seconds === "number") {
+    return new Date(value.seconds * 1000).toLocaleDateString("fr-LU");
+  }
+
+  return "—";
+}
+
 const FLAG_BASE = "https://flagcdn.com/20x15";
 const NOC_TO_ISO2 = {
   ALG: "dz", AND: "ad", ARG: "ar", AUS: "au", AUT: "at",
@@ -812,7 +828,7 @@ function MeetingHistoryPage({ Panel }) {
                 fontSize: "0.85rem",
                 color: "#555",
               }}>
-                <span>📅 {selectedEdition.date}</span>
+                <span>📅 {formatEditionDate(selectedEdition.date)}</span>
                 <span>🏟 {selectedEdition.venue}</span>
                 {formatEditionLabel(selectedEdition, { withHash: true }) && (
                   <span>🏆 {formatEditionLabel(selectedEdition, { withHash: true })}</span>
