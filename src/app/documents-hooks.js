@@ -65,4 +65,4 @@ function useDocumentsCollection(enabled = true) {
   return enabled ? { documents, loading, error } : { documents: [], loading: false, error: "" };
 }
 
-export { mapStoredDocument, useDocumentsCollection };
+export { getDocumentReferenceUrl, isExternalDocumentLink, mapStoredDocument, useDocumentsCollection };

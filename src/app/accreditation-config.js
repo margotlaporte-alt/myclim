@@ -1,4 +1,9 @@
 import { defaultTeamRoles } from "./team-config";
+import accreditationQrEmagazineAthleteUrl from "../assets/accreditation-qr-emagazine-athlete.png";
+import accreditationQrPhotosUrl from "../assets/accreditation-qr-photos.png";
+import accreditationQrResultsLiveAthleteUrl from "../assets/accreditation-qr-results-live-athlete.png";
+import accreditationQrRoadbookAthleteUrl from "../assets/accreditation-qr-roadbook-athlete.png";
+import accreditationQrRoadbookUrl from "../assets/accreditation-qr-roadbook.png";
 
 const accreditationZoneSeed = [
   { id: "zone-infield", order: 1, name: "Infield" },
@@ -54,6 +59,81 @@ const NON_NOMINATIVE_BADGE_TEMPLATES = [
     defaultZoneIds: ["zone-warmup", "zone-coaching"],
   },
 ];
+const ACCREDITATION_BADGE_VISUALS = [
+  {
+    id: "volunteer",
+    label: "Bénévole nominatif",
+    description: "Badge nominatif pour les bénévoles affectés.",
+  },
+  {
+    id: "athlete",
+    label: "Athlete non nominatif",
+    description: "Lot d'accréditations Athlete non nominatives.",
+  },
+  {
+    id: "coach",
+    label: "Coach non nominatif",
+    description: "Lot d'accréditations Coach non nominatives.",
+  },
+  {
+    id: "judge",
+    label: "Judge nominatif",
+    description: "Badge nominatif pour les juges.",
+  },
+];
+const ACCREDITATION_QR_RESOURCE_SEED = [
+  {
+    id: "results-live",
+    label: "Résultats live",
+    subtitle: "Suivi des performances",
+    targetType: "url",
+    url: "",
+    documentId: "",
+    legacyImageUrl: accreditationQrResultsLiveAthleteUrl,
+  },
+  {
+    id: "volunteer-roadbook",
+    label: "Volunteer roadbook",
+    subtitle: "Infos utiles bénévoles",
+    targetType: "url",
+    url: "",
+    documentId: "",
+    legacyImageUrl: accreditationQrRoadbookUrl,
+  },
+  {
+    id: "photos-live",
+    label: "Photos live",
+    subtitle: "Album événement",
+    targetType: "url",
+    url: "",
+    documentId: "",
+    legacyImageUrl: accreditationQrPhotosUrl,
+  },
+  {
+    id: "athlete-roadbook",
+    label: "Roadbook athlete",
+    subtitle: "Informations utiles meeting",
+    targetType: "url",
+    url: "",
+    documentId: "",
+    legacyImageUrl: accreditationQrRoadbookAthleteUrl,
+  },
+  {
+    id: "emagazine-athlete",
+    label: "E-magazine",
+    subtitle: "Contenus meeting",
+    targetType: "url",
+    url: "",
+    documentId: "",
+    legacyImageUrl: accreditationQrEmagazineAthleteUrl,
+  },
+];
+const ACCREDITATION_QR_VISUAL_ASSIGNMENT_SEED = {
+  volunteer: ["results-live", "volunteer-roadbook", "photos-live"],
+  athlete: ["athlete-roadbook", "results-live", "photos-live", "emagazine-athlete"],
+  coach: ["athlete-roadbook", "results-live", "photos-live", "emagazine-athlete"],
+  judge: ["results-live"],
+};
 
 function normalizeSubRoles(subRoles) {
   if (!Array.isArray(subRoles)) return [];
@@ -139,6 +219,36 @@ function normalizePrintHistoryBatch(batch = {}, index = 0) {
   };
 }
 
+function normalizeAccreditationQrResource(resource = {}, index = 0) {
+  const fallback = ACCREDITATION_QR_RESOURCE_SEED[index] ?? {};
+  const normalizedTargetType = String(resource?.targetType || fallback.targetType || "url").trim() === "document"
+    ? "document"
+    : "url";
+
+  return {
+    id: String(resource?.id || fallback.id || `qr-resource-${index + 1}`),
+    label: String(resource?.label || fallback.label || `Ressource QR ${index + 1}`).trim(),
+    subtitle: String(resource?.subtitle || fallback.subtitle || "").trim(),
+    targetType: normalizedTargetType,
+    documentId: String(resource?.documentId || fallback.documentId || "").trim(),
+    url: String(resource?.url || fallback.url || "").trim(),
+    legacyImageUrl: String(resource?.legacyImageUrl || fallback.legacyImageUrl || "").trim(),
+  };
+}
+
+function normalizeAccreditationQrVisualAssignments(assignments = {}, availableResourceIds = new Set()) {
+  return ACCREDITATION_BADGE_VISUALS.reduce((accumulator, visual) => {
+    const storedAssignments = assignments?.[visual.id];
+    const fallbackAssignments = ACCREDITATION_QR_VISUAL_ASSIGNMENT_SEED[visual.id] ?? [];
+
+    accumulator[visual.id] = normalizeSubRoles(
+      Array.isArray(storedAssignments) ? storedAssignments : fallbackAssignments,
+    ).filter((resourceId) => availableResourceIds.has(resourceId));
+
+    return accumulator;
+  }, {});
+}
+
 function normalizeAccreditationConfigurationPayload(data, roles = defaultTeamRoles) {
   const zonesSource = Array.isArray(data?.zones) && data.zones.length > 0 ? data.zones : accreditationZoneSeed;
   const zones = zonesSource.map((zone, index) => normalizeAccreditationZone(zone, index));
@@ -203,6 +313,16 @@ function normalizeAccreditationConfigurationPayload(data, roles = defaultTeamRol
   const customStorageLocations = Array.isArray(data?.customStorageLocations)
     ? data.customStorageLocations.map((v) => String(v || "").trim()).filter(Boolean)
     : [];
+  const qrResourceSource =
+    Array.isArray(data?.qrResources) && data.qrResources.length > 0
+      ? data.qrResources
+      : ACCREDITATION_QR_RESOURCE_SEED;
+  const qrResources = qrResourceSource.map((resource, index) => normalizeAccreditationQrResource(resource, index));
+  const availableQrResourceIds = new Set(qrResources.map((resource) => resource.id));
+  const qrVisualAssignments = normalizeAccreditationQrVisualAssignments(
+    data?.qrVisualAssignments && typeof data.qrVisualAssignments === "object" ? data.qrVisualAssignments : {},
+    availableQrResourceIds,
+  );
 
   return {
     zones,
@@ -211,11 +331,15 @@ function normalizeAccreditationConfigurationPayload(data, roles = defaultTeamRol
     printHistory,
     badgeStorageLocations,
     customStorageLocations,
+    qrResources,
+    qrVisualAssignments,
   };
 }
 
 export {
+  ACCREDITATION_BADGE_VISUALS,
   ACCREDITATION_PRINT_STATUS_OPTIONS,
+  ACCREDITATION_QR_RESOURCE_SEED,
   BADGE_STORAGE_LOCATIONS,
   NON_NOMINATIVE_BADGE_TEMPLATES,
   normalizeAccreditationConfigurationPayload,

@@ -427,7 +427,7 @@ export function AuthProvider({ children }) {
         cmcmExperience: formData.cmcmExperience,
         volunteerExperience: formData.volunteerExperience,
         healthSafetyInfo: formData.healthSafetyInfo,
-        certificateNeeded: formData.certificateNeeded,
+        certificateNeeded: Boolean(formData.certificateNeeded),
         retainForNextYear: formData.retainForNextYear,
         imageConsent: formData.imageConsent,
         availability: [
