@@ -30,6 +30,7 @@ import { VolunteersPage as VolunteersPageScreen } from "./app/volunteers-page";
 import { AccreditationsPage as AccreditationsPageScreen } from "./app/accreditations-page";
 import { AppShell as AppShellScreen, DashboardHome as DashboardHomeScreen } from "./app/app-shell-layout";
 import { PresencePage as PresencePageScreen, RoleManagementPage as RoleManagementPageScreen, TeamsPage as TeamsPageScreen } from "./app/admin-operations-pages";
+import { BudgetTrackingPage as BudgetTrackingPageScreen } from "./app/budget-tracking-page";
 import { MyAssignmentsPage as MyAssignmentsPageScreen, MyDocumentsPage as MyDocumentsPageScreen } from "./app/volunteer-space-pages";
 import { DocumentsPage as DocumentsPageScreen } from "./app/documents-page";
 import { MyChildrenPage as MyChildrenPageScreen } from "./app/my-children-page";
@@ -261,6 +262,10 @@ function RoleManagementPage() {
   return <RoleManagementPageScreen AuthFormField={AuthFormField} Panel={Panel} />;
 }
 
+function BudgetTrackingPage() {
+  return <BudgetTrackingPageScreen Panel={Panel} />;
+}
+
 function DocumentsPage() {
   return (
     <DocumentsPageScreen
@@ -469,6 +474,9 @@ export default function App() {
                 <Route path="roles" element={<RoleManagementPage />} />
                 <Route path="invitations" element={<InvitationAdminPage />} />
                 <Route path="postes" element={<TeamsPage />} />
+              </Route>
+              <Route element={<RequireRouteAccess allowedRoles={["admin", "budget"]} />}>
+                <Route path="budget" element={<BudgetTrackingPage />} />
               </Route>
               <Route element={<RequireRouteAccess allowedRoles={["admin", "gestionnaire"]} />}>
                 <Route path="benevoles" element={<VolunteersPage />} />

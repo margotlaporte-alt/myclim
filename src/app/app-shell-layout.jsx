@@ -23,6 +23,28 @@ function flattenNavigationItems(items) {
   return items.flatMap((item) => (item.type === "section" ? item.links : [item]));
 }
 
+function isRouteMatch(pathname, targetPath) {
+  if (targetPath === "/app") return pathname === targetPath;
+  return pathname === targetPath || pathname.startsWith(`${targetPath}/`);
+}
+
+function formatRoleLabel(role) {
+  const labels = {
+    admin: "Administrateur",
+    budget: "Budget",
+    gestionnaire: "Gestionnaire",
+    chef_equipe: "Chef d’équipe",
+    benevole: "Bénévole",
+    parent_u14: "Parent U14",
+    gestionnaire_site: "Gestionnaire site",
+    chef_transport_athletes: "Transport athlètes",
+    benevole_transport_athletes: "Navettes athlètes",
+    meeting_director: "Direction meeting",
+  };
+
+  return labels[role] || String(role || "").replaceAll("_", " ");
+}
+
 function NavIcon({ icon }) {
   const paths = {
     dashboard: "M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5.5v-6h-5v6H4a1 1 0 0 1-1-1z",
@@ -37,6 +59,9 @@ function NavIcon({ icon }) {
     pin: "M12 21s-5.5-5.7-5.5-10A5.5 5.5 0 1 1 17.5 11C17.5 15.3 12 21 12 21Zm0-7.5a2.5 2.5 0 1 0-2.5-2.5 2.5 2.5 0 0 0 2.5 2.5Z",
     child: "M12 7.2a2.7 2.7 0 1 0-2.7-2.7A2.7 2.7 0 0 0 12 7.2Zm-4.8 12.3v-4.2a3.2 3.2 0 0 1 3.2-3.2h3.2a3.2 3.2 0 0 1 3.2 3.2v4.2M8.5 10l-2 2.2m9-2.2 2 2.2",
     grid: "M4 4h7v7H4zm9 0h7v7h-7zM4 13h7v7H4zm9 0h7v7h-7z",
+    calendar: "M7 3.5V6m10-2.5V6M4.5 8.5h15M6 5h12a1.5 1.5 0 0 1 1.5 1.5v11A1.5 1.5 0 0 1 18 19H6A1.5 1.5 0 0 1 4.5 17.5v-11A1.5 1.5 0 0 1 6 5Z",
+    star: "m12 3 2.7 5.5 6 0.9-4.3 4.2 1 6-5.4-2.9-5.4 2.9 1-6-4.3-4.2 6-0.9z",
+    trophy: "M8 4h8v2.5A4 4 0 0 1 12 10.5 4 4 0 0 1 8 6.5zm-3 1h3v1.5A5.5 5.5 0 0 1 5 12a2.5 2.5 0 0 1 0-5Zm14 0h-3v1.5A5.5 5.5 0 0 0 19 12a2.5 2.5 0 0 0 0-5ZM9 20h6M10 16h4v4h-4z",
   };
 
   return (
@@ -56,7 +81,6 @@ function AppShell(props) {
   const roles = getActiveRoles(userProfile);
   const { activeEditionLabel } = useActiveEdition();
   const { settings: portalSettings, loading: portalSettingsLoading } = useAthletePortalSettings();
-  const isAthletePortal = location.pathname.startsWith("/app/athlete-portal");
   const [preferredViewAsRole, setPreferredViewAsRole] = useState(() => getPrimaryRole(userProfile));
   const [isSidebarOpen, setIsSidebarOpen] = useState(() =>
     typeof window === "undefined" ? true : window.innerWidth > 1100,
@@ -72,34 +96,38 @@ function AppShell(props) {
   }, [roles, viewAsRole]);
 
   const portalCanImport = useMemo(() => canImportAthletes(roles, portalSettings), [roles, portalSettings]);
+  const portalSection = useMemo(() => {
+    if (portalSettingsLoading || !canAccessAthletePortal(roles, portalSettings)) return null;
+    return {
+      type: "section",
+      title: "Athlete Portal",
+      links: buildAthletePortalNavigation(roles, portalSettings, { canImport: portalCanImport }),
+    };
+  }, [portalCanImport, portalSettings, portalSettingsLoading, roles]);
+
   const mainNavigation = useMemo(() => {
     const nav = buildNavigationFromRoles(effectiveRoles);
-    if (!portalSettingsLoading && canAccessAthletePortal(roles, portalSettings)) {
-      const portalLink = { to: "/app/athlete-portal", label: "Athlete Portal", icon: "spark" };
-      if (Array.isArray(nav)) {
-        const lastSection = nav[nav.length - 1];
-        if (lastSection?.type === "section") {
-          lastSection.links = [portalLink, ...lastSection.links];
-        } else {
-          nav.splice(nav.length - 1, 0, portalLink);
-        }
+
+    if (portalSection && Array.isArray(nav)) {
+      const settingsIndex = nav.findIndex((item) => item.type === "section" && item.title === "Réglages");
+      if (settingsIndex >= 0) {
+        nav.splice(settingsIndex, 0, portalSection);
+      } else {
+        nav.push(portalSection);
       }
     }
+
     return nav;
-  }, [effectiveRoles, roles, portalSettings, portalSettingsLoading]);
+  }, [effectiveRoles, portalSection]);
 
-  const portalNavigation = useMemo(
-    () => buildAthletePortalNavigation(roles, portalSettings, { canImport: portalCanImport }),
-    [roles, portalSettings, portalCanImport],
-  );
-
-  const navigation = isAthletePortal ? portalNavigation : mainNavigation;
+  const navigation = mainNavigation;
   const flatNavigation = useMemo(() => flattenNavigationItems(navigation), [navigation]);
+  const [openSections, setOpenSections] = useState({});
   const displayName = getDisplayName(userProfile, currentUser?.email);
   const currentRouteLabel = useMemo(
     () =>
       flatNavigation.find((item) => item.to === location.pathname)?.label ||
-      flatNavigation.find((item) => item.to !== "/app" && location.pathname.startsWith(item.to))?.label ||
+      flatNavigation.find((item) => item.to !== "/app" && isRouteMatch(location.pathname, item.to))?.label ||
       "Menu",
     [flatNavigation, location.pathname],
   );
@@ -136,6 +164,7 @@ function AppShell(props) {
 
     const defaultRouteByRole = {
       admin: "/app",
+      budget: "/app/budget",
       gestionnaire: "/app/benevoles",
       chef_equipe: "/app/equipe",
       benevole: "/app/mes-affectations",
@@ -150,41 +179,35 @@ function AppShell(props) {
     navigate("/login");
   }
 
+  function isSectionOpen(section, index) {
+    const hasManualValue = Object.prototype.hasOwnProperty.call(openSections, section.title);
+    if (hasManualValue) return openSections[section.title];
+    return section.links.some((link) => isRouteMatch(location.pathname, link.to)) || index === 0;
+  }
+
+  function toggleSection(title, fallbackOpen) {
+    setOpenSections((current) => {
+      const hasManualValue = Object.prototype.hasOwnProperty.call(current, title);
+      const currentValue = hasManualValue ? current[title] : fallbackOpen;
+      return { ...current, [title]: !currentValue };
+    });
+  }
+
   return (
     <div className={`shell${isSidebarOpen ? " shell--sidebar-open" : " shell--sidebar-closed"}`}>
-      <aside className={`sidebar${isSidebarOpen ? " sidebar--open" : ""}${isAthletePortal ? " sidebar--portal" : ""}`}>
+      <aside className={`sidebar${isSidebarOpen ? " sidebar--open" : ""}`}>
         <div className="sidebar-header">
-          {isAthletePortal ? (
-            <div className="sidebar-brand">
-              <div className="sidebar-brand-lockup">
-                <div className="sidebar-brand-logo-shell sidebar-brand-logo-shell--portal">
-                  <img alt="Logo CMCM Luxembourg Indoor Meeting" className="sidebar-brand-logo" src={cmcmLogo} />
-                </div>
-                <div className="sidebar-brand-copy">
-                  <h2>Athlete Portal</h2>
-                  <p className="sidebar-brand-tagline sidebar-brand-tagline--portal">CLIM {activeEditionLabel}</p>
-                </div>
+          <div className="sidebar-brand">
+            <a href="/" className="sidebar-brand-lockup sidebar-brand-lockup--link" title="Retour au site public">
+              <div className="sidebar-brand-logo-shell">
+                <img alt="Logo CMCM Luxembourg Indoor Meeting" className="sidebar-brand-logo" src={cmcmLogo} />
               </div>
-              <NavLink
-                className="button button--ghost button--small sidebar-portal-back"
-                to="/app"
-              >
-                ← Back to MyCLIM
-              </NavLink>
-            </div>
-          ) : (
-            <div className="sidebar-brand">
-              <a href="/" className="sidebar-brand-lockup sidebar-brand-lockup--link" title="Retour au site public">
-                <div className="sidebar-brand-logo-shell">
-                  <img alt="Logo CMCM Luxembourg Indoor Meeting" className="sidebar-brand-logo" src={cmcmLogo} />
-                </div>
-                <div className="sidebar-brand-copy">
-                  <h2>MyCLIM</h2>
-                </div>
-              </a>
-              <p className="sidebar-brand-tagline">Plateforme équipes et accès meeting.</p>
-            </div>
-          )}
+              <div className="sidebar-brand-copy">
+                <h2>MyCLIM</h2>
+              </div>
+            </a>
+            <p className="sidebar-brand-tagline">Plateforme équipes et accès meeting.</p>
+          </div>
           <button
             className="button button--ghost sidebar-toggle sidebar-toggle--inside"
             type="button"
@@ -195,29 +218,55 @@ function AppShell(props) {
         </div>
         <div className="sidebar-main">
           <nav className="sidebar-nav">
-            {navigation.map((item) =>
+            {navigation.map((item, index) =>
               item.type === "section" ? (
-                <section key={item.title} className="sidebar-nav-section" aria-label={item.title}>
-                  <p className="sidebar-nav-section__title">{item.title}</p>
-                  <div className="sidebar-nav-section__links">
-                    {item.links.map((link) => (
-                      <NavLink
-                        key={link.to}
-                        className={({ isActive }) => `nav-link${isActive ? " nav-link--active" : ""}`}
-                        to={link.to}
-                        end={link.to === "/app"}
+                (() => {
+                  const sectionOpen = isSectionOpen(item, index);
+                  const sectionActive = item.links.some((link) => isRouteMatch(location.pathname, link.to));
+
+                  return (
+                    <section
+                      key={item.title}
+                      className={`sidebar-nav-section${sectionOpen ? " sidebar-nav-section--open" : ""}${sectionActive ? " sidebar-nav-section--active" : ""}`}
+                      aria-label={item.title}
+                    >
+                      <button
+                        aria-expanded={sectionOpen}
+                        className="sidebar-nav-section__button"
+                        type="button"
+                        onClick={() => toggleSection(item.title, sectionOpen)}
                       >
-                        <span className="nav-link__label">
-                          <NavIcon icon={link.icon} />
-                          <span>{link.label}</span>
+                        <span className="sidebar-nav-section__header">
+                          <span className="sidebar-nav-section__title">{item.title}</span>
+                          <span className="sidebar-nav-section__meta">{item.links.length}</span>
                         </span>
-                        <span aria-hidden="true" className="nav-link__chevron">
-                          ›
+                        <span aria-hidden="true" className="sidebar-nav-section__chevron">
+                          ⌄
                         </span>
-                      </NavLink>
-                    ))}
-                  </div>
-                </section>
+                      </button>
+                      {sectionOpen ? (
+                        <div className="sidebar-nav-section__links">
+                          {item.links.map((link) => (
+                            <NavLink
+                              key={link.to}
+                              className={({ isActive }) => `nav-link${isActive ? " nav-link--active" : ""}`}
+                              to={link.to}
+                              end={link.to === "/app"}
+                            >
+                              <span className="nav-link__label">
+                                <NavIcon icon={link.icon} />
+                                <span>{link.label}</span>
+                              </span>
+                              <span aria-hidden="true" className="nav-link__chevron">
+                                ›
+                              </span>
+                            </NavLink>
+                          ))}
+                        </div>
+                      ) : null}
+                    </section>
+                  );
+                })()
               ) : (
                 <NavLink
                   key={item.to}
@@ -244,8 +293,8 @@ function AppShell(props) {
             <p>Édition active: {activeEditionLabel}</p>
           </div>
           <div className="sidebar-footer__actions">
-            <span className="status-pill status-pill--accent">{primaryRole.replace("_", " ")}</span>
-            <button className="button button--ghost sidebar-footer__logout" onClick={handleLogout} type="button">
+            <span className="status-pill status-pill--accent">{formatRoleLabel(roles.includes("admin") ? viewAsRole : primaryRole)}</span>
+            <button className="button button--secondary sidebar-footer__logout" onClick={handleLogout} type="button">
               Se deconnecter
             </button>
           </div>
@@ -280,12 +329,13 @@ function AppShell(props) {
           </button>
           <span className="shell-mobile-bar__route">{currentRouteLabel}</span>
         </div>
-        {roles.includes("admin") && !isAthletePortal ? (
+        {roles.includes("admin") ? (
           <div className="content-toolbar">
             <label className="view-switcher">
               <span>Voir comme</span>
               <select value={viewAsRole} onChange={(event) => handleViewAsChange(event.target.value)}>
                 {roles.includes("admin") ? <option value="admin">Administrateur</option> : null}
+                {roles.includes("budget") ? <option value="budget">Budget</option> : null}
                 {roles.includes("chef_equipe") ? <option value="chef_equipe">Chef d'équipe</option> : null}
                 {roles.includes("benevole") ? <option value="benevole">Bénévole</option> : null}
                 {roles.includes("parent_u14") ? <option value="parent_u14">Parent U14</option> : null}

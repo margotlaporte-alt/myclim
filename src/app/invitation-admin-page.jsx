@@ -201,6 +201,7 @@ function InviteForm({ onSaved, onCancel }) {
 function getRoleDescription(role) {
   const descriptions = {
     admin: "Accès complet à toute la plateforme",
+    budget: "Accès au module budget sans droits administrateur globaux",
     gestionnaire: "Gestion des bénévoles, présences, accréditations",
     gestionnaire_site: "Gestion du site public : actualités, partenaires, communiqués",
     chef_equipe: "Gestion de son équipe et pointage des présences",
