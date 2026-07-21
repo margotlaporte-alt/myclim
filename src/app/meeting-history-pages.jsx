@@ -4,10 +4,12 @@ import { formatEditionLabel } from "./meeting-edition-utils";
 import { getActiveRoles } from "./navigation";
 import {
   MEETING_EDITIONS_COL,
-  clearResultsForYear,
   closeEdition,
   deleteResult,
+  getOfficialWinnersFromResults,
+  rebuildMeetingRecords,
   resetAndReseedWinners,
+  reseedMeetingYearFromJson,
   saveResult,
   seedMeetingDatabase,
   setEditionVisibility,
@@ -47,7 +49,20 @@ function compareDisciplineGender(a, b) {
   const dk = disciplineSortKey(a.discipline).localeCompare(disciplineSortKey(b.discipline));
   if (dk !== 0) return dk;
   // same discipline: W before M
-  return (a.gender === "W" ? 0 : 1) - (b.gender === "W" ? 0 : 1);
+  const gc = (a.gender === "W" ? 0 : 1) - (b.gender === "W" ? 0 : 1);
+  if (gc !== 0) return gc;
+  const roundOrder = { Heat: 0, Final: 1 };
+  const rc = (roundOrder[a.round] ?? 9) - (roundOrder[b.round] ?? 9);
+  if (rc !== 0) return rc;
+  const aSection = String(a.finalGroup || a.heat || "");
+  const bSection = String(b.finalGroup || b.heat || "");
+  return aSection.localeCompare(bSection, undefined, { numeric: true });
+}
+
+function formatSectionLabel(group) {
+  if (group.round === "Heat") return group.heat ? `Série ${group.heat}` : "Série";
+  if (group.finalGroup) return `Finale ${group.finalGroup}`;
+  return group.round || "";
 }
 
 function formatEditionDate(value) {
@@ -541,10 +556,7 @@ function WinnersComparisonPanel({ editions, allWinners, Panel }) {
 
   const { results, loading } = useMeetingResultsForYear(year);
 
-  const rank1 = useMemo(() =>
-    results.filter((r) => Number(r.rank) === 1),
-    [results],
-  );
+  const rank1 = useMemo(() => getOfficialWinnersFromResults(results), [results]);
 
   const winnersByKey = useMemo(() => {
     const map = new Map();
@@ -671,8 +683,17 @@ function MeetingHistoryPage({ Panel }) {
   const groups = useMemo(() => {
     const map = new Map();
     for (const r of results) {
-      const key = `${r.discipline}||${r.gender}||${r.round || ""}`;
-      if (!map.has(key)) map.set(key, { discipline: r.discipline, gender: r.gender, round: r.round || "", rows: [] });
+      const key = `${r.discipline}||${r.gender}||${r.round || ""}||${r.finalGroup || ""}||${r.heat || ""}`;
+      if (!map.has(key)) {
+        map.set(key, {
+          discipline: r.discipline,
+          gender: r.gender,
+          round: r.round || "",
+          heat: r.heat || "",
+          finalGroup: r.finalGroup || "",
+          rows: [],
+        });
+      }
       map.get(key).rows.push(r);
     }
     return [...map.values()].sort(compareDisciplineGender);
@@ -944,15 +965,15 @@ function MeetingHistoryPage({ Panel }) {
                 <tbody>
                   {groups.map((grp) => [
                     // Event group header
-                    <tr key={`grp-${grp.discipline}-${grp.gender}-${grp.round}`} className="event-group-header">
-                      <td colSpan={isAdmin ? 8 : 7} style={{ paddingTop: "0.65rem", paddingBottom: "0.4rem" }}>
+                    <tr key={`grp-${grp.discipline}-${grp.gender}-${grp.round}-${grp.finalGroup}-${grp.heat}`} className="event-group-header">
+                      <td colSpan={isAdmin ? 9 : 8} style={{ paddingTop: "0.65rem", paddingBottom: "0.4rem" }}>
                         <span style={{ fontWeight: 700, fontSize: "0.88rem", marginRight: 8 }}>
                           {grp.discipline}
                         </span>
                         <GenderTag gender={grp.gender} />
-                        {grp.round && (
+                        {formatSectionLabel(grp) && (
                           <span style={{ marginLeft: 8, fontSize: "0.75rem", fontWeight: 600, color: "#6b7280", background: "#f3f4f6", padding: "1px 7px", borderRadius: 10 }}>
-                            {grp.round}
+                            {formatSectionLabel(grp)}
                           </span>
                         )}
                       </td>
@@ -1024,37 +1045,33 @@ function MeetingHistoryPage({ Panel }) {
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
               <div>
                 <p className="panel-note" style={{ marginBottom: "0.5rem" }}>
-                  Seeds all historical data (editions, results, records, winners) from the bundled
-                  JSON files into Firestore. Safe to re-run — uses merge writes.
+                  Importez l'année sélectionnée depuis le JSON local, puis synchronisez automatiquement
+                  les winners et les records.
                 </p>
-                <SeedButton onSeed={handleSeed} seeding={seeding} seedLog={seedLog} />
-              </div>
-              <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: "0.75rem" }}>
-                <p className="panel-note" style={{ marginBottom: "0.5rem" }}>
-                  <strong>Réinitialiser les winners</strong> — supprime tous les documents de la collection meetingWinners
-                  (y compris les anciens IDs avec disciplines "60 m" vs "60m") puis recharge depuis le JSON corrigé.
-                  À utiliser si des doublons de noms apparaissent dans Winners History ou Luxembourg.
-                </p>
-                <button
-                  className="btn btn--danger"
-                  style={{ fontSize: "0.82rem" }}
-                  onClick={async () => {
-                    if (!window.confirm("Supprimer TOUS les winners et re-seeder depuis le JSON ? (les données 2026 seront perdues — relancer Close Edition ensuite)")) return;
-                    setSeedLog([]);
-                    setSeeding(true);
-                    try {
-                      const result = await resetAndReseedWinners((msg) => setSeedLog((p) => [...p, msg]));
-                      setSeedLog((p) => [...p, `✅ ${result}`]);
-                    } catch (err) {
-                      setSeedLog((p) => [...p, `❌ ${err.message}`]);
-                    } finally {
-                      setSeeding(false);
-                    }
-                  }}
-                  disabled={seeding}
-                >
-                  🔄 Réinitialiser winners (purge + re-seed)
-                </button>
+                {effectiveYear && !selectedEdition?.cancelled ? (
+                  <button
+                    className="btn btn--primary"
+                    style={{ fontSize: "0.82rem" }}
+                    onClick={async () => {
+                      if (!window.confirm(`Importer ${effectiveYear} depuis le JSON local, synchroniser les winners puis recalculer tous les records ?`)) return;
+                      setSeedLog([`Import ${effectiveYear} depuis le JSON local…`]);
+                      setSeeding(true);
+                      try {
+                        const summary = await reseedMeetingYearFromJson(effectiveYear, (msg) => setSeedLog((p) => [...p, msg]));
+                        setSeedLog((p) => [...p, `✅ ${effectiveYear}: ${summary.results} résultats, ${summary.winners} winners, ${summary.records} records.`]);
+                      } catch (err) {
+                        setSeedLog((p) => [...p, `❌ ${err.message}`]);
+                      } finally {
+                        setSeeding(false);
+                      }
+                    }}
+                    disabled={seeding}
+                  >
+                    Importer {effectiveYear} depuis JSON + winners + records
+                  </button>
+                ) : (
+                  <p className="panel-note">Sélectionnez une édition active pour lancer l'import.</p>
+                )}
               </div>
               <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: "0.75rem" }}>
                 <p className="panel-note" style={{ marginBottom: "0.5rem" }}>
@@ -1064,35 +1081,94 @@ function MeetingHistoryPage({ Panel }) {
                 <p className="panel-note" style={{ marginBottom: "0.5rem" }}>
                   <strong>Visibilité dans les stats publiques :</strong> cochez/décochez la case "stats" sous chaque année dans le sélecteur d'édition.
                 </p>
-                <button
-                  className="btn"
-                  style={{ fontSize: "0.82rem" }}
-                  onClick={async () => {
-                    const years = editions.filter((e) => e.year >= 2004 && e.year <= 2018).map((e) => e.year);
-                    if (!years.length) return;
-                    if (!window.confirm(`Masquer les années ${years.join(", ")} des statistiques ?`)) return;
-                    await Promise.all(years.map((y) => setEditionVisibility(y, false)));
-                  }}
-                >
-                  Masquer 2004–2018 des stats
-                </button>
-                {effectiveYear && !selectedEdition?.cancelled && (
+                <details style={{ marginTop: "0.75rem" }}>
+                  <summary style={{ cursor: "pointer", fontSize: "0.82rem", fontWeight: 600, color: "#4b5563" }}>
+                    Maintenance avancée
+                  </summary>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "0.75rem" }}>
+                    <p className="panel-note" style={{ marginBottom: 0 }}>
+                      À utiliser seulement pour corriger ou reconstruire la base historique.
+                    </p>
+                    <SeedButton onSeed={handleSeed} seeding={seeding} seedLog={seedLog} />
+                    <button
+                      className="btn btn--danger"
+                      style={{ fontSize: "0.82rem", width: "fit-content" }}
+                      onClick={async () => {
+                        if (!window.confirm("Supprimer TOUS les winners et re-seeder depuis le JSON ? (les données 2026 seront perdues — relancer Close Edition ensuite)")) return;
+                        setSeedLog([]);
+                        setSeeding(true);
+                        try {
+                          const result = await resetAndReseedWinners((msg) => setSeedLog((p) => [...p, msg]));
+                          setSeedLog((p) => [...p, `✅ ${result}`]);
+                        } catch (err) {
+                          setSeedLog((p) => [...p, `❌ ${err.message}`]);
+                        } finally {
+                          setSeeding(false);
+                        }
+                      }}
+                      disabled={seeding}
+                    >
+                      🔄 Réinitialiser winners (purge + re-seed)
+                    </button>
+                    <button
+                      className="btn"
+                      style={{ fontSize: "0.82rem", width: "fit-content" }}
+                      onClick={async () => {
+                        const years = editions.filter((e) => e.year >= 2004 && e.year <= 2018).map((e) => e.year);
+                        if (!years.length) return;
+                        if (!window.confirm(`Masquer les années ${years.join(", ")} des statistiques ?`)) return;
+                        await Promise.all(years.map((y) => setEditionVisibility(y, false)));
+                      }}
+                    >
+                      Masquer 2004–2018 des stats
+                    </button>
+                    <button
+                      className="btn"
+                      style={{ fontSize: "0.82rem", width: "fit-content" }}
+                      onClick={async () => {
+                        if (!window.confirm("Recalculer tous les records à partir des résultats déjà en base ?")) return;
+                        setSeedLog(["Recalcul des records…"]);
+                        setSeeding(true);
+                        try {
+                          const n = await rebuildMeetingRecords((msg) => setSeedLog((p) => [...p, msg]));
+                          setSeedLog((p) => [...p, `✅ ${n} records recalculés.`]);
+                        } catch (err) {
+                          setSeedLog((p) => [...p, `❌ ${err.message}`]);
+                        } finally {
+                          setSeeding(false);
+                        }
+                      }}
+                      disabled={seeding}
+                    >
+                      Recalculer les records
+                    </button>
+                  </div>
+                </details>
+              </div>
+              {effectiveYear && !selectedEdition?.cancelled && (
+                <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: "0.75rem" }}>
                   <button
                     className="btn"
-                    style={{ fontSize: "0.82rem", marginTop: "0.5rem", color: "#dc2626", borderColor: "#dc2626" }}
+                    style={{ fontSize: "0.82rem", color: "#dc2626", borderColor: "#dc2626" }}
                     onClick={async () => {
-                      if (!window.confirm(`Vider TOUS les résultats ${effectiveYear} de Firestore et les réimporter depuis le JSON ?`)) return;
-                      setSeedLog([`Suppression des résultats ${effectiveYear}…`]);
-                      const n = await clearResultsForYear(effectiveYear);
-                      setSeedLog((p) => [...p, `${n} résultats supprimés. Réimport en cours…`]);
-                      await seedMeetingDatabase((msg) => setSeedLog((p) => [...p, msg]));
-                      setSeedLog((p) => [...p, `✅ Résultats ${effectiveYear} réimportés.`]);
+                      if (!window.confirm(`Vous avez déjà importé ${effectiveYear}. Voulez-vous vraiment le relancer ?`)) return;
+                      setSeedLog([`Import ${effectiveYear} relancé…`]);
+                      setSeeding(true);
+                      try {
+                        const summary = await reseedMeetingYearFromJson(effectiveYear, (msg) => setSeedLog((p) => [...p, msg]));
+                        setSeedLog((p) => [...p, `✅ ${effectiveYear}: ${summary.results} résultats, ${summary.winners} winners, ${summary.records} records.`]);
+                      } catch (err) {
+                        setSeedLog((p) => [...p, `❌ ${err.message}`]);
+                      } finally {
+                        setSeeding(false);
+                      }
                     }}
+                    disabled={seeding}
                   >
-                    Vider et réimporter {effectiveYear}
+                    Relancer l'import {effectiveYear}
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </Panel>
         </section>

@@ -503,7 +503,6 @@ function AthletePortalOverview({ Panel }) {
   const { userProfile } = useAuth();
   const roles = getActiveRoles(userProfile);
   const { settings, loading: settingsLoading } = useAthletePortalSettings();
-  const canImport = canImportAthletes(roles, settings);
   const { athletes, loading: athletesLoading } = useAthletes(!settingsLoading);
   const isAdmin = roles.includes("admin") || roles.includes("meeting_director");
 
@@ -560,7 +559,6 @@ function AthletePortalOverview({ Panel }) {
         <Panel title="Quick access">
           <div className="dashboard-action-grid">
             <NavLink className="button button--secondary button-link" to="/app/athlete-portal/athletes">View athletes</NavLink>
-            {canImport && <NavLink className="button button--secondary button-link" to="/app/athlete-portal/import">Import file</NavLink>}
             {isAdmin && <NavLink className="button button--secondary button-link" to="/app/athlete-portal/registry">Athletes database</NavLink>}
             {isAdmin && <NavLink className="button button--secondary button-link" to="/app/athlete-portal/history">Meeting results</NavLink>}
             {isAdmin && <NavLink className="button button--secondary button-link" to="/app/athlete-portal/records">Meeting records</NavLink>}
