@@ -16,7 +16,6 @@ import {
   ACCREDITATION_CONFIGURATION_DOC_PATH,
   TEAM_CONFIGURATION_DOC_PATH,
   JUDGE_ROSTER_DOC_PATH,
-  roleConfigurationSeed,
 } from "./seed-data";
 import { useDocumentsCollection } from "./documents-hooks";
 import { getActiveEditionId, recordMatchesEdition } from "./edition";
@@ -29,6 +28,7 @@ import { normalizePresenceRecord } from "./presence-helpers";
 import { normalizeTeamConfigurationPayload } from "./team-config";
 import { isTeamLeadAssignment } from "./common-helpers";
 import { mapVolunteerApplicationToAdminVolunteer } from "./volunteer-helpers";
+import { useTeamConfiguration } from "./config-hooks";
 import { db } from "../services/firebase";
 
 const EMERGENCY_EXTRACTION_DEFINITIONS = [
@@ -533,6 +533,7 @@ function DocumentsPage(props) {
     loading: documentsLoading,
     error: documentsError,
   } = useDocumentsCollection(true);
+  const { roles: configuredRoles } = useTeamConfiguration();
   const [documentForm, setDocumentForm] = useState(emptyDocumentForm);
   const [editingDocumentId, setEditingDocumentId] = useState(null);
   const [documentStatus, setDocumentStatus] = useState("");
@@ -543,7 +544,20 @@ function DocumentsPage(props) {
     () => [...storedDocuments].sort((left, right) => right.createdAtMs - left.createdAtMs),
     [storedDocuments],
   );
-  const teamOptions = roleConfigurationSeed.map((role) => role.roleName);
+  const teamOptions = useMemo(() => {
+    const normalizedConfiguredRoles = Array.isArray(configuredRoles)
+      ? configuredRoles.map((role) => String(role?.roleName || "").trim()).filter(Boolean)
+      : [];
+    const normalizedDocumentTeams = documents.flatMap((documentItem) =>
+      Array.isArray(documentItem?.teams)
+        ? documentItem.teams.map((team) => String(team || "").trim()).filter(Boolean)
+        : [],
+    );
+
+    return [...new Set([...normalizedConfiguredRoles, ...normalizedDocumentTeams])].sort((left, right) =>
+      left.localeCompare(right, "fr", { sensitivity: "base" }),
+    );
+  }, [configuredRoles, documents]);
 
   function handleDocumentFormChange(event) {
     const { name, value } = event.target;
