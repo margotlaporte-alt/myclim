@@ -56,7 +56,7 @@ export function SitePress() {
               Press registration
             </a>
             <a
-              href="mailto:press@luxembourg-indoor-meeting.lu"
+              href="mailto:communication@fla.lu"
               className="site-btn site-btn--secondary"
             >
               Contact press office
@@ -156,10 +156,10 @@ export function SitePress() {
                       Email
                     </span>
                     <a
-                      href="mailto:press@luxembourg-indoor-meeting.lu"
+                      href="mailto:communication@fla.lu"
                       style={{ display: "block", fontSize: "0.9rem", color: "var(--site-blue-light)", marginTop: 4 }}
                     >
-                      press@luxembourg-indoor-meeting.lu
+                      communication@fla.lu
                     </a>
                   </div>
                 </div>

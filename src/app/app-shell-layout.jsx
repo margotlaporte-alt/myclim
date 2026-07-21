@@ -764,6 +764,9 @@ function DashboardHome(props) {
               <NavLink className="button button--secondary button-link" to="/app/roles">Gérer les rôles</NavLink>
               <NavLink className="button button--secondary button-link" to="/app/postes">Ajuster les équipes</NavLink>
               <NavLink className="button button--secondary button-link" to="/app/accreditations">Produire les badges</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/website">Gérer le site internet</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/athlete-portal">Gérer les athlètes</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/athlete-portal/records">Gérer les résultats</NavLink>
             </div>
           </Panel>
         </section>
