@@ -1,7 +1,8 @@
 /* global process */
 
 import admin from "firebase-admin";
-import { HttpsError, onCall } from "firebase-functions/v2/https";
+import { randomUUID } from "node:crypto";
+import { HttpsError, onCall, onRequest } from "firebase-functions/v2/https";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import { logger } from "firebase-functions";
 import { sendMail } from "./mailer.js";
@@ -9,6 +10,7 @@ import { sendMail } from "./mailer.js";
 admin.initializeApp();
 const db = admin.firestore();
 const auth = admin.auth();
+const bucket = admin.storage().bucket();
 const REGION = "europe-west1";
 const TEAM_CONFIGURATION_DOC_PATH = ["appSettings", "teamsConfiguration"];
 const ACCREDITATION_CONFIGURATION_DOC_PATH = ["appSettings", "accreditationConfiguration"];
@@ -21,6 +23,125 @@ function buildHtmlFromText(text) {
     .map((line) => `<p>${line}</p>`)
     .join("");
 }
+
+function setCorsHeaders(response) {
+  response.set("Access-Control-Allow-Origin", "*");
+  response.set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Upload-Path, X-File-Name");
+  response.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+}
+
+function sanitizePathSegment(value, fallback = "file") {
+  return String(value || "")
+    .trim()
+    .replace(/[^a-zA-Z0-9._/-]/g, "_")
+    .replace(/\/{2,}/g, "/")
+    .replace(/^\/+|\/+$/g, "") || fallback;
+}
+
+function sanitizeFileName(value) {
+  return String(value || "")
+    .trim()
+    .replace(/[^a-zA-Z0-9._-]/g, "_") || "file";
+}
+
+function decodeHeaderValue(value = "") {
+  try {
+    return decodeURIComponent(String(value || "").trim());
+  } catch {
+    return String(value || "").trim();
+  }
+}
+
+async function verifyBearerToken(request) {
+  const header = String(request.get("authorization") || "");
+  const match = header.match(/^Bearer\s+(.+)$/i);
+
+  if (!match) {
+    throw new HttpsError("unauthenticated", "Jeton Firebase manquant.");
+  }
+
+  return auth.verifyIdToken(match[1]);
+}
+
+export const uploadStorageFile = onRequest(
+  {
+    region: REGION,
+    cors: false,
+    memory: "1GiB",
+  },
+  async (request, response) => {
+    setCorsHeaders(response);
+
+    if (request.method === "OPTIONS") {
+      response.status(204).send("");
+      return;
+    }
+
+    if (request.method !== "POST") {
+      response.status(405).json({ error: "method-not-allowed" });
+      return;
+    }
+
+    try {
+      const decodedToken = await verifyBearerToken(request);
+      const uploadPath = sanitizePathSegment(request.get("x-upload-path"), "uploads");
+      const originalFileName = sanitizeFileName(decodeHeaderValue(request.get("x-file-name")));
+      const fileName = `${Date.now()}-${originalFileName}`;
+      const filePath = `${uploadPath}/${fileName}`;
+      const contentType = String(request.get("content-type") || "application/octet-stream").trim();
+      const fileBuffer = request.rawBody;
+
+      if (!decodedToken?.uid) {
+        throw new HttpsError("unauthenticated", "Utilisateur Firebase introuvable.");
+      }
+
+      if (!fileBuffer?.length) {
+        throw new HttpsError("invalid-argument", "Fichier vide.");
+      }
+
+      if (fileBuffer.length > 20 * 1024 * 1024) {
+        throw new HttpsError("invalid-argument", "Le fichier dépasse la limite autorisée de 20 Mo.");
+      }
+
+      const downloadToken = randomUUID();
+      const bucketFile = bucket.file(filePath);
+
+      await bucketFile.save(fileBuffer, {
+        metadata: {
+          contentType,
+          metadata: {
+            firebaseStorageDownloadTokens: downloadToken,
+            uploadedByUid: decodedToken.uid,
+          },
+        },
+        resumable: false,
+        validation: "md5",
+      });
+
+      response.status(200).json({
+        ok: true,
+        fileName: originalFileName,
+        filePath,
+        mimeType: contentType,
+        url: `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(filePath)}?alt=media&token=${downloadToken}`,
+      });
+    } catch (error) {
+      if (error instanceof HttpsError) {
+        response.status(error.httpErrorCode.status).json({
+          error: error.code,
+          message: error.message,
+        });
+        return;
+      }
+
+      logger.error("uploadStorageFile failed", error);
+      response.status(500).json({
+        error: "internal",
+        message: "Le dépôt du fichier a échoué côté serveur.",
+      });
+    }
+  },
+);
 
 export const processMailQueue = onDocumentCreated(
   {
