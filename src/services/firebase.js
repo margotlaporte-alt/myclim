@@ -19,6 +19,10 @@ const firebaseConfig = {
   appId: "1:393030012618:web:b6c3b5545672f75d10ae33",
 };
 
+export const FIREBASE_PROJECT_ID = firebaseConfig.projectId;
+export const FIREBASE_FUNCTIONS_REGION = "europe-west1";
+export const STORAGE_UPLOAD_ENDPOINT = `https://${FIREBASE_FUNCTIONS_REGION}-${FIREBASE_PROJECT_ID}.cloudfunctions.net/uploadStorageFile`;
+
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
 function initializeFirebaseAuth(firebaseApp) {
@@ -43,3 +47,5 @@ export const auth = initializeFirebaseAuth(app);
 export const db = getFirestore(app);
 export const functions = getFunctions(app, "europe-west1");
 export const storage = getStorage(app);
+storage.maxUploadRetryTime = 15000;
+storage.maxOperationRetryTime = 10000;

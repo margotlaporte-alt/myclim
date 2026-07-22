@@ -1,6 +1,5 @@
-import { useState, useRef } from "react";
-import { ref, uploadBytes, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { storage } from "../services/firebase";
+import { useRef, useState } from "react";
+import { auth, STORAGE_UPLOAD_ENDPOINT } from "../services/firebase";
 
 /**
  * FileUpload — drag-and-drop or click-to-select file uploader backed by Firebase Storage.
@@ -21,15 +20,11 @@ export function FileUpload({
   label = "File",
   helperText = "PDF files only · Max 20 MB",
 }) {
-  const [progress, setProgress] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef(null);
-  const startupTimerRef = useRef(null);
-  const stalledUploadTimerRef = useRef(null);
-  const didForceAbortRef = useRef(false);
-  const hasTransferredBytesRef = useRef(false);
   const activeAttemptIdRef = useRef(0);
 
   const labelStyle = {
@@ -42,196 +37,143 @@ export function FileUpload({
     marginBottom: 6,
   };
 
-  function clearStartupTimer() {
-    if (startupTimerRef.current) {
-      window.clearTimeout(startupTimerRef.current);
-      startupTimerRef.current = null;
-    }
-  }
-
-  function clearStalledUploadTimer() {
-    if (stalledUploadTimerRef.current) {
-      window.clearTimeout(stalledUploadTimerRef.current);
-      stalledUploadTimerRef.current = null;
-    }
-  }
-
   function isAttemptActive(attemptId) {
     return activeAttemptIdRef.current === attemptId;
   }
 
-  function invalidateAttempt(attemptId) {
+  function finishAttempt(attemptId) {
     if (activeAttemptIdRef.current === attemptId) {
       activeAttemptIdRef.current += 1;
     }
-  }
-
-  function armStalledUploadTimer(task) {
-    clearStalledUploadTimer();
-    stalledUploadTimerRef.current = window.setTimeout(() => {
-      didForceAbortRef.current = true;
-      task.cancel();
-    }, 15000);
   }
 
   function formatUploadError(err) {
     const code = err?.code || "";
 
     if (code === "storage/unauthorized" || code === "storage/unauthenticated") {
-      return "Upload impossible pour le moment. Vous semblez non authentifié(e) sur Firebase Storage.";
-    }
-
-    if (code === "storage/canceled") {
-      if (didForceAbortRef.current) {
-        return "L'envoi est resté bloqué au démarrage. Vérifiez la connexion ou Firebase Storage, puis réessayez.";
-      }
-      return "Envoi annulé.";
-    }
-
-    if (code === "storage/bucket-not-found" || code === "storage/project-not-found") {
-      return "Le stockage Firebase n'est pas disponible pour ce projet.";
+      return "Votre session n'est plus valide pour le dépôt de fichiers. Reconnectez-vous puis réessayez.";
     }
 
     if (code === "storage/retry-limit-exceeded") {
-      return "Le stockage ne répond pas. Ce n'est généralement pas lié au local, mais à Firebase ou à la connexion.";
+      return "Firebase Storage ne répond pas assez vite. Réessayez dans quelques instants.";
     }
 
     if (code === "storage/direct-upload-timeout") {
-      return "Le second mode d'envoi ne répond pas non plus. Vérifiez Firebase Storage ou la connexion, puis réessayez.";
+      return "Le dépôt du fichier a expiré avant réponse de Firebase Storage.";
+    }
+
+    if (code === "storage/bucket-not-found" || code === "storage/project-not-found") {
+      return "Le bucket Firebase Storage configuré pour ce projet est introuvable.";
     }
 
     return err?.message || "Upload impossible pour le moment.";
   }
 
-  function buildUploadPayload(file, storageRef, url) {
-    return {
-      url,
-      fileName: file.name,
-      filePath: storageRef.fullPath,
-      mimeType: file.type || "",
-    };
-  }
-
-  async function completeUpload(file, storageRef, attemptId) {
+  async function completeUpload(file, payload, attemptId) {
     if (!isAttemptActive(attemptId)) return;
-    const url = await getDownloadURL(storageRef);
-    if (!isAttemptActive(attemptId)) return;
-    const payload = buildUploadPayload(file, storageRef, url);
-    onChange(url);
-    onUploadComplete?.(payload);
+    onChange(payload.url);
+    onUploadComplete?.({
+      url: payload.url,
+      fileName: payload.fileName || file.name,
+      filePath: payload.filePath || "",
+      mimeType: payload.mimeType || file.type || "",
+    });
+    finishAttempt(attemptId);
     setStatusMessage("");
-    setProgress(null);
-  }
-
-  async function tryDirectUpload(file, storageRef, attemptId) {
-    if (!isAttemptActive(attemptId)) return;
-    setStatusMessage("Reprise automatique de l'envoi…");
-    setProgress(12);
-    await Promise.race([
-      uploadBytes(storageRef, file, file.type ? { contentType: file.type } : undefined),
-      new Promise((_, reject) => {
-        window.setTimeout(() => {
-          reject(Object.assign(new Error("L'envoi direct reste bloqué."), { code: "storage/direct-upload-timeout" }));
-        }, 15000);
-      }),
-    ]);
-    if (!isAttemptActive(attemptId)) return;
-    setProgress(100);
-    await completeUpload(file, storageRef, attemptId);
+    setIsUploading(false);
   }
 
   async function uploadFile(file) {
     if (!file) return;
+
     const attemptId = activeAttemptIdRef.current + 1;
     activeAttemptIdRef.current = attemptId;
-    clearStartupTimer();
-    clearStalledUploadTimer();
-    didForceAbortRef.current = false;
-    hasTransferredBytesRef.current = false;
     setError("");
-    setProgress(0);
-    setStatusMessage("Connexion à l'espace de stockage…");
+    setIsUploading(true);
+    setStatusMessage("Vérification de la session…");
 
-    const safeName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-    const storageRef = ref(storage, `${storagePath}/${safeName}`);
-    const task = uploadBytesResumable(storageRef, file);
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        throw Object.assign(new Error("User is not authenticated."), { code: "storage/unauthenticated" });
+      }
 
-    startupTimerRef.current = window.setTimeout(() => {
-      setStatusMessage("Connexion lente à Firebase Storage. En local, cela fonctionne normalement aussi.");
-    }, 4000);
+      const idToken = await user.getIdToken();
+      if (!isAttemptActive(attemptId)) return;
 
-    armStalledUploadTimer(task);
+      setStatusMessage("Envoi du fichier…");
 
-    task.on(
-      "state_changed",
-      (snap) => {
-        if (!isAttemptActive(attemptId)) return;
-        const hasRealTransfer = snap.bytesTransferred > 0;
+      const response = await Promise.race([
+        fetch(STORAGE_UPLOAD_ENDPOINT, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+            "Content-Type": file.type || "application/octet-stream",
+            "X-Upload-Path": storagePath,
+            "X-File-Name": encodeURIComponent(file.name),
+          },
+          body: file,
+        }),
+        new Promise((_, reject) => {
+          window.setTimeout(() => {
+            reject(
+              Object.assign(new Error("Direct upload timed out."), {
+                code: "storage/direct-upload-timeout",
+              }),
+            );
+          }, 20000);
+        }),
+      ]);
 
-        if (hasRealTransfer) {
-          hasTransferredBytesRef.current = true;
-          clearStartupTimer();
-          armStalledUploadTimer(task);
-          setStatusMessage("Envoi du fichier…");
-        } else if (!hasTransferredBytesRef.current) {
-          setStatusMessage("Préparation de l'envoi…");
+      if (!isAttemptActive(attemptId)) return;
+
+      if (!response?.ok) {
+        let payload = null;
+        try {
+          payload = await response.json();
+        } catch {
+          payload = null;
         }
 
-        setProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100));
-      },
-      (err) => {
-        if (!isAttemptActive(attemptId)) return;
-        clearStartupTimer();
-        clearStalledUploadTimer();
-        const code = err?.code || "";
-        const canRetryWithDirectUpload =
-          !hasTransferredBytesRef.current &&
-          code !== "storage/unauthorized" &&
-          code !== "storage/unauthenticated" &&
-          code !== "storage/bucket-not-found" &&
-          code !== "storage/project-not-found";
+        throw Object.assign(
+          new Error(payload?.message || `Upload HTTP ${response.status}`),
+          { code: payload?.error || "storage/upload-via-function-failed" },
+        );
+      }
 
-        if (canRetryWithDirectUpload) {
-          tryDirectUpload(file, storageRef, attemptId).catch((directUploadError) => {
-            if (!isAttemptActive(attemptId)) return;
-            invalidateAttempt(attemptId);
-            setError(formatUploadError(directUploadError));
-            setStatusMessage("");
-            setProgress(null);
-          });
-          return;
-        }
+      const payload = await response.json();
+      if (!payload?.url || !payload?.filePath) {
+        throw Object.assign(new Error("Réponse d'upload incomplète."), {
+          code: "storage/upload-via-function-invalid-response",
+        });
+      }
 
-        setError(formatUploadError(err));
-        setStatusMessage("");
-        setProgress(null);
-      },
-      async () => {
-        if (!isAttemptActive(attemptId)) return;
-        clearStartupTimer();
-        clearStalledUploadTimer();
-        await completeUpload(file, task.snapshot.ref, attemptId);
-      },
-    );
+      setStatusMessage("Finalisation…");
+      await completeUpload(file, payload, attemptId);
+    } catch (err) {
+      if (!isAttemptActive(attemptId)) return;
+      finishAttempt(attemptId);
+      setError(formatUploadError(err));
+      setStatusMessage("");
+      setIsUploading(false);
+    }
   }
 
-  function handleDrop(e) {
-    e.preventDefault();
+  function handleDrop(event) {
+    event.preventDefault();
     setDragging(false);
-    const file = e.dataTransfer.files?.[0];
+    const file = event.dataTransfer.files?.[0];
     if (file) uploadFile(file);
   }
-
-  const uploading = progress !== null;
 
   return (
     <div className="file-upload">
       <label className="file-upload__label" style={labelStyle}>{label}</label>
 
       <div
-        className={`file-upload__dropzone ${dragging ? "file-upload__dropzone--dragging" : ""} ${uploading ? "file-upload__dropzone--uploading" : ""} ${value ? "file-upload__dropzone--filled" : ""}`}
-        onClick={() => !uploading && inputRef.current?.click()}
-        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        className={`file-upload__dropzone ${dragging ? "file-upload__dropzone--dragging" : ""} ${isUploading ? "file-upload__dropzone--uploading" : ""} ${value ? "file-upload__dropzone--filled" : ""}`}
+        onClick={() => !isUploading && inputRef.current?.click()}
+        onDragOver={(event) => { event.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
       >
@@ -240,18 +182,15 @@ export function FileUpload({
           type="file"
           accept={accept}
           className="file-upload__input"
-          onChange={(e) => uploadFile(e.target.files?.[0])}
+          onChange={(event) => uploadFile(event.target.files?.[0])}
         />
 
-        {uploading ? (
+        {isUploading ? (
           <div className="file-upload__progress">
-            <div className="file-upload__progress-label">Envoi… {progress}%</div>
+            <div className="file-upload__progress-label">{statusMessage || "Envoi du fichier…"}</div>
             <div className="file-upload__progress-bar">
-              <div className="file-upload__progress-fill" style={{ width: `${progress}%` }} />
+              <div className="file-upload__progress-fill file-upload__progress-fill--indeterminate" />
             </div>
-            {statusMessage ? (
-              <div className="file-upload__status">{statusMessage}</div>
-            ) : null}
           </div>
         ) : value ? (
           <div className="file-upload__ready">
@@ -261,8 +200,8 @@ export function FileUpload({
               type="button"
               title="Ouvrir le fichier actuel"
               aria-label="Ouvrir le fichier actuel"
-              onClick={(e) => {
-                e.stopPropagation();
+              onClick={(event) => {
+                event.stopPropagation();
                 window.open(value, "_blank", "noopener,noreferrer");
               }}
             >
@@ -279,9 +218,7 @@ export function FileUpload({
         )}
       </div>
 
-      {error && (
-        <p className="file-upload__error">{error}</p>
-      )}
+      {error ? <p className="file-upload__error">{error}</p> : null}
     </div>
   );
 }

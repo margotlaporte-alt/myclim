@@ -2887,6 +2887,11 @@ tr.row--warning > td {
   transition: width 0.2s ease;
 }
 
+.file-upload__progress-fill--indeterminate {
+  width: 34%;
+  animation: file-upload-indeterminate 1.2s ease-in-out infinite;
+}
+
 .file-upload__ready {
   grid-template-columns: auto auto 1fr;
   align-items: center;
@@ -2929,6 +2934,18 @@ tr.row--warning > td {
 
 .file-upload__status {
   line-height: 1.4;
+}
+
+@keyframes file-upload-indeterminate {
+  0% {
+    transform: translateX(-18%);
+  }
+  50% {
+    transform: translateX(120%);
+  }
+  100% {
+    transform: translateX(-18%);
+  }
 }
 
 .file-upload__empty-icon {
