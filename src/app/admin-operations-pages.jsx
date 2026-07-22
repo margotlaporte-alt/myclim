@@ -14,6 +14,7 @@ import {
 } from "firebase/firestore";
 import { getActiveRoles } from "./navigation";
 import {
+  BUDGET_INVOICE_CONFIGURATION_DOC_PATH,
   TEAM_CONFIGURATION_DOC_PATH,
   defaultTeamRoleOptions,
   platformRoleOptions,
@@ -43,7 +44,7 @@ import {
   normalizeSubRoles,
   normalizeTeamConfigurationPayload,
 } from "./team-config";
-import { useTeamConfiguration } from "./config-hooks";
+import { useBudgetInvoiceConfiguration, useTeamConfiguration } from "./config-hooks";
 import { buildUserIdentitySet, getWorkflowStatusClass, isTeamLeadAssignment } from "./common-helpers";
 import { normalizeComparableValue } from "./u14-helpers";
 import {
@@ -122,6 +123,18 @@ function RoleManagementPage(props) {
   const [duplicateGroups, setDuplicateGroups] = useState([]);
   const [duplicatesLoading, setDuplicatesLoading] = useState(false);
   const [isCleaningDuplicates, setIsCleaningDuplicates] = useState(false);
+  const {
+    allowedUploaderRoles,
+    allowedUploaderUserIds,
+  } = useBudgetInvoiceConfiguration();
+  const [invoicePermissionDraft, setInvoicePermissionDraft] = useState({
+    allowedUploaderRoles: [],
+    allowedUploaderUserIds: [],
+  });
+  const [invoicePermissionUsers, setInvoicePermissionUsers] = useState([]);
+  const [selectedInvoicePermissionUserId, setSelectedInvoicePermissionUserId] = useState("");
+  const [invoicePermissionStatus, setInvoicePermissionStatus] = useState("");
+  const [isSavingInvoicePermissions, setIsSavingInvoicePermissions] = useState(false);
   const normalizedSearch = search.trim().toLowerCase();
   const searchTokens = useMemo(() => buildSearchPrefixes(search).slice(0, 10), [search]);
   const shouldSearch = searchTokens.length > 0;
@@ -132,6 +145,57 @@ function RoleManagementPage(props) {
     () => duplicateGroups.reduce((sum, group) => sum + group.removedUsers.length, 0),
     [duplicateGroups],
   );
+  const invoicePermissionUsersById = useMemo(
+    () => new Map(invoicePermissionUsers.map((user) => [user.id, user])),
+    [invoicePermissionUsers],
+  );
+
+  useEffect(() => {
+    setInvoicePermissionDraft({
+      allowedUploaderRoles,
+      allowedUploaderUserIds,
+    });
+  }, [allowedUploaderRoles, allowedUploaderUserIds]);
+
+  useEffect(() => {
+    if (!hasAdminRole) return undefined;
+
+    let isCancelled = false;
+
+    async function loadInvoicePermissionUsers() {
+      try {
+        const snapshot = await getDocs(collection(db, "users"));
+        if (isCancelled) return;
+
+        const nextUsers = snapshot.docs
+          .map((entry) => {
+            const data = entry.data();
+            return {
+              id: entry.id,
+              email: String(data.email || "").trim(),
+              firstName: String(data.firstName || "").trim(),
+              lastName: String(data.lastName || "").trim(),
+            };
+          })
+          .sort((left, right) =>
+            getDisplayName(left, left.email).localeCompare(getDisplayName(right, right.email), "fr", {
+              sensitivity: "base",
+            }),
+          );
+
+        setInvoicePermissionUsers(nextUsers);
+      } catch {
+        if (isCancelled) return;
+        setInvoicePermissionStatus("Impossible de charger la liste des utilisateurs pour les permissions facture.");
+      }
+    }
+
+    loadInvoicePermissionUsers();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [hasAdminRole]);
 
   useEffect(() => {
     if (!shouldLoadUsers) return undefined;
@@ -365,6 +429,57 @@ function RoleManagementPage(props) {
     }
   }
 
+  function toggleInvoicePermissionRole(roleValue) {
+    setInvoicePermissionDraft((current) => ({
+      ...current,
+      allowedUploaderRoles: current.allowedUploaderRoles.includes(roleValue)
+        ? current.allowedUploaderRoles.filter((role) => role !== roleValue)
+        : [...current.allowedUploaderRoles, roleValue],
+    }));
+  }
+
+  function addInvoicePermissionUser() {
+    if (!selectedInvoicePermissionUserId) return;
+
+    setInvoicePermissionDraft((current) => ({
+      ...current,
+      allowedUploaderUserIds: current.allowedUploaderUserIds.includes(selectedInvoicePermissionUserId)
+        ? current.allowedUploaderUserIds
+        : [...current.allowedUploaderUserIds, selectedInvoicePermissionUserId],
+    }));
+    setSelectedInvoicePermissionUserId("");
+  }
+
+  function removeInvoicePermissionUser(userId) {
+    setInvoicePermissionDraft((current) => ({
+      ...current,
+      allowedUploaderUserIds: current.allowedUploaderUserIds.filter((entry) => entry !== userId),
+    }));
+  }
+
+  async function saveInvoicePermissions() {
+    setIsSavingInvoicePermissions(true);
+    setInvoicePermissionStatus("");
+
+    try {
+      await setDoc(
+        doc(db, ...BUDGET_INVOICE_CONFIGURATION_DOC_PATH),
+        {
+          allowedUploaderRoles: invoicePermissionDraft.allowedUploaderRoles,
+          allowedUploaderUserIds: invoicePermissionDraft.allowedUploaderUserIds,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      );
+
+      setInvoicePermissionStatus("Permissions de dépôt de facture enregistrées.");
+    } catch {
+      setInvoicePermissionStatus("La sauvegarde des permissions facture a échoué.");
+    } finally {
+      setIsSavingInvoicePermissions(false);
+    }
+  }
+
   if (!hasAdminRole) {
     return (
       <div className="page">
@@ -428,6 +543,93 @@ function RoleManagementPage(props) {
           {statusMessage ? <p className="panel-note">{statusMessage}</p> : null}
         </Panel>
       </section>
+
+      <Panel
+        title="Dépôt de facture"
+        subtitle="Choisis quels rôles plateforme peuvent déposer des factures dans l'onglet Document, et ajoute si besoin des personnes précises."
+      >
+        <div className="section-stack">
+          <div className="choice-grid choice-grid--2">
+            {platformRoleOptions.map((roleOption) => (
+              <label key={`invoice-${roleOption.value}`} className="selection-card selection-card--compact">
+                <input
+                  checked={invoicePermissionDraft.allowedUploaderRoles.includes(roleOption.value)}
+                  type="checkbox"
+                  onChange={() => toggleInvoicePermissionRole(roleOption.value)}
+                />
+                <div>
+                  <strong>{roleOption.label}</strong>
+                </div>
+              </label>
+            ))}
+          </div>
+
+          <div className="field">
+            <span>Personne spécifique</span>
+            <div className="document-team-picker">
+              <select
+                value={selectedInvoicePermissionUserId}
+                onChange={(event) => setSelectedInvoicePermissionUserId(event.target.value)}
+              >
+                <option value="">Ajouter une personne</option>
+                {invoicePermissionUsers
+                  .filter((user) => !invoicePermissionDraft.allowedUploaderUserIds.includes(user.id))
+                  .map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {getDisplayName(user, user.email)}{user.email ? ` · ${user.email}` : ""}
+                    </option>
+                  ))}
+              </select>
+              <button
+                className="button button--secondary"
+                type="button"
+                disabled={!selectedInvoicePermissionUserId}
+                onClick={addInvoicePermissionUser}
+              >
+                Ajouter
+              </button>
+            </div>
+          </div>
+
+          {invoicePermissionDraft.allowedUploaderUserIds.length ? (
+            <div className="document-tag-list">
+              {invoicePermissionDraft.allowedUploaderUserIds.map((userId) => {
+                const user = invoicePermissionUsersById.get(userId);
+                const label = user ? `${getDisplayName(user, user.email)}${user.email ? ` · ${user.email}` : ""}` : userId;
+
+                return (
+                  <button
+                    key={`invoice-user-${userId}`}
+                    className="document-tag document-tag--removable"
+                    type="button"
+                    onClick={() => removeInvoicePermissionUser(userId)}
+                  >
+                    {label} ×
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="panel-note">Aucune personne spécifique ajoutée pour le moment.</p>
+          )}
+
+          <div className="button-row">
+            <button
+              className="button button--primary"
+              type="button"
+              disabled={isSavingInvoicePermissions}
+              onClick={saveInvoicePermissions}
+            >
+              {isSavingInvoicePermissions ? "Sauvegarde..." : "Enregistrer les permissions facture"}
+            </button>
+          </div>
+
+          <p className="panel-note">
+            Les administrateurs gardent toujours l'accès au dépôt et au classement des factures.
+          </p>
+          {invoicePermissionStatus ? <p className="panel-note">{invoicePermissionStatus}</p> : null}
+        </div>
+      </Panel>
 
       <Panel
         title="Nettoyage des doublons"

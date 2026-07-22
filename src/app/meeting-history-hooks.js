@@ -66,6 +66,46 @@ function compareResultRows(a, b) {
   return (a.sectionRank || a.rank || 99) - (b.sectionRank || b.rank || 99);
 }
 
+function normalizeHeatSectionRanks(results) {
+  const rows = results.map((row) => ({ ...row }));
+  const hasFinalByEvent = new Set(
+    rows
+      .filter((row) => String(row?.round || "").toLowerCase() === "final")
+      .map((row) => `${row.discipline || ""}||${row.gender || ""}`),
+  );
+  const groups = new Map();
+
+  for (const row of rows) {
+    if (String(row?.round || "").toLowerCase() !== "heat") continue;
+    const linkedRound = String(row?.linkedRound || "").toLowerCase();
+    const eventKey = `${row.discipline || ""}||${row.gender || ""}`;
+    const qualifiesToFinal = linkedRound === "final" || hasFinalByEvent.has(eventKey);
+    if (!qualifiesToFinal) continue;
+    const groupKey = `${eventKey}||${row.heat || ""}`;
+    if (!groups.has(groupKey)) groups.set(groupKey, []);
+    groups.get(groupKey).push(row);
+  }
+
+  for (const groupRows of groups.values()) {
+    groupRows.sort((a, b) => {
+      const rankDiff = (Number(a.rank) || 999) - (Number(b.rank) || 999);
+      if (rankDiff !== 0) return rankDiff;
+      const markDiff = compareRecordCandidates(
+        { discipline: a.discipline, result: a.result },
+        { discipline: b.discipline, result: b.result },
+      );
+      if (markDiff !== 0) return markDiff;
+      return `${a.lastName || ""} ${a.firstName || ""}`.localeCompare(`${b.lastName || ""} ${b.firstName || ""}`);
+    });
+
+    groupRows.forEach((row, index) => {
+      row.sectionRank = index + 1;
+    });
+  }
+
+  return rows;
+}
+
 function isOfficialResult(result) {
   return String(result?.round || "").toLowerCase() !== "heat";
 }
@@ -174,8 +214,9 @@ export function useMeetingResultsForYear(year) {
     if (!year) { setLoading(false); return; }
     const q = query(collection(db, MEETING_RESULTS_COL), where("year", "==", Number(year)));
     const unsub = onSnapshot(q, (snap) => {
-      const items = snap.docs
-        .map((d) => ({ id: d.id, ...d.data() }))
+      const items = normalizeHeatSectionRanks(
+        snap.docs.map((d) => ({ id: d.id, ...d.data() })),
+      )
         .sort(compareResultRows);
       setResults(items);
       setLoading(false);

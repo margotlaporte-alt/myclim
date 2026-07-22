@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytes, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage } from "../services/firebase";
 
 /**
@@ -23,8 +23,14 @@ export function FileUpload({
 }) {
   const [progress, setProgress] = useState(null);
   const [error, setError] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef(null);
+  const startupTimerRef = useRef(null);
+  const stalledUploadTimerRef = useRef(null);
+  const didForceAbortRef = useRef(false);
+  const hasTransferredBytesRef = useRef(false);
+  const activeAttemptIdRef = useRef(0);
 
   const labelStyle = {
     fontSize: "0.78rem",
@@ -36,30 +42,175 @@ export function FileUpload({
     marginBottom: 6,
   };
 
+  function clearStartupTimer() {
+    if (startupTimerRef.current) {
+      window.clearTimeout(startupTimerRef.current);
+      startupTimerRef.current = null;
+    }
+  }
+
+  function clearStalledUploadTimer() {
+    if (stalledUploadTimerRef.current) {
+      window.clearTimeout(stalledUploadTimerRef.current);
+      stalledUploadTimerRef.current = null;
+    }
+  }
+
+  function isAttemptActive(attemptId) {
+    return activeAttemptIdRef.current === attemptId;
+  }
+
+  function invalidateAttempt(attemptId) {
+    if (activeAttemptIdRef.current === attemptId) {
+      activeAttemptIdRef.current += 1;
+    }
+  }
+
+  function armStalledUploadTimer(task) {
+    clearStalledUploadTimer();
+    stalledUploadTimerRef.current = window.setTimeout(() => {
+      didForceAbortRef.current = true;
+      task.cancel();
+    }, 15000);
+  }
+
+  function formatUploadError(err) {
+    const code = err?.code || "";
+
+    if (code === "storage/unauthorized" || code === "storage/unauthenticated") {
+      return "Upload impossible pour le moment. Vous semblez non authentifié(e) sur Firebase Storage.";
+    }
+
+    if (code === "storage/canceled") {
+      if (didForceAbortRef.current) {
+        return "L'envoi est resté bloqué au démarrage. Vérifiez la connexion ou Firebase Storage, puis réessayez.";
+      }
+      return "Envoi annulé.";
+    }
+
+    if (code === "storage/bucket-not-found" || code === "storage/project-not-found") {
+      return "Le stockage Firebase n'est pas disponible pour ce projet.";
+    }
+
+    if (code === "storage/retry-limit-exceeded") {
+      return "Le stockage ne répond pas. Ce n'est généralement pas lié au local, mais à Firebase ou à la connexion.";
+    }
+
+    if (code === "storage/direct-upload-timeout") {
+      return "Le second mode d'envoi ne répond pas non plus. Vérifiez Firebase Storage ou la connexion, puis réessayez.";
+    }
+
+    return err?.message || "Upload impossible pour le moment.";
+  }
+
+  function buildUploadPayload(file, storageRef, url) {
+    return {
+      url,
+      fileName: file.name,
+      filePath: storageRef.fullPath,
+      mimeType: file.type || "",
+    };
+  }
+
+  async function completeUpload(file, storageRef, attemptId) {
+    if (!isAttemptActive(attemptId)) return;
+    const url = await getDownloadURL(storageRef);
+    if (!isAttemptActive(attemptId)) return;
+    const payload = buildUploadPayload(file, storageRef, url);
+    onChange(url);
+    onUploadComplete?.(payload);
+    setStatusMessage("");
+    setProgress(null);
+  }
+
+  async function tryDirectUpload(file, storageRef, attemptId) {
+    if (!isAttemptActive(attemptId)) return;
+    setStatusMessage("Reprise automatique de l'envoi…");
+    setProgress(12);
+    await Promise.race([
+      uploadBytes(storageRef, file, file.type ? { contentType: file.type } : undefined),
+      new Promise((_, reject) => {
+        window.setTimeout(() => {
+          reject(Object.assign(new Error("L'envoi direct reste bloqué."), { code: "storage/direct-upload-timeout" }));
+        }, 15000);
+      }),
+    ]);
+    if (!isAttemptActive(attemptId)) return;
+    setProgress(100);
+    await completeUpload(file, storageRef, attemptId);
+  }
+
   async function uploadFile(file) {
     if (!file) return;
+    const attemptId = activeAttemptIdRef.current + 1;
+    activeAttemptIdRef.current = attemptId;
+    clearStartupTimer();
+    clearStalledUploadTimer();
+    didForceAbortRef.current = false;
+    hasTransferredBytesRef.current = false;
     setError("");
     setProgress(0);
+    setStatusMessage("Connexion à l'espace de stockage…");
 
-    const ext = file.name.split(".").pop();
     const safeName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
     const storageRef = ref(storage, `${storagePath}/${safeName}`);
     const task = uploadBytesResumable(storageRef, file);
 
+    startupTimerRef.current = window.setTimeout(() => {
+      setStatusMessage("Connexion lente à Firebase Storage. En local, cela fonctionne normalement aussi.");
+    }, 4000);
+
+    armStalledUploadTimer(task);
+
     task.on(
       "state_changed",
-      (snap) => setProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100)),
-      (err) => { setError(err.message); setProgress(null); },
-      async () => {
-        const url = await getDownloadURL(task.snapshot.ref);
-        onChange(url);
-        onUploadComplete?.({
-          url,
-          fileName: file.name,
-          filePath: task.snapshot.ref.fullPath,
-          mimeType: file.type || "",
-        });
+      (snap) => {
+        if (!isAttemptActive(attemptId)) return;
+        const hasRealTransfer = snap.bytesTransferred > 0;
+
+        if (hasRealTransfer) {
+          hasTransferredBytesRef.current = true;
+          clearStartupTimer();
+          armStalledUploadTimer(task);
+          setStatusMessage("Envoi du fichier…");
+        } else if (!hasTransferredBytesRef.current) {
+          setStatusMessage("Préparation de l'envoi…");
+        }
+
+        setProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100));
+      },
+      (err) => {
+        if (!isAttemptActive(attemptId)) return;
+        clearStartupTimer();
+        clearStalledUploadTimer();
+        const code = err?.code || "";
+        const canRetryWithDirectUpload =
+          !hasTransferredBytesRef.current &&
+          code !== "storage/unauthorized" &&
+          code !== "storage/unauthenticated" &&
+          code !== "storage/bucket-not-found" &&
+          code !== "storage/project-not-found";
+
+        if (canRetryWithDirectUpload) {
+          tryDirectUpload(file, storageRef, attemptId).catch((directUploadError) => {
+            if (!isAttemptActive(attemptId)) return;
+            invalidateAttempt(attemptId);
+            setError(formatUploadError(directUploadError));
+            setStatusMessage("");
+            setProgress(null);
+          });
+          return;
+        }
+
+        setError(formatUploadError(err));
+        setStatusMessage("");
         setProgress(null);
+      },
+      async () => {
+        if (!isAttemptActive(attemptId)) return;
+        clearStartupTimer();
+        clearStalledUploadTimer();
+        await completeUpload(file, task.snapshot.ref, attemptId);
       },
     );
   }
@@ -74,74 +225,62 @@ export function FileUpload({
   const uploading = progress !== null;
 
   return (
-    <div>
-      <label style={labelStyle}>{label}</label>
+    <div className="file-upload">
+      <label className="file-upload__label" style={labelStyle}>{label}</label>
 
-      {/* Drop zone */}
       <div
+        className={`file-upload__dropzone ${dragging ? "file-upload__dropzone--dragging" : ""} ${uploading ? "file-upload__dropzone--uploading" : ""} ${value ? "file-upload__dropzone--filled" : ""}`}
         onClick={() => !uploading && inputRef.current?.click()}
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
-        style={{
-          border: `2px dashed ${dragging ? "#1066cc" : "rgba(0,0,0,0.2)"}`,
-          borderRadius: 10,
-          padding: "20px 16px",
-          textAlign: "center",
-          cursor: uploading ? "default" : "pointer",
-          background: dragging ? "rgba(16,102,204,0.05)" : "rgba(0,0,0,0.02)",
-          transition: "border-color 0.15s, background 0.15s",
-          userSelect: "none",
-        }}
       >
         <input
           ref={inputRef}
           type="file"
           accept={accept}
-          style={{ display: "none" }}
+          className="file-upload__input"
           onChange={(e) => uploadFile(e.target.files?.[0])}
         />
 
         {uploading ? (
-          <div>
-            <div style={{ fontSize: "0.875rem", color: "#1066cc", marginBottom: 8 }}>
-              Uploading… {progress}%
+          <div className="file-upload__progress">
+            <div className="file-upload__progress-label">Envoi… {progress}%</div>
+            <div className="file-upload__progress-bar">
+              <div className="file-upload__progress-fill" style={{ width: `${progress}%` }} />
             </div>
-            <div style={{ height: 6, borderRadius: 3, background: "rgba(0,0,0,0.1)", overflow: "hidden" }}>
-              <div style={{ height: "100%", width: `${progress}%`, background: "#1066cc", borderRadius: 3, transition: "width 0.2s" }} />
-            </div>
+            {statusMessage ? (
+              <div className="file-upload__status">{statusMessage}</div>
+            ) : null}
           </div>
         ) : value ? (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, flexWrap: "wrap" }}>
-            <span style={{ fontSize: "0.85rem", color: "#1066cc", fontWeight: 600 }}>
-              📄 File uploaded
-            </span>
-            <a
-              href={value}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              style={{ fontSize: "0.8rem", color: "#546770", textDecoration: "underline" }}
+          <div className="file-upload__ready">
+            <span className="file-upload__ready-badge">Fichier prêt</span>
+            <button
+              className="file-upload__icon-link"
+              type="button"
+              title="Ouvrir le fichier actuel"
+              aria-label="Ouvrir le fichier actuel"
+              onClick={(e) => {
+                e.stopPropagation();
+                window.open(value, "_blank", "noopener,noreferrer");
+              }}
             >
-              View current file
-            </a>
-            <span style={{ fontSize: "0.8rem", color: "#999" }}>· Click or drop to replace</span>
+              <span aria-hidden="true">↗</span>
+            </button>
+            <span className="file-upload__ready-hint">Cliquer ou déposer pour remplacer</span>
           </div>
         ) : (
-          <div>
-            <div style={{ fontSize: "1.4rem", marginBottom: 6 }}>📎</div>
-            <div style={{ fontSize: "0.875rem", color: "#546770" }}>
-              Click to select or drag &amp; drop
-            </div>
-            <div style={{ fontSize: "0.78rem", color: "#999", marginTop: 4 }}>
-              {helperText}
-            </div>
+          <div className="file-upload__empty">
+            <div className="file-upload__empty-icon" aria-hidden="true">⌁</div>
+            <div className="file-upload__empty-title">Déposer ou sélectionner un fichier</div>
+            <div className="file-upload__empty-hint">{helperText}</div>
           </div>
         )}
       </div>
 
       {error && (
-        <p style={{ fontSize: "0.8rem", color: "#e8001c", marginTop: 6 }}>{error}</p>
+        <p className="file-upload__error">{error}</p>
       )}
     </div>
   );
