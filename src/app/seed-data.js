@@ -224,12 +224,14 @@ const platformRoleOptions = [
 const TEAM_CONFIGURATION_DOC_PATH = ["appSettings", "teamsConfiguration"];
 const ACCREDITATION_CONFIGURATION_DOC_PATH = ["appSettings", "accreditationConfiguration"];
 const JUDGE_ROSTER_DOC_PATH = ["appSettings", "judgeRoster"];
+const BUDGET_INVOICE_CONFIGURATION_DOC_PATH = ["appSettings", "budgetInvoiceConfiguration"];
 const VOLUNTEER_ALERT_LOG_DOC_PATH = ["appSettings", "volunteerAlertLog"];
 const defaultTeamRoleOptions = ["Bénévole", "Chef d'équipe", "Remplaçant"];
 const PARTICIPATION_CERTIFICATE_SIGNATORY = "Responsable bénévoles";
 
 export {
   ACCREDITATION_CONFIGURATION_DOC_PATH,
+  BUDGET_INVOICE_CONFIGURATION_DOC_PATH,
   JUDGE_ROSTER_DOC_PATH,
   PARTICIPATION_CERTIFICATE_SIGNATORY,
   TEAM_CONFIGURATION_DOC_PATH,

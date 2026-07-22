@@ -1,9 +1,18 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
-import { addDoc, collection, doc, onSnapshot, serverTimestamp, setDoc, writeBatch } from "firebase/firestore";
+import { addDoc, collection, doc, onSnapshot, serverTimestamp, setDoc, updateDoc, writeBatch } from "firebase/firestore";
 import { db } from "../services/firebase";
 import { useAuth } from "../context/auth-context";
-import { getDisplayName } from "./utils";
+import { useBudgetInvoiceConfiguration } from "./config-hooks";
+import { useDocumentsCollection } from "./documents-hooks";
 import { useActiveEdition } from "./edition";
+import { canUserUploadBudgetInvoice } from "./budget-invoice-config";
+import {
+  buildBudgetExpenseTargetOptions,
+  formatInvoiceStatusLabel,
+  InvoiceInlineList,
+  InvoiceUploadForm,
+} from "./invoice-management";
+import { extractRolesFromProfile, getDisplayName } from "./utils";
 import {
   BUDGET_COLLECTION,
   BUDGET_HISTORY_COLLECTION,
@@ -23,6 +32,7 @@ import {
   mergeFallbackBudgetValues,
   normalizeBudgetDocument,
   normalizeEditionId,
+  recalculateBudgetFormulas,
   serializeBudgetDocument,
   sortBudgetDocuments,
   toBudgetNumber,
@@ -36,13 +46,16 @@ const currencyFormatter = new Intl.NumberFormat("fr-LU", {
 });
 
 const historyFieldLabels = {
+  rowNumber: "Ordre",
   section: "Section",
   label: "Libellé",
   details: "Détail",
   referenceForecast: "Prévisionnel année de référence",
   referenceActual: "Réalisé année de référence",
   currentForecast: "Prévisionnel année courante",
+  currentForecastFormula: "Formule prévisionnel",
   currentActual: "Réalisé année courante",
+  currentActualFormula: "Formule réalisé",
   actualReference: "Facture / repère",
   comment: "Commentaire",
   created: "Création",
@@ -65,19 +78,45 @@ function formatDateTime(value) {
   });
 }
 
+function formatDateForExport(value = new Date()) {
+  return new Date(value).toLocaleString("fr-LU", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 function formatHistoryValue(value) {
   if (typeof value === "number") return formatCurrency(value);
   if (value == null || value === "") return "vide";
   return String(value);
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll("\"", "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
 function computeVariance(forecastValue, actualValue) {
   const normalizedForecast = forecastValue == null ? null : Number(forecastValue);
   const normalizedActual = actualValue == null ? null : Number(actualValue);
 
-  if (normalizedForecast == null && normalizedActual == null) return null;
+  if (normalizedActual == null) return null;
 
   return Number(((normalizedActual ?? 0) - (normalizedForecast ?? 0)).toFixed(2));
+}
+
+function sumBudgetRowsField(rows = [], fieldName, { emptyAsNull = false } = {}) {
+  const numericValues = rows.map((row) => toBudgetNumber(row[fieldName])).filter((value) => value != null);
+
+  if (!numericValues.length) return emptyAsNull ? null : 0;
+  return Number(numericValues.reduce((sum, value) => sum + value, 0).toFixed(2));
 }
 
 function formatVariance(value) {
@@ -116,10 +155,15 @@ function buildBudgetFromTemplate(templateBudget, nextEditionId) {
   function mapRowForNewBudget(row) {
     return {
       ...row,
+      isCustom: false,
       referenceForecast: row.currentForecast ?? row.referenceForecast,
       referenceActual: row.currentActual ?? row.currentForecast ?? row.referenceActual,
       currentForecast: row.currentActual ?? row.currentForecast ?? row.referenceForecast,
+      currentForecastFormula: "",
+      currentForecastFormulaError: "",
       currentActual: null,
+      currentActualFormula: "",
+      currentActualFormulaError: "",
       actualReference: "",
       comment: "",
     };
@@ -140,6 +184,458 @@ function buildBudgetFromTemplate(templateBudget, nextEditionId) {
   };
 }
 
+function resequenceBudgetRows(rows = []) {
+  return rows.map((row, index) => ({
+    ...row,
+    rowNumber: index + 1,
+  }));
+}
+
+function getBudgetExportColumnLabel(fieldName) {
+  if (fieldName === "currentForecast") return "Prévisionnel";
+  if (fieldName === "currentActual") return "Réalisé";
+  return fieldName;
+}
+
+function buildBudgetSheetExportRows({
+  title,
+  sectionLabel,
+  sections,
+  totals,
+  currentEditionId,
+  referenceEditionId,
+  hasComparison,
+}) {
+  const rows = [
+    [title],
+    [`Généré le ${formatDateForExport()}`],
+    [],
+    ["Section", "Ligne", "Poste", "Détail", ...(hasComparison ? [`Réalisé ${referenceEditionId}`] : []), `Prévisionnel ${currentEditionId}`, `Réalisé ${currentEditionId}`, `Écart ${currentEditionId}`, "Repère / facture", "Commentaire", "Formule prévisionnel", "Formule réalisé"],
+  ];
+
+  sections.forEach(({ sectionName, rows: sectionRows }) => {
+    rows.push([`${sectionLabel} · ${sectionName}`]);
+    sectionRows.forEach((row) => {
+      const variance = computeVariance(row.currentForecast, row.currentActual);
+      rows.push([
+        sectionName,
+        row.rowNumber,
+        row.label,
+        row.details || "",
+        ...(hasComparison ? [row.referenceActual ?? ""] : []),
+        row.currentForecast ?? "",
+        row.currentActual ?? "",
+        variance ?? "",
+        row.actualReference || "",
+        row.comment || "",
+        row.currentForecastFormula || "",
+        row.currentActualFormula || "",
+      ]);
+    });
+    rows.push([]);
+  });
+
+  rows.push([
+    `Total ${title.toLowerCase()}`,
+    "",
+    "",
+    "",
+    ...(hasComparison ? [totals.referenceActual ?? ""] : []),
+    totals.currentForecast ?? "",
+    totals.currentActual ?? "",
+    computeVariance(totals.currentForecast, totals.currentActual) ?? "",
+    "",
+    "",
+    "",
+    "",
+  ]);
+
+  return rows;
+}
+
+function buildBudgetOverviewExportRows({ budget, totals, hasComparison }) {
+  return [
+    [`Budget ${budget.currentEditionId} · Vue d'ensemble`],
+    [`Généré le ${formatDateForExport()}`],
+    [],
+    ["Bloc", ...(hasComparison ? [`Réalisé ${budget.referenceEditionId}`] : []), `Prévisionnel ${budget.currentEditionId}`, `Réalisé ${budget.currentEditionId}`, `Écart ${budget.currentEditionId}`],
+    ["Dépenses", ...(hasComparison ? [totals.expenses.referenceActual] : []), totals.expenses.currentForecast, totals.expenses.currentActual, computeVariance(totals.expenses.currentForecast, totals.expenses.currentActual)],
+    ["Recettes", ...(hasComparison ? [totals.revenues.referenceActual] : []), totals.revenues.currentForecast, totals.revenues.currentActual, computeVariance(totals.revenues.currentForecast, totals.revenues.currentActual)],
+    ["Équilibre", ...(hasComparison ? [totals.balance.referenceActual] : []), totals.balance.currentForecast, totals.balance.currentActual, computeVariance(totals.balance.currentForecast, totals.balance.currentActual)],
+  ];
+}
+
+function buildBudgetPrintSectionMarkup({
+  title,
+  side,
+  sections,
+  currentEditionId,
+  referenceEditionId,
+  hasComparison,
+}) {
+  return `
+    <section class="budget-print-section">
+      <header class="budget-print-section__header">
+        <div>
+          <p>${escapeHtml(side)}</p>
+          <h2>${escapeHtml(title)}</h2>
+        </div>
+      </header>
+      ${sections.map(({ sectionName, rows }) => {
+        const sectionReferenceActual = sumBudgetRowsField(rows, "referenceActual");
+        const sectionCurrentForecast = sumBudgetRowsField(rows, "currentForecast");
+        const sectionCurrentActual = sumBudgetRowsField(rows, "currentActual", { emptyAsNull: true });
+        const variance = computeVariance(sectionCurrentForecast, sectionCurrentActual);
+
+        return `
+          <article class="budget-print-card">
+            <div class="budget-print-card__top">
+              <div>
+                <h3>${escapeHtml(sectionName)}</h3>
+                <p>${rows.length} ligne(s)</p>
+              </div>
+              <div class="budget-print-metrics">
+                ${hasComparison ? `<span><small>Réf. ${escapeHtml(referenceEditionId)}</small><strong>${escapeHtml(formatCurrency(sectionReferenceActual))}</strong></span>` : ""}
+                <span><small>Prévisionnel ${escapeHtml(currentEditionId)}</small><strong>${escapeHtml(formatCurrency(sectionCurrentForecast))}</strong></span>
+                <span><small>Réalisé ${escapeHtml(currentEditionId)}</small><strong>${escapeHtml(formatCurrency(sectionCurrentActual))}</strong></span>
+                <span><small>Écart</small><strong>${escapeHtml(formatVariance(variance))}</strong></span>
+              </div>
+            </div>
+            <table class="budget-print-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Poste</th>
+                  <th>Détail</th>
+                  ${hasComparison ? `<th>Réalisé ${escapeHtml(referenceEditionId)}</th>` : ""}
+                  <th>Prév. ${escapeHtml(currentEditionId)}</th>
+                  <th>Réalisé ${escapeHtml(currentEditionId)}</th>
+                  <th>Écart</th>
+                  <th>Repère</th>
+                  <th>Commentaire</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.map((row) => `
+                  <tr>
+                    <td>${escapeHtml(row.rowNumber)}</td>
+                    <td>
+                      <strong>${escapeHtml(row.label)}</strong>
+                      ${row.isCustom ? `<small class="budget-print-pill">Ajoutée</small>` : ""}
+                    </td>
+                    <td>${escapeHtml(row.details || "—")}</td>
+                    ${hasComparison ? `<td>${escapeHtml(formatCurrency(row.referenceActual))}</td>` : ""}
+                    <td>${escapeHtml(formatCurrency(row.currentForecast))}</td>
+                    <td>${escapeHtml(formatCurrency(row.currentActual))}</td>
+                    <td>${escapeHtml(formatVariance(computeVariance(row.currentForecast, row.currentActual)))}</td>
+                    <td>${escapeHtml(row.actualReference || "—")}</td>
+                    <td>${escapeHtml(row.comment || "—")}</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          </article>
+        `;
+      }).join("")}
+    </section>
+  `;
+}
+
+function buildBudgetPrintDocument({
+  budget,
+  totals,
+  expenseSections,
+  revenueSections,
+  hasComparison,
+}) {
+  const generatedAt = formatDateForExport();
+  const balanceVariance = computeVariance(totals.balance.currentForecast, totals.balance.currentActual);
+
+  return `<!DOCTYPE html>
+  <html lang="fr">
+    <head>
+      <meta charset="utf-8" />
+      <title>Budget ${escapeHtml(budget.currentEditionId)}</title>
+      <style>
+        :root {
+          color-scheme: light;
+          --ink: #172033;
+          --muted: #607086;
+          --line: #d7e1eb;
+          --paper: #ffffff;
+          --soft: #f4f7fb;
+          --brand: #163c6b;
+          --brand-soft: #edf4fb;
+          --good: #176f3f;
+          --warn: #b54708;
+        }
+        * { box-sizing: border-box; }
+        body {
+          margin: 0;
+          font-family: "Avenir Next", "Segoe UI", Arial, sans-serif;
+          color: var(--ink);
+          background: #eef3f8;
+        }
+        .budget-print {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 18mm 14mm 22mm;
+        }
+        .budget-print-cover {
+          margin-bottom: 16mm;
+          padding: 16mm;
+          border-radius: 18px;
+          background:
+            linear-gradient(135deg, #143a66 0%, #204d86 55%, #2f6ba6 100%);
+          color: #fff;
+          box-shadow: 0 18px 40px rgba(23, 32, 51, 0.18);
+        }
+        .budget-print-cover__eyebrow {
+          margin: 0 0 10px;
+          font-size: 11pt;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          opacity: 0.82;
+        }
+        .budget-print-cover h1 {
+          margin: 0;
+          font-size: 28pt;
+          line-height: 1.05;
+        }
+        .budget-print-cover p {
+          margin: 8px 0 0;
+          font-size: 12pt;
+          opacity: 0.92;
+        }
+        .budget-print-summary {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 10px;
+          margin-top: 14mm;
+        }
+        .budget-print-summary article {
+          padding: 12px 14px;
+          border-radius: 14px;
+          background: rgba(255, 255, 255, 0.14);
+          border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        .budget-print-summary span {
+          display: block;
+          font-size: 10pt;
+          opacity: 0.84;
+        }
+        .budget-print-summary strong {
+          display: block;
+          margin-top: 6px;
+          font-size: 18pt;
+        }
+        .budget-print-section {
+          margin-top: 12mm;
+        }
+        .budget-print-section__header {
+          display: flex;
+          align-items: end;
+          justify-content: space-between;
+          margin-bottom: 6mm;
+        }
+        .budget-print-section__header p {
+          margin: 0 0 4px;
+          color: var(--muted);
+          font-size: 9pt;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+        }
+        .budget-print-section__header h2 {
+          margin: 0;
+          font-size: 19pt;
+          color: var(--brand);
+        }
+        .budget-print-card {
+          margin-bottom: 8mm;
+          padding: 11px 12px 12px;
+          border-radius: 16px;
+          border: 1px solid var(--line);
+          background: var(--paper);
+          box-shadow: 0 10px 26px rgba(15, 23, 42, 0.05);
+          break-inside: avoid;
+        }
+        .budget-print-card__top {
+          display: flex;
+          justify-content: space-between;
+          gap: 14px;
+          margin-bottom: 10px;
+        }
+        .budget-print-card__top h3 {
+          margin: 0;
+          font-size: 14pt;
+        }
+        .budget-print-card__top p {
+          margin: 4px 0 0;
+          color: var(--muted);
+          font-size: 9pt;
+        }
+        .budget-print-metrics {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 8px;
+          min-width: 52%;
+        }
+        .budget-print-metrics span {
+          display: grid;
+          gap: 4px;
+          padding: 8px 10px;
+          border-radius: 12px;
+          background: var(--soft);
+          border: 1px solid var(--line);
+        }
+        .budget-print-metrics small {
+          color: var(--muted);
+          font-size: 8pt;
+        }
+        .budget-print-metrics strong {
+          font-size: 10pt;
+        }
+        .budget-print-table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+        .budget-print-table th,
+        .budget-print-table td {
+          padding: 7px 8px;
+          border: 1px solid #e5edf4;
+          vertical-align: top;
+          text-align: left;
+          font-size: 8.6pt;
+          line-height: 1.36;
+        }
+        .budget-print-table th {
+          background: var(--brand-soft);
+          color: var(--brand);
+          font-size: 7.9pt;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+        }
+        .budget-print-pill {
+          display: inline-block;
+          margin-top: 4px;
+          padding: 2px 7px;
+          border-radius: 999px;
+          background: #ecfeff;
+          color: #0f766e;
+          font-size: 7.2pt;
+          font-weight: 700;
+        }
+        .budget-print-note {
+          margin-top: 12mm;
+          color: var(--muted);
+          font-size: 8.5pt;
+          text-align: center;
+        }
+        @page {
+          size: A4 landscape;
+          margin: 10mm;
+        }
+        @media print {
+          body { background: #fff; }
+          .budget-print { padding: 0; }
+          .budget-print-note { display: none; }
+        }
+      </style>
+    </head>
+    <body>
+      <main class="budget-print">
+        <section class="budget-print-cover">
+          <p class="budget-print-cover__eyebrow">MyCLIM · Export budget</p>
+          <h1>Budget ${escapeHtml(budget.currentEditionId)}</h1>
+          <p>${escapeHtml(budget.meetingLevel || "Meeting")} · Généré le ${escapeHtml(generatedAt)}</p>
+          <div class="budget-print-summary">
+            <article>
+              <span>Dépenses</span>
+              <strong>${escapeHtml(formatCurrency(totals.expenses.currentActual))}</strong>
+            </article>
+            <article>
+              <span>Recettes</span>
+              <strong>${escapeHtml(formatCurrency(totals.revenues.currentActual))}</strong>
+            </article>
+            <article>
+              <span>Équilibre</span>
+              <strong>${escapeHtml(formatVariance(balanceVariance))}</strong>
+            </article>
+          </div>
+        </section>
+        ${buildBudgetPrintSectionMarkup({
+          title: "Dépenses détaillées",
+          side: "Budget détaillé",
+          sections: expenseSections,
+          currentEditionId: budget.currentEditionId,
+          referenceEditionId: budget.referenceEditionId,
+          hasComparison,
+        })}
+        ${buildBudgetPrintSectionMarkup({
+          title: "Recettes détaillées",
+          side: "Budget détaillé",
+          sections: revenueSections,
+          currentEditionId: budget.currentEditionId,
+          referenceEditionId: budget.referenceEditionId,
+          hasComparison,
+        })}
+        <p class="budget-print-note">Utilisez la boîte de dialogue d'impression pour enregistrer le document en PDF.</p>
+      </main>
+      <script>
+        window.addEventListener("load", () => {
+          const triggerPrint = () => {
+            window.focus();
+            window.print();
+          };
+
+          if ("requestAnimationFrame" in window) {
+            window.requestAnimationFrame(() => {
+              window.requestAnimationFrame(() => {
+                window.setTimeout(triggerPrint, 180);
+              });
+            });
+          } else {
+            window.setTimeout(triggerPrint, 180);
+          }
+        });
+      </script>
+    </body>
+  </html>`;
+}
+
+function BudgetAmountField({ row, fieldName, onValueChange, collectionKey, isEditable }) {
+  const formulaFieldName = `${fieldName}Formula`;
+  const formulaErrorFieldName = `${fieldName}FormulaError`;
+  const formulaValue = String(row[formulaFieldName] || "").trim();
+  const formulaError = String(row[formulaErrorFieldName] || "").trim();
+  const isFormula = Boolean(formulaValue);
+  const inputValue = isFormula ? formulaValue : (row[fieldName] ?? "");
+  const columnCode = fieldName === "currentForecast" ? "P" : "R";
+  const placeholder = fieldName === "currentForecast" ? "=SOMME(P1:P3)" : "=SOMME(R1:R3)";
+
+  if (!isEditable) {
+    return <span className="budget-cell-value">{formatCurrency(row[fieldName])}</span>;
+  }
+
+  return (
+    <div className={`budget-amount-editor ${isFormula ? "budget-amount-editor--formula" : ""} ${formulaError ? "budget-amount-editor--error" : ""}`}>
+      <input
+        className={`budget-cell-input ${isFormula ? "budget-cell-input--formula" : ""} ${formulaError ? "budget-cell-input--error" : ""}`}
+        inputMode="decimal"
+        type="text"
+        value={inputValue}
+        onChange={(event) => onValueChange(collectionKey, row.id, fieldName, event.target.value)}
+        placeholder={placeholder}
+      />
+      {isFormula ? (
+        <small className={`budget-amount-editor__meta ${formulaError ? "budget-amount-editor__meta--error" : ""}`}>
+          {formulaError || `${columnCode}${row.rowNumber} = ${formatCurrency(row[fieldName])}`}
+        </small>
+      ) : null}
+    </div>
+  );
+}
+
 function BudgetLineTable({
   side,
   collectionKey,
@@ -154,25 +650,17 @@ function BudgetLineTable({
   onDeleteRow,
   onNewSectionNameChange,
   onAddSection,
+  dragState,
+  dragOverRowId,
+  onRowDragStart,
+  onRowDragOver,
+  onRowDrop,
+  onRowDragEnd,
   totals,
+  invoicesByRowId,
+  canManageInvoices,
+  onUnlinkInvoice,
 }) {
-  function renderNumberCell(row, fieldName) {
-    if (!isEditable) {
-      return <span className="budget-cell-value">{formatCurrency(row[fieldName])}</span>;
-    }
-
-    return (
-      <input
-        className="budget-cell-input"
-        inputMode="decimal"
-        type="number"
-        step="0.01"
-        value={row[fieldName] ?? ""}
-        onChange={(event) => onValueChange(collectionKey, row.id, fieldName, event.target.value)}
-      />
-    );
-  }
-
   function renderTextCell(row, fieldName, placeholder) {
     if (!isEditable) {
       return <span className="budget-cell-text">{row[fieldName] || "—"}</span>;
@@ -189,37 +677,68 @@ function BudgetLineTable({
     );
   }
 
+  function renderReferenceCell(row) {
+    const linkedInvoices = invoicesByRowId[row.id] || [];
+
+    if (!isEditable) {
+      return (
+        <div className="budget-reference-cell">
+          <span className="budget-cell-text">{row.actualReference || "—"}</span>
+          <InvoiceInlineList invoices={linkedInvoices} />
+        </div>
+      );
+    }
+
+    return (
+      <div className="budget-reference-cell">
+        <input
+          className="budget-text-input"
+          type="text"
+          value={row.actualReference}
+          onChange={(event) => onValueChange(collectionKey, row.id, "actualReference", event.target.value)}
+          placeholder="Facture / note"
+        />
+        <InvoiceInlineList invoices={linkedInvoices} canManage={canManageInvoices} onDetach={onUnlinkInvoice} />
+      </div>
+    );
+  }
+
   return (
     <div className="budget-table-stack">
       {isEditable ? (
-        <div className="budget-table-toolbar">
-          <div className="budget-table-toolbar__legend">
-            {hasComparison ? <span className="budget-legend budget-legend--reference">Réalisé {referenceEditionId}</span> : null}
-            <span className="budget-legend budget-legend--forecast">Prévisionnel {currentEditionId}</span>
-            <span className="budget-legend budget-legend--actual">Réalisé {currentEditionId}</span>
+        <Fragment>
+          <div className="budget-table-toolbar">
+            <div className="budget-table-toolbar__legend">
+              {hasComparison ? <span className="budget-legend budget-legend--reference">Réalisé {referenceEditionId}</span> : null}
+              <span className="budget-legend budget-legend--forecast">Prévisionnel {currentEditionId}</span>
+              <span className="budget-legend budget-legend--actual">Réalisé {currentEditionId}</span>
+            </div>
+            <div className="budget-table-toolbar__actions">
+              <input
+                className="budget-text-input budget-table-toolbar__input"
+                type="text"
+                value={newSectionName}
+                onChange={(event) => onNewSectionNameChange(collectionKey, event.target.value)}
+                placeholder="Nouvelle section"
+              />
+              <button
+                className="button button--secondary budget-add-row-button"
+                type="button"
+                onClick={() => onAddSection(collectionKey)}
+              >
+                Ajouter une section
+              </button>
+            </div>
           </div>
-          <div className="budget-table-toolbar__actions">
-            <input
-              className="budget-text-input budget-table-toolbar__input"
-              type="text"
-              value={newSectionName}
-              onChange={(event) => onNewSectionNameChange(collectionKey, event.target.value)}
-              placeholder="Nouvelle section"
-            />
-            <button
-              className="button button--secondary budget-add-row-button"
-              type="button"
-              onClick={() => onAddSection(collectionKey)}
-            >
-              Ajouter une section
-            </button>
-          </div>
-        </div>
+          <p className="budget-formula-note">
+            Formules disponibles dans les montants: <code>=SOMME(P1:P3)</code> pour le prévisionnel et <code>=SOMME(R4:R8)</code> pour le réalisé.
+          </p>
+        </Fragment>
       ) : null}
       {sections.map(({ sectionName, rows }) => {
-        const sectionReferenceActual = rows.reduce((sum, row) => sum + Number(row.referenceActual || 0), 0);
-        const sectionCurrentForecast = rows.reduce((sum, row) => sum + Number(row.currentForecast || 0), 0);
-        const sectionCurrentActual = rows.reduce((sum, row) => sum + Number(row.currentActual || 0), 0);
+        const sectionReferenceActual = sumBudgetRowsField(rows, "referenceActual");
+        const sectionCurrentForecast = sumBudgetRowsField(rows, "currentForecast");
+        const sectionCurrentActual = sumBudgetRowsField(rows, "currentActual", { emptyAsNull: true });
         const sectionVariance = computeVariance(sectionCurrentForecast, sectionCurrentActual);
 
         return (
@@ -240,30 +759,28 @@ function BudgetLineTable({
             ) : null}
           </div>
           <div className="table-wrap table-wrap--compact">
-            <div className={`budget-section-summary ${isEditable ? "budget-section-summary--editable" : ""}`}>
-              <div className="budget-section-summary__spacer" />
-              <div className="budget-section-summary__spacer" />
-              {hasComparison ? (
-                <span className="budget-metric-chip budget-metric-chip--reference">
-                  <small>Réalisé {referenceEditionId}</small>
-                  <strong>{formatCurrency(sectionReferenceActual)}</strong>
+            <div className="budget-section-summary">
+              <div className="budget-section-summary__eyebrow">Synthèse de section</div>
+              <div className="budget-section-summary__metrics">
+                {hasComparison ? (
+                  <span className="budget-metric-chip budget-metric-chip--reference">
+                    <small>Réalisé {referenceEditionId}</small>
+                    <strong>{formatCurrency(sectionReferenceActual)}</strong>
+                  </span>
+                ) : null}
+                <span className="budget-metric-chip budget-metric-chip--forecast">
+                  <small>Prévu {currentEditionId}</small>
+                  <strong>{formatCurrency(sectionCurrentForecast)}</strong>
                 </span>
-              ) : null}
-              <span className="budget-metric-chip budget-metric-chip--forecast">
-                <small>Prévu {currentEditionId}</small>
-                <strong>{formatCurrency(sectionCurrentForecast)}</strong>
-              </span>
-              <span className="budget-metric-chip budget-metric-chip--actual">
-                <small>Réalisé {currentEditionId}</small>
-                <strong>{formatCurrency(sectionCurrentActual)}</strong>
-              </span>
-              <span className={`${getVarianceToneClass(sectionVariance, side)} budget-metric-chip budget-metric-chip--variance`}>
-                <small>Écart {currentEditionId}</small>
-                <strong>{formatVariance(sectionVariance)}</strong>
-              </span>
-              <div className="budget-section-summary__spacer" />
-              <div className="budget-section-summary__spacer" />
-              {isEditable ? <div className="budget-section-summary__spacer" /> : null}
+                <span className="budget-metric-chip budget-metric-chip--actual">
+                  <small>Réalisé {currentEditionId}</small>
+                  <strong>{formatCurrency(sectionCurrentActual)}</strong>
+                </span>
+                <span className={`${getVarianceToneClass(sectionVariance, side)} budget-metric-chip budget-metric-chip--variance`}>
+                  <small>Écart {currentEditionId}</small>
+                  <strong>{formatVariance(sectionVariance)}</strong>
+                </span>
+              </div>
             </div>
             <table className="data-table data-table--admin data-table--compact budget-table budget-table--sheet">
               <colgroup>
@@ -292,16 +809,44 @@ function BudgetLineTable({
               </thead>
               <tbody>
                 {rows.map((row) => (
-                  <tr className={row.isCustom ? "budget-table__row budget-table__row--custom" : "budget-table__row"} key={row.id}>
+                  <tr
+                    className={[
+                      "budget-table__row",
+                      row.isCustom ? "budget-table__row--custom" : "",
+                      dragOverRowId === row.id ? "budget-table__row--drag-over" : "",
+                    ].filter(Boolean).join(" ")}
+                    key={row.id}
+                    onDragOver={isEditable ? (event) => onRowDragOver(event, collectionKey, row.id) : undefined}
+                    onDrop={isEditable ? (event) => onRowDrop(event, collectionKey, sectionName, row.id) : undefined}
+                  >
                     <td className="budget-table__label">
                       {isEditable ? (
-                        <input
-                          className="budget-text-input"
-                          type="text"
-                          value={row.label}
-                          onChange={(event) => onValueChange(collectionKey, row.id, "label", event.target.value)}
-                          placeholder="Libellé"
-                        />
+                        <div className="budget-table__label-editable">
+                          <button
+                            className={`budget-drag-handle ${dragState?.rowId === row.id ? "budget-drag-handle--active" : ""}`}
+                            type="button"
+                            draggable
+                            onDragStart={(event) => onRowDragStart(event, collectionKey, sectionName, row.id)}
+                            onDragEnd={onRowDragEnd}
+                            aria-label={`Déplacer ${row.label}`}
+                            title="Glisser pour déplacer la ligne"
+                          >
+                            <span className="budget-drag-handle__icon" aria-hidden="true" />
+                          </button>
+                          <div className="budget-table__label-content">
+                            <div className="budget-table__label-inline">
+                              <span className="budget-row-ref">#{row.rowNumber}</span>
+                              <input
+                                className="budget-text-input"
+                                type="text"
+                                value={row.label}
+                                onChange={(event) => onValueChange(collectionKey, row.id, "label", event.target.value)}
+                                placeholder="Libellé"
+                              />
+                              {row.isCustom ? <span className="budget-custom-badge">Ajoutée</span> : null}
+                            </div>
+                          </div>
+                        </div>
                       ) : (
                         <span className="budget-cell-text">{row.label}</span>
                       )}
@@ -314,25 +859,41 @@ function BudgetLineTable({
                     {hasComparison ? (
                       <td className="budget-table__cell budget-table__cell--reference"><span className="budget-cell-value">{formatCurrency(row.referenceActual)}</span></td>
                     ) : null}
-                    <td className="budget-table__cell budget-table__cell--forecast">{renderNumberCell(row, "currentForecast")}</td>
-                    <td className="budget-table__cell budget-table__cell--actual">{renderNumberCell(row, "currentActual")}</td>
+                    <td className="budget-table__cell budget-table__cell--forecast">
+                      <BudgetAmountField
+                        row={row}
+                        fieldName="currentForecast"
+                        onValueChange={onValueChange}
+                        collectionKey={collectionKey}
+                        isEditable={isEditable}
+                      />
+                    </td>
+                    <td className="budget-table__cell budget-table__cell--actual">
+                      <BudgetAmountField
+                        row={row}
+                        fieldName="currentActual"
+                        onValueChange={onValueChange}
+                        collectionKey={collectionKey}
+                        isEditable={isEditable}
+                      />
+                    </td>
                     <td className="budget-table__variance">
                       <span className={getVarianceToneClass(computeVariance(row.currentForecast, row.currentActual), side)}>
                         {formatVariance(computeVariance(row.currentForecast, row.currentActual))}
                       </span>
                     </td>
-                    <td>{renderTextCell(row, "actualReference", "Facture / note")}</td>
+                    <td>{renderReferenceCell(row)}</td>
                     <td>{renderTextCell(row, "comment", "Commentaire")}</td>
                     {isEditable ? (
                       <td className="budget-table__actions">
                         <button
-                          className="budget-icon-button"
+                          className="budget-delete-button"
                           type="button"
                           onClick={() => onDeleteRow(collectionKey, row.id)}
                           aria-label={`Supprimer ${row.label}`}
                           title="Supprimer la ligne"
                         >
-                          Suppr.
+                          <span aria-hidden="true">×</span>
                         </button>
                       </td>
                     ) : null}
@@ -362,6 +923,7 @@ function BudgetOverviewTable({
   actualColumnLabel,
   onValueChange,
   totals,
+  invoicesByRowId,
 }) {
   const amountColumns = [
     { key: "currentForecast", label: `Prév. ${currentEditionId}`, cellClassName: "budget-table__cell--forecast" },
@@ -384,21 +946,8 @@ function BudgetOverviewTable({
     );
   }
 
-  function renderAmountField(row, fieldName) {
-    if (!allowEditing) {
-      return <span className="budget-cell-value">{formatCurrency(row[fieldName])}</span>;
-    }
-
-    return (
-      <input
-        className="budget-cell-input"
-        inputMode="decimal"
-        type="number"
-        step="0.01"
-        value={row[fieldName] ?? ""}
-        onChange={(event) => onValueChange(collectionKey, row.id, fieldName, event.target.value)}
-      />
-    );
+  function renderInvoiceCell(row) {
+    return <InvoiceInlineList invoices={invoicesByRowId[row.id] || []} />;
   }
 
   return (
@@ -410,6 +959,7 @@ function BudgetOverviewTable({
           {amountColumns.map((column) => (
             <col className="budget-col budget-col--amount" key={column.key} />
           ))}
+          <col className="budget-col budget-col--reference" />
         </colgroup>
         <thead>
           <tr>
@@ -420,12 +970,14 @@ function BudgetOverviewTable({
                 {column.label}
               </th>
             ))}
+            <th>Factures</th>
           </tr>
         </thead>
         <tbody>
           {sections.map(({ sectionName, rows }) => {
-            const sectionCurrentForecast = rows.reduce((sum, row) => sum + Number(row.currentForecast || 0), 0);
-            const sectionCurrentActual = rows.reduce((sum, row) => sum + Number(row.currentActual || 0), 0);
+            const sectionCurrentForecast = sumBudgetRowsField(rows, "currentForecast");
+            const sectionCurrentActual = sumBudgetRowsField(rows, "currentActual", { emptyAsNull: true });
+            const sectionInvoiceCount = rows.reduce((sum, row) => sum + (invoicesByRowId[row.id]?.length || 0), 0);
 
             return (
               <Fragment key={sectionName}>
@@ -442,18 +994,27 @@ function BudgetOverviewTable({
                   <th className="budget-overview-table__section-total budget-table__cell--actual">
                     {formatCurrency(sectionCurrentActual)}
                   </th>
+                  <th className="budget-overview-table__section-total">
+                    {sectionInvoiceCount ? `${sectionInvoiceCount} facture(s)` : "—"}
+                  </th>
                 </tr>
                 {rows.map((row) => (
                   <tr className={row.isCustom ? "budget-table__row budget-table__row--custom" : "budget-table__row"} key={row.id}>
                     <td className="budget-table__label">
                       {allowEditing ? (
-                        <input
-                          className="budget-text-input"
-                          type="text"
-                          value={row.label}
-                          onChange={(event) => onValueChange(collectionKey, row.id, "label", event.target.value)}
-                          placeholder="Libellé"
-                        />
+                        <div className="budget-table__label-content">
+                          <div className="budget-table__label-inline">
+                            <span className="budget-row-ref">#{row.rowNumber}</span>
+                            <input
+                              className="budget-text-input"
+                              type="text"
+                              value={row.label}
+                              onChange={(event) => onValueChange(collectionKey, row.id, "label", event.target.value)}
+                              placeholder="Libellé"
+                            />
+                            {row.isCustom ? <span className="budget-custom-badge">Ajoutée</span> : null}
+                          </div>
+                        </div>
                       ) : (
                         <span className="budget-cell-text">{row.label}</span>
                       )}
@@ -461,9 +1022,16 @@ function BudgetOverviewTable({
                     <td className="budget-table__details">{renderTextField(row, "details", "Détail")}</td>
                     {amountColumns.map((column) => (
                       <td className={`budget-table__cell ${column.cellClassName}`} key={`${row.id}-${column.key}`}>
-                        {renderAmountField(row, column.key)}
+                        <BudgetAmountField
+                          row={row}
+                          fieldName={column.key}
+                          onValueChange={onValueChange}
+                          collectionKey={collectionKey}
+                          isEditable={allowEditing}
+                        />
                       </td>
                     ))}
+                    <td>{renderInvoiceCell(row)}</td>
                   </tr>
                 ))}
               </Fragment>
@@ -475,6 +1043,7 @@ function BudgetOverviewTable({
             <th colSpan={2}>Total</th>
             <th className="budget-table__cell--forecast">{formatCurrency(totals.currentForecast)}</th>
             <th className="budget-table__cell--actual">{formatCurrency(totals.currentActual)}</th>
+            <th>{Object.values(invoicesByRowId).flat().length || "—"}</th>
           </tr>
         </tfoot>
       </table>
@@ -640,6 +1209,8 @@ function SimplifiedBudgetTable({
 function BudgetTrackingPage({ Panel }) {
   const { currentUser, userProfile } = useAuth();
   const { activeEditionId } = useActiveEdition(true);
+  const invoiceConfiguration = useBudgetInvoiceConfiguration();
+  const { documents: allDocuments } = useDocumentsCollection(true);
   const [storedBudgets, setStoredBudgets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -671,6 +1242,15 @@ function BudgetTrackingPage({ Panel }) {
   const [historyEntries, setHistoryEntries] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState("");
+  const [dragState, setDragState] = useState(null);
+  const [dragOverRowId, setDragOverRowId] = useState("");
+  const [exportStatus, setExportStatus] = useState("");
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [hasUserSelectedEdition, setHasUserSelectedEdition] = useState(false);
+  const [invoiceLinkDrafts, setInvoiceLinkDrafts] = useState({});
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState("");
+  const [selectedInvoiceTargetRowId, setSelectedInvoiceTargetRowId] = useState("");
 
   const fallbackBudgets = useMemo(() => buildAllBudgetSeeds(), []);
   const fallbackBudgetMap = useMemo(
@@ -724,21 +1304,8 @@ function BudgetTrackingPage({ Panel }) {
       applyCanonicalHistoricalBudget(budget, fallbackBudgetMap.get(budget.editionId)),
     );
 
-    return canonicalBudgets.map((budget) => enrichBudgetWithLinkedActuals(budget, canonicalBudgets));
+    return canonicalBudgets.map((budget) => recalculateBudgetFormulas(enrichBudgetWithLinkedActuals(budget, canonicalBudgets)));
   }, [fallbackBudgetMap, fallbackBudgets, missingSeedEditionIds, storedBudgets, usesFallbackBudgets]);
-
-  useEffect(() => {
-    if (!budgets.length) return;
-    if (selectedEditionId && budgets.some((budget) => budget.editionId === selectedEditionId)) return;
-
-    const normalizedActiveEditionId = normalizeEditionId(activeEditionId, "");
-    const preferredBudget =
-      budgets.find((budget) => budget.editionId === normalizedActiveEditionId) ??
-      budgets.find((budget) => budget.editionId === "2026") ??
-      budgets[0];
-
-    setSelectedEditionId(preferredBudget.editionId);
-  }, [activeEditionId, budgets, selectedEditionId]);
 
   const selectedBudget = useMemo(
     () => budgets.find((budget) => budget.editionId === selectedEditionId) ?? null,
@@ -757,6 +1324,14 @@ function BudgetTrackingPage({ Panel }) {
 
     return budgets[0] ?? null;
   }, [budgets]);
+
+  useEffect(() => {
+    if (!budgets.length || !latestBudget) return;
+    if (hasUserSelectedEdition && selectedEditionId && budgets.some((budget) => budget.editionId === selectedEditionId)) return;
+
+    setSelectedEditionId(latestBudget.editionId);
+  }, [budgets, hasUserSelectedEdition, latestBudget, selectedEditionId]);
+
   const isBudgetLocked = Boolean(selectedBudget && isBudgetLockedEdition(selectedBudget.editionId));
   const isBudgetEditable = Boolean(selectedBudget && latestBudget && selectedBudget.editionId === latestBudget.editionId && !isBudgetLocked);
   const canEditBudget = isBudgetEditable && isEditMode;
@@ -765,7 +1340,7 @@ function BudgetTrackingPage({ Panel }) {
 
   useEffect(() => {
     if (!selectedBudget) return;
-    setDraftBudget(structuredClone(selectedBudget));
+    setDraftBudget(recalculateBudgetFormulas(structuredClone(selectedBudget)));
     setActiveTab("overview");
     if (selectedBudget.editionId === pendingNewBudgetId) {
       setIsEditMode(true);
@@ -810,6 +1385,7 @@ function BudgetTrackingPage({ Panel }) {
   }, [selectedEditionId]);
 
   const actorName = useMemo(() => getDisplayName(userProfile, currentUser?.email), [currentUser?.email, userProfile]);
+  const activeRoles = useMemo(() => extractRolesFromProfile(userProfile), [userProfile]);
   const budgetDiff = useMemo(
     () => (draftBudget && selectedBudget ? buildBudgetDiff(selectedBudget, draftBudget) : []),
     [draftBudget, selectedBudget],
@@ -834,6 +1410,61 @@ function BudgetTrackingPage({ Panel }) {
   const revenueSections = useMemo(
     () => (draftBudget ? groupRowsBySection(draftBudget.revenues, REVENUE_SECTION_ORDER) : []),
     [draftBudget],
+  );
+  const expenseTargetOptions = useMemo(
+    () => buildBudgetExpenseTargetOptions(expenseSections, draftBudget?.currentEditionId || ""),
+    [draftBudget?.currentEditionId, expenseSections],
+  );
+  const invoiceDocuments = useMemo(
+    () => allDocuments.filter((document) => document.documentType === "invoice"),
+    [allDocuments],
+  );
+  const selectedEditionInvoices = useMemo(
+    () =>
+      invoiceDocuments
+        .filter((invoice) => {
+          const invoiceEditionId = String(invoice.linkedBudgetEditionId || invoice.editionId || "").trim();
+          return invoiceEditionId === String(draftBudget?.currentEditionId || "").trim();
+        })
+        .sort((left, right) => right.createdAtMs - left.createdAtMs),
+    [draftBudget?.currentEditionId, invoiceDocuments],
+  );
+  const unclassifiedInvoices = useMemo(
+    () =>
+      selectedEditionInvoices.filter(
+        (invoice) => String(invoice.invoiceStatus || "").trim() !== "linked" || !String(invoice.linkedBudgetRowId || "").trim(),
+      ),
+    [selectedEditionInvoices],
+  );
+  const invoicesByBudgetRowId = useMemo(
+    () =>
+      selectedEditionInvoices.reduce((accumulator, invoice) => {
+        const rowId = String(invoice.linkedBudgetRowId || "").trim();
+        if (!rowId) return accumulator;
+        if (!accumulator[rowId]) accumulator[rowId] = [];
+        accumulator[rowId].push(invoice);
+        return accumulator;
+      }, {}),
+    [selectedEditionInvoices],
+  );
+  const selectedInvoiceForClassification = useMemo(
+    () => unclassifiedInvoices.find((invoice) => invoice.id === selectedInvoiceId) ?? null,
+    [selectedInvoiceId, unclassifiedInvoices],
+  );
+  const canUploadInvoices = useMemo(
+    () =>
+      canUserUploadBudgetInvoice({
+        activeRoles,
+        userId: currentUser?.uid,
+        configuration: invoiceConfiguration,
+      }),
+    [activeRoles, currentUser?.uid, invoiceConfiguration],
+  );
+  const canManageInvoicePanel = Boolean(
+    draftBudget &&
+      latestBudget &&
+      draftBudget.currentEditionId === latestBudget.currentEditionId &&
+      (activeRoles.includes("admin") || activeRoles.includes("budget") || canUploadInvoices),
   );
   const simplifiedExpenseRows = useMemo(
     () => (draftBudget ? buildSimplifiedRows(draftBudget, "expense") : []),
@@ -876,6 +1507,34 @@ function BudgetTrackingPage({ Panel }) {
     }));
   }, [simplifiedExpenseRows, simplifiedRevenueRows]);
 
+  useEffect(() => {
+    setInvoiceLinkDrafts((currentDrafts) =>
+      Object.fromEntries(
+        unclassifiedInvoices.map((invoice) => [invoice.id, currentDrafts[invoice.id] || ""]),
+      ),
+    );
+  }, [unclassifiedInvoices]);
+
+  useEffect(() => {
+    if (!unclassifiedInvoices.length) {
+      setSelectedInvoiceId("");
+      setSelectedInvoiceTargetRowId("");
+      return;
+    }
+
+    setSelectedInvoiceId((currentInvoiceId) => {
+      if (currentInvoiceId && unclassifiedInvoices.some((invoice) => invoice.id === currentInvoiceId)) {
+        return currentInvoiceId;
+      }
+
+      return unclassifiedInvoices[0].id;
+    });
+  }, [unclassifiedInvoices]);
+
+  useEffect(() => {
+    setSelectedInvoiceTargetRowId("");
+  }, [selectedInvoiceId]);
+
   function handleRowChange(type, rowId, fieldName, nextValue) {
     if (!canEditBudget) return;
 
@@ -884,18 +1543,33 @@ function BudgetTrackingPage({ Panel }) {
 
       const collectionKey = type === "expenses" ? "expenses" : "revenues";
       const isNumericField = fieldName.includes("Forecast") || fieldName.includes("Actual");
-
-      return {
+      const nextBudget = {
         ...currentBudget,
         [collectionKey]: currentBudget[collectionKey].map((row) =>
           row.id === rowId
             ? {
                 ...row,
-                [fieldName]: isNumericField ? toBudgetNumber(nextValue) : nextValue,
+                ...(isNumericField
+                  ? String(nextValue || "").trim().startsWith("=")
+                    ? {
+                        [fieldName]: row[fieldName],
+                        [`${fieldName}Formula`]: String(nextValue || "").trim(),
+                        [`${fieldName}FormulaError`]: "",
+                      }
+                    : {
+                        [fieldName]: toBudgetNumber(nextValue),
+                        [`${fieldName}Formula`]: "",
+                        [`${fieldName}FormulaError`]: "",
+                      }
+                  : {
+                      [fieldName]: nextValue,
+                    }),
               }
             : row,
         ),
       };
+
+      return isNumericField ? recalculateBudgetFormulas(nextBudget) : nextBudget;
     });
   }
 
@@ -922,10 +1596,10 @@ function BudgetTrackingPage({ Panel }) {
       const nextRows = [...existingRows];
       nextRows.splice(insertIndex, 0, newRow);
 
-      return {
+      return recalculateBudgetFormulas({
         ...currentBudget,
-        [collectionKey]: nextRows,
-      };
+        [collectionKey]: resequenceBudgetRows(nextRows),
+      });
     });
 
     setSaveStatus("Nouvelle ligne ajoutée au budget en cours.");
@@ -966,10 +1640,10 @@ function BudgetTrackingPage({ Panel }) {
         rowNumber: nextRowNumber,
       });
 
-      return {
+      return recalculateBudgetFormulas({
         ...currentBudget,
-        [collectionKey]: [...existingRows, newRow],
-      };
+        [collectionKey]: resequenceBudgetRows([...existingRows, newRow]),
+      });
     });
 
     setSectionDrafts((currentDrafts) => ({
@@ -989,18 +1663,128 @@ function BudgetTrackingPage({ Panel }) {
     setDraftBudget((currentBudget) => {
       if (!currentBudget) return currentBudget;
 
-      return {
+      return recalculateBudgetFormulas({
         ...currentBudget,
-        [collectionKey]: currentBudget[collectionKey].filter((row) => row.id !== rowId),
-      };
+        [collectionKey]: resequenceBudgetRows(currentBudget[collectionKey].filter((row) => row.id !== rowId)),
+      });
     });
 
     setSaveStatus(`Ligne "${rowToDelete.label}" supprimée du budget en cours.`);
   }
 
+  async function handleLinkInvoice(invoiceId, targetRowId) {
+    const invoice = selectedEditionInvoices.find((entry) => entry.id === invoiceId);
+    const target = expenseTargetOptions.find((option) => option.value === targetRowId);
+    if (!invoice || !target) return;
+
+    try {
+      await updateDoc(doc(db, "documents", invoiceId), {
+        invoiceStatus: "linked",
+        linkedBudgetEditionId: target.editionId,
+        linkedBudgetCollectionKey: target.collectionKey,
+        linkedBudgetRowId: target.rowId,
+        linkedBudgetRowLabel: target.rowLabel,
+        linkedBudgetSectionName: target.sectionName,
+        updatedAt: serverTimestamp(),
+      });
+      setSaveStatus(`Facture liée à ${target.rowLabel}.`);
+    } catch (error) {
+      console.error("Unable to link invoice to budget row", error);
+      setSaveStatus("La liaison de la facture a échoué.");
+    }
+  }
+
+  async function handleUnlinkInvoice(invoice) {
+    if (!invoice?.id || !draftBudget) return;
+
+    try {
+      await updateDoc(doc(db, "documents", invoice.id), {
+        invoiceStatus: "unclassified",
+        linkedBudgetEditionId: draftBudget.currentEditionId,
+        linkedBudgetCollectionKey: "",
+        linkedBudgetRowId: "",
+        linkedBudgetRowLabel: "",
+        linkedBudgetSectionName: "",
+        updatedAt: serverTimestamp(),
+      });
+      setSaveStatus(`Facture déliée de ${invoice.linkedBudgetRowLabel || "la ligne budgétaire"}.`);
+    } catch (error) {
+      console.error("Unable to unlink invoice from budget row", error);
+      setSaveStatus("Le retrait de la facture a échoué.");
+    }
+  }
+
+  function handleRowDragStart(event, type, sectionName, rowId) {
+    if (!canEditBudget) return;
+
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", rowId);
+    setDragState({
+      type,
+      sectionName,
+      rowId,
+    });
+    setDragOverRowId(rowId);
+  }
+
+  function handleRowDragOver(event, type, rowId) {
+    if (!dragState || dragState.type !== type) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    if (dragOverRowId !== rowId) setDragOverRowId(rowId);
+  }
+
+  function handleRowDrop(event, type, sectionName, targetRowId) {
+    event.preventDefault();
+    if (!canEditBudget || !dragState || dragState.type !== type) {
+      setDragState(null);
+      setDragOverRowId("");
+      return;
+    }
+
+    const sourceRowId = dragState.rowId;
+    setDragState(null);
+    setDragOverRowId("");
+
+    if (sourceRowId === targetRowId) return;
+
+    setDraftBudget((currentBudget) => {
+      if (!currentBudget) return currentBudget;
+
+      const collectionKey = type === "expenses" ? "expenses" : "revenues";
+      const currentRows = currentBudget[collectionKey];
+      const sourceIndex = currentRows.findIndex((row) => row.id === sourceRowId);
+      const targetIndex = currentRows.findIndex((row) => row.id === targetRowId);
+
+      if (sourceIndex < 0 || targetIndex < 0) return currentBudget;
+
+      const sourceRow = currentRows[sourceIndex];
+      const targetRow = currentRows[targetIndex];
+
+      if (sourceRow.section !== targetRow.section || sourceRow.section !== sectionName) return currentBudget;
+
+      const nextRows = [...currentRows];
+      const [movedRow] = nextRows.splice(sourceIndex, 1);
+      const insertionIndex = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
+      nextRows.splice(insertionIndex, 0, movedRow);
+
+      return recalculateBudgetFormulas({
+        ...currentBudget,
+        [collectionKey]: resequenceBudgetRows(nextRows),
+      });
+    });
+
+    setSaveStatus(`Ordre mis à jour dans la section "${sectionName}".`);
+  }
+
+  function handleRowDragEnd() {
+    setDragState(null);
+    setDragOverRowId("");
+  }
+
   function resetDraft() {
     if (!isBudgetEditable || !selectedBudget) return;
-    setDraftBudget(structuredClone(selectedBudget));
+    setDraftBudget(recalculateBudgetFormulas(structuredClone(selectedBudget)));
     setIsEditMode(false);
     setSaveStatus("Les modifications locales ont été réinitialisées.");
   }
@@ -1219,6 +2003,138 @@ function BudgetTrackingPage({ Panel }) {
     }));
   }
 
+  async function handleExportExcel() {
+    if (!draftBudget || !totals) return;
+
+    setIsExportingExcel(true);
+    setExportStatus("Préparation de l'export Excel…");
+
+    try {
+      const { utils, writeFile } = await import("xlsx");
+
+      const workbook = utils.book_new();
+      const overviewRows = buildBudgetOverviewExportRows({
+        budget: draftBudget,
+        totals,
+        hasComparison,
+      });
+      const expenseRows = buildBudgetSheetExportRows({
+        title: "Dépenses",
+        sectionLabel: "Dépenses",
+        sections: expenseSections,
+        totals: totals.expenses,
+        currentEditionId: draftBudget.currentEditionId,
+        referenceEditionId: draftBudget.referenceEditionId,
+        hasComparison,
+      });
+      const revenueRows = buildBudgetSheetExportRows({
+        title: "Recettes",
+        sectionLabel: "Recettes",
+        sections: revenueSections,
+        totals: totals.revenues,
+        currentEditionId: draftBudget.currentEditionId,
+        referenceEditionId: draftBudget.referenceEditionId,
+        hasComparison,
+      });
+
+      const overviewSheet = utils.aoa_to_sheet(overviewRows);
+      overviewSheet["!cols"] = [
+        { wch: 24 },
+        ...(hasComparison ? [{ wch: 18 }] : []),
+        { wch: 18 },
+        { wch: 18 },
+        { wch: 18 },
+      ];
+
+      const expenseSheet = utils.aoa_to_sheet(expenseRows);
+      expenseSheet["!cols"] = [
+        { wch: 20 },
+        { wch: 8 },
+        { wch: 34 },
+        { wch: 24 },
+        ...(hasComparison ? [{ wch: 16 }] : []),
+        { wch: 16 },
+        { wch: 16 },
+        { wch: 16 },
+        { wch: 20 },
+        { wch: 24 },
+        { wch: 24 },
+        { wch: 24 },
+      ];
+
+      const revenueSheet = utils.aoa_to_sheet(revenueRows);
+      revenueSheet["!cols"] = expenseSheet["!cols"];
+
+      utils.book_append_sheet(workbook, overviewSheet, "Vue d'ensemble");
+      utils.book_append_sheet(workbook, expenseSheet, "Dépenses");
+      utils.book_append_sheet(workbook, revenueSheet, "Recettes");
+
+      if (historyEntries.length) {
+        const historyRows = [
+          ["Historique budget"],
+          [`Généré le ${formatDateForExport()}`],
+          [],
+          ["Date", "Auteur", "Résumé", "Nb changements"],
+          ...historyEntries.map((entry) => [
+            formatDateTime(entry.createdAt),
+            entry.actorName || "Admin",
+            entry.summary || "",
+            entry.changeCount || 0,
+          ]),
+        ];
+        const historySheet = utils.aoa_to_sheet(historyRows);
+        historySheet["!cols"] = [{ wch: 20 }, { wch: 20 }, { wch: 52 }, { wch: 14 }];
+        utils.book_append_sheet(workbook, historySheet, "Historique");
+      }
+
+      writeFile(workbook, `budget-${draftBudget.currentEditionId}.xlsx`);
+      setExportStatus(`Export Excel prêt : budget-${draftBudget.currentEditionId}.xlsx`);
+    } catch (error) {
+      console.error("Unable to export budget to Excel", error);
+      setExportStatus("L'export Excel a échoué.");
+    } finally {
+      setIsExportingExcel(false);
+    }
+  }
+
+  function handleExportPdf() {
+    if (!draftBudget || !totals) return;
+
+    setIsExportingPdf(true);
+    setExportStatus("Préparation du PDF…");
+
+    try {
+      const htmlDocument = buildBudgetPrintDocument({
+        budget: draftBudget,
+        totals,
+        expenseSections,
+        revenueSections,
+        hasComparison,
+      });
+      const printBlob = new Blob([htmlDocument], { type: "text/html;charset=utf-8" });
+      const printUrl = URL.createObjectURL(printBlob);
+      const printWindow = window.open(printUrl, "_blank");
+
+      if (!printWindow) {
+        URL.revokeObjectURL(printUrl);
+        setExportStatus("Le navigateur a bloqué l'ouverture de la fenêtre PDF.");
+        setIsExportingPdf(false);
+        return;
+      }
+
+      window.setTimeout(() => {
+        URL.revokeObjectURL(printUrl);
+      }, 60000);
+
+      setExportStatus("Aperçu PDF ouvert. Si la boîte d'impression ne s'ouvre pas, utilise Cmd+P pour enregistrer le PDF.");
+    } catch (error) {
+      console.error("Unable to export budget to PDF", error);
+      setExportStatus("L'export PDF a échoué.");
+    } finally {
+      setIsExportingPdf(false);
+    }
+  }
+
   if (loading || !draftBudget || !totals) {
     return (
       <div className="page">
@@ -1281,6 +2197,22 @@ function BudgetTrackingPage({ Panel }) {
             ) : (
               <span className="status-pill">Firebase</span>
             )}
+            <button
+              className="button button--secondary budget-export-button"
+              type="button"
+              onClick={handleExportExcel}
+              disabled={isExportingExcel}
+            >
+              {isExportingExcel ? "Export Excel..." : "Export Excel"}
+            </button>
+            <button
+              className="button button--secondary budget-export-button"
+              type="button"
+              onClick={handleExportPdf}
+              disabled={isExportingPdf}
+            >
+              {isExportingPdf ? "Export PDF..." : "Export PDF"}
+            </button>
             {isBudgetEditable ? (
               <>
                 {!isEditMode ? (
@@ -1308,7 +2240,13 @@ function BudgetTrackingPage({ Panel }) {
         <div className="budget-toolbar">
           <label className="field budget-toolbar__field">
             <span>Budget consulté</span>
-            <select value={selectedEditionId} onChange={(event) => setSelectedEditionId(event.target.value)}>
+            <select
+              value={selectedEditionId}
+              onChange={(event) => {
+                setHasUserSelectedEdition(true);
+                setSelectedEditionId(event.target.value);
+              }}
+            >
               {budgets.map((budget) => (
                 <option key={budget.editionId} value={budget.editionId}>
                   {getBudgetDocumentLabel(budget)}
@@ -1342,10 +2280,11 @@ function BudgetTrackingPage({ Panel }) {
         </div>
 
         {budgetSeedLog.length ? <BudgetSeedLog lines={budgetSeedLog} /> : null}
+        {exportStatus ? <p className="panel-note budget-save-status">{exportStatus}</p> : null}
         {saveStatus ? <p className="panel-note budget-save-status">{saveStatus}</p> : null}
       </section>
 
-      {activeTab !== "overview" ? (
+      {activeTab !== "overview" && activeTab !== "invoices" ? (
         <section className="budget-summary-grid">
             {hasComparison ? (
               <article className="budget-summary-card">
@@ -1400,6 +2339,7 @@ function BudgetTrackingPage({ Panel }) {
           ["overview", primaryTabLabel],
           ["expenses", "Dépenses"],
           ["revenues", "Recettes"],
+          ...(canManageInvoicePanel || selectedEditionInvoices.length ? [["invoices", "Factures"]] : []),
           ["simplified", "Simplifiée"],
           ["history", "Historique"],
         ].map(([tabId, label]) => (
@@ -1413,6 +2353,12 @@ function BudgetTrackingPage({ Panel }) {
           </button>
         ))}
       </div>
+
+      {activeTab === "overview" && canEditBudget ? (
+        <p className="panel-note budget-reorder-note">
+          Pour déplacer les lignes, ouvre l&apos;onglet Dépenses ou Recettes puis utilise le bouton "Depl." au bout de la ligne.
+        </p>
+      ) : null}
 
       {activeTab === "overview" ? (
         <div className="budget-sheet-stack">
@@ -1431,6 +2377,7 @@ function BudgetTrackingPage({ Panel }) {
               actualColumnLabel={`${isBudgetLocked ? "Définitif" : "Réalisé"} ${draftBudget.currentEditionId}`}
               onValueChange={handleRowChange}
               totals={totals.expenses}
+              invoicesByRowId={invoicesByBudgetRowId}
             />
           </section>
 
@@ -1449,6 +2396,7 @@ function BudgetTrackingPage({ Panel }) {
               actualColumnLabel={`${isBudgetLocked ? "Définitif" : "Réalisé"} ${draftBudget.currentEditionId}`}
               onValueChange={handleRowChange}
               totals={totals.revenues}
+              invoicesByRowId={invoicesByBudgetRowId}
             />
           </section>
         </div>
@@ -1469,7 +2417,16 @@ function BudgetTrackingPage({ Panel }) {
           onDeleteRow={handleDeleteRow}
           onNewSectionNameChange={handleNewSectionNameChange}
           onAddSection={handleAddSection}
+          dragState={dragState}
+          dragOverRowId={dragOverRowId}
+          onRowDragStart={handleRowDragStart}
+          onRowDragOver={handleRowDragOver}
+          onRowDrop={handleRowDrop}
+          onRowDragEnd={handleRowDragEnd}
           totals={totals.expenses}
+          invoicesByRowId={invoicesByBudgetRowId}
+          canManageInvoices={canManageInvoicePanel}
+          onUnlinkInvoice={handleUnlinkInvoice}
         />
       ) : null}
 
@@ -1488,8 +2445,152 @@ function BudgetTrackingPage({ Panel }) {
           onDeleteRow={handleDeleteRow}
           onNewSectionNameChange={handleNewSectionNameChange}
           onAddSection={handleAddSection}
+          dragState={dragState}
+          dragOverRowId={dragOverRowId}
+          onRowDragStart={handleRowDragStart}
+          onRowDragOver={handleRowDragOver}
+          onRowDrop={handleRowDrop}
+          onRowDragEnd={handleRowDragEnd}
           totals={totals.revenues}
+          invoicesByRowId={invoicesByBudgetRowId}
+          canManageInvoices={canManageInvoicePanel}
+          onUnlinkInvoice={handleUnlinkInvoice}
         />
+      ) : null}
+
+      {activeTab === "invoices" ? (
+        <section className="panel-grid panel-grid--2 budget-invoice-panels">
+          {canManageInvoicePanel ? (
+            <Panel
+              title="Déposer une facture"
+              subtitle="Dépose une facture dans ce module dédié. Le classement se fait ensuite séparément."
+            >
+              <InvoiceUploadForm
+                editionId={draftBudget.currentEditionId}
+                currentUser={currentUser}
+                userProfile={userProfile}
+                assignedTeams={Array.isArray(userProfile?.assignedTeams) ? userProfile.assignedTeams : []}
+              />
+            </Panel>
+          ) : null}
+
+          <Panel
+            title="Classer une facture"
+            subtitle="Choisis d'abord la facture par son titre, puis la ligne budgétaire de dépense à laquelle la rattacher."
+          >
+            {!unclassifiedInvoices.length ? (
+              <p className="panel-note">Aucune facture en attente de classement pour cette édition.</p>
+            ) : (
+              <div className="section-stack">
+                <div className="field">
+                  <span>Facture</span>
+                  <select value={selectedInvoiceId} onChange={(event) => setSelectedInvoiceId(event.target.value)}>
+                    {unclassifiedInvoices.map((invoice) => (
+                      <option key={invoice.id} value={invoice.id}>
+                        {invoice.title || invoice.fileName || "Facture"}{invoice.uploadedByName ? ` · ${invoice.uploadedByName}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="field">
+                  <span>Ligne budgétaire</span>
+                  <select
+                    value={selectedInvoiceTargetRowId}
+                    onChange={(event) => setSelectedInvoiceTargetRowId(event.target.value)}
+                  >
+                    <option value="">Choisir une ligne de dépense</option>
+                    {expenseTargetOptions.map((target) => (
+                      <option key={`selected-invoice-${target.value}`} value={target.value}>
+                        {target.rowLabel} · {target.sectionName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {selectedInvoiceForClassification ? (
+                  <div className="budget-invoice-admin-cell">
+                    <strong>{selectedInvoiceForClassification.title || selectedInvoiceForClassification.fileName || "Facture"}</strong>
+                    <span>{selectedInvoiceForClassification.invoiceNote || "Aucune note renseignée."}</span>
+                    {selectedInvoiceForClassification.resolvedUrl ? (
+                      <button
+                        className="button button--secondary"
+                        type="button"
+                        onClick={() => window.open(selectedInvoiceForClassification.resolvedUrl, "_blank", "noopener,noreferrer")}
+                      >
+                        Ouvrir la facture
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                <div className="table-actions table-actions--inline">
+                  <button
+                    className="button button--primary"
+                    type="button"
+                    disabled={!selectedInvoiceId || !selectedInvoiceTargetRowId}
+                    onClick={() => handleLinkInvoice(selectedInvoiceId, selectedInvoiceTargetRowId)}
+                  >
+                    Classer la facture
+                  </button>
+                </div>
+              </div>
+            )}
+          </Panel>
+
+          {selectedEditionInvoices.length ? (
+            <Panel
+              title="Factures de l'édition"
+              subtitle="Vue d'ensemble des factures déposées pour cette édition, classées ou encore en attente."
+            >
+              <div className="table-wrap">
+                <table className="data-table data-table--admin">
+                  <thead>
+                    <tr>
+                      <th>Facture</th>
+                      <th>Déposée par</th>
+                      <th>Statut</th>
+                      <th>Ligne liée</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedEditionInvoices.map((invoice) => (
+                      <tr key={invoice.id}>
+                        <td>{invoice.title || invoice.fileName || "Facture"}</td>
+                        <td>{invoice.uploadedByName || "Utilisateur"}</td>
+                        <td>{formatInvoiceStatusLabel(invoice)}</td>
+                        <td>{invoice.linkedBudgetRowLabel || "—"}</td>
+                        <td>
+                          <div className="table-actions table-actions--inline">
+                            {invoice.resolvedUrl ? (
+                              <button
+                                className="button button--secondary"
+                                type="button"
+                                onClick={() => window.open(invoice.resolvedUrl, "_blank", "noopener,noreferrer")}
+                              >
+                                Ouvrir
+                              </button>
+                            ) : null}
+                            {invoice.linkedBudgetRowId && canManageInvoicePanel ? (
+                              <button
+                                className="button button--ghost-danger"
+                                type="button"
+                                onClick={() => handleUnlinkInvoice(invoice)}
+                              >
+                                Délier
+                              </button>
+                            ) : null}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Panel>
+          ) : null}
+        </section>
       ) : null}
 
       {activeTab === "simplified" ? (
