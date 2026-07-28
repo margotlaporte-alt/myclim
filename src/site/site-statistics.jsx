@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { formatEditionLabel, getEditionDisplayNumber } from "../app/meeting-edition-utils";
 import {
@@ -17,19 +17,99 @@ function genderLabel(g) {
   return g === "W" ? "Women" : "Men";
 }
 
-const DISC_ORDER = [
+function genderGroupLabel(g) {
+  return g === "W" ? "Women Records" : g === "M" ? "Men Records" : "Mixed Records";
+}
+
+function winnerGroupLabel(g) {
+  return g === "W" ? "Women" : g === "M" ? "Men" : "Mixed";
+}
+
+const TRACK_DISC_ORDER = [
   "50m","60m","60m hurdles",
   "200m","200m - Special Olympics",
-  "400m","800m","1000m","1500m","3000m","5000m",
-  "High Jump","Long Jump","Triple Jump","Pole Vault","Shot Put",
+  "400m","400m hurdles","400m - Special Olympics",
+  "800m","800m - Special Olympics",
+  "1000m","1500m","3000m","5000m",
 ];
 const normDiscipline = (d) =>
   (d || "").replace(/(\d)\s+(m\b)/gi, "$1$2").replace(/Hurdles/g, "hurdles").trim();
 const discKey = (d) => {
   const nd = normDiscipline(d);
-  const i = DISC_ORDER.indexOf(nd);
-  return i !== -1 ? `0_${i.toString().padStart(3, "0")}` : `1_${nd}`;
+  const i = TRACK_DISC_ORDER.indexOf(nd);
+  return i !== -1 ? `0_${i.toString().padStart(3, "0")}` : `1_${nd.toLowerCase()}`;
 };
+
+function genderSortValue(gender) {
+  return ({ W: 0, M: 1, X: 2 }[gender] ?? 9);
+}
+
+function resultRankSortValue(rank) {
+  const numeric = Number(rank);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : 999;
+}
+
+function normalizeRoundLabel(round) {
+  const value = String(round || "").trim().toLowerCase();
+  if (value === "heat") return "Heat";
+  if (value === "final") return "Final";
+  if (value === "timed final") return "Timed Final";
+  return String(round || "").trim();
+}
+
+function isHeatRound(round) {
+  return normalizeRoundLabel(round) === "Heat";
+}
+
+function isFinalRound(round) {
+  return normalizeRoundLabel(round) === "Final";
+}
+
+function isTimedFinalRound(round) {
+  return normalizeRoundLabel(round) === "Timed Final";
+}
+
+function sectionOrderValue(token) {
+  const value = String(token || "").trim().toUpperCase();
+  if (!value) return 0;
+  if (value === "1" || value === "A") return 1;
+  if (value === "2" || value === "B") return 2;
+  if (value === "3" || value === "C") return 3;
+  const numeric = Number(value);
+  if (Number.isFinite(numeric)) return numeric;
+  return 99;
+}
+
+function sectionSortValue(section) {
+  const round = normalizeRoundLabel(section?.round);
+  if (isFinalRound(round)) return 0;
+  if (isTimedFinalRound(round)) return 1;
+  if (isHeatRound(round)) return 2;
+  return 3;
+}
+
+function buildSectionKey(result) {
+  return [
+    normalizeRoundLabel(result?.round) || "Round",
+    String(result?.finalGroup || ""),
+    String(result?.heat || ""),
+  ].join("||");
+}
+
+function formatSectionLabel(section) {
+  const round = normalizeRoundLabel(section?.round);
+  if (round === "Heat") return section?.heat ? `Heat ${section.heat}` : "Heat";
+  if (round === "Final") return section?.finalGroup ? `Final ${section.finalGroup}` : "Final";
+  if (round === "Timed Final") return section?.heat ? `Timed Final · Heat ${section.heat}` : "Timed Final";
+  if (section?.finalGroup) return `${round} ${section.finalGroup}`.trim();
+  if (section?.heat) return `${round} ${section.heat}`.trim();
+  return round || "Results";
+}
+
+function resultDisplayRank(result) {
+  if (isHeatRound(result?.round)) return result?.sectionRank || result?.rank || null;
+  return result?.rank || result?.sectionRank || null;
+}
 
 const NOC_TO_ISO2 = {
   GER:"DE", GBR:"GB", NED:"NL", SUI:"CH", DEN:"DK", NOR:"NO",
@@ -65,25 +145,32 @@ function LoadingRows({ cols = 5 }) {
 /* ── Records panel ───────────────────────────────────────── */
 function RecordsPanel({ records, loading }) {
   const [genderFilter, setGenderFilter] = useState("all");
+  const [luxOnly, setLuxOnly] = useState(false);
   const [search, setSearch] = useState("");
 
   const filtered = useMemo(() => {
     const seen = new Set();
     return records
       .filter((r) => genderFilter === "all" || r.gender === genderFilter)
+      .filter((r) => !luxOnly || r.noc === "LUX")
       .filter((r) => {
         if (!search) return true;
         const q = search.toLowerCase();
         return (
           normDiscipline(r.discipline)?.toLowerCase().includes(q) ||
           r.fullName?.toLowerCase().includes(q) ||
-          r.noc?.toLowerCase().includes(q)
+          r.noc?.toLowerCase().includes(q) ||
+          String(r.year || "").includes(q) ||
+          String(r.mark || "").toLowerCase().includes(q)
         );
       })
       .sort((a, b) => {
+        const genderOrder = { W: 0, M: 1, X: 2 };
+        const gc = (genderOrder[a.gender] ?? 9) - (genderOrder[b.gender] ?? 9);
+        if (gc !== 0) return gc;
         const dc = discKey(a.discipline).localeCompare(discKey(b.discipline));
         if (dc !== 0) return dc;
-        return (a.gender === "W" ? 0 : 1) - (b.gender === "W" ? 0 : 1);
+        return String(a.fullName || "").localeCompare(String(b.fullName || ""));
       })
       .filter((r) => {
         const key = `${normDiscipline(r.discipline)}_${r.gender}`;
@@ -91,29 +178,81 @@ function RecordsPanel({ records, loading }) {
         seen.add(key);
         return true;
       });
-  }, [records, genderFilter, search]);
+  }, [records, genderFilter, luxOnly, search]);
+
+  const grouped = useMemo(() => {
+    const groups = [
+      { key: "W", label: "Women Records", rows: [] },
+      { key: "M", label: "Men Records", rows: [] },
+      { key: "X", label: "Mixed / Other", rows: [] },
+    ];
+    filtered.forEach((row) => {
+      const target = groups.find((group) => group.key === row.gender) || groups[2];
+      target.rows.push(row);
+    });
+    return groups.filter((group) => group.rows.length > 0);
+  }, [filtered]);
+
+  const activeDisciplines = useMemo(
+    () => new Set(filtered.map((row) => normDiscipline(row.discipline)).filter(Boolean)).size,
+    [filtered],
+  );
+  const activeNations = useMemo(
+    () => new Set(filtered.map((row) => row.noc).filter(Boolean)).size,
+    [filtered],
+  );
+  const latestRecordYear = useMemo(
+    () => filtered.reduce((max, row) => Math.max(max, Number(row.year || 0)), 0) || "—",
+    [filtered],
+  );
 
   return (
     <div className="site-stats-panel site-stats-panel--full">
       <div className="site-stats-panel__head">
-        <span className="site-stats-panel__title">Meeting Records</span>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          {["all", "M", "W"].map((g) => (
-            <button
-              key={g}
-              className={`site-stats-filter${genderFilter === g ? " site-stats-filter--active" : ""}`}
-              onClick={() => setGenderFilter(g)}
-            >
-              {g === "all" ? "All" : genderLabel(g)}
-            </button>
-          ))}
+        <div className="site-stats-heading">
+          <span className="site-stats-panel__title">Meeting Records</span>
+          <p>Fastest marks and best field performances ever achieved at the meeting.</p>
+        </div>
+      </div>
+      <div className="site-stats-toolbar">
+        <div className="site-stats-toolbar__row">
           <input
-            className="site-stats-search"
-            placeholder="Search discipline or athlete…"
+            className="site-stats-search site-stats-search--wide"
+            placeholder="Search athlete, discipline, nation, year or mark…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          {search ? (
+            <button className="site-stats-clear" onClick={() => setSearch("")}>
+              Clear search
+            </button>
+          ) : null}
         </div>
+        <div className="site-stats-toolbar__row">
+          <div className="site-stats-segmented">
+            {["all", "W", "M"].map((g) => (
+              <button
+                key={g}
+                className={`site-stats-filter${genderFilter === g ? " site-stats-filter--active" : ""}`}
+                onClick={() => setGenderFilter(g)}
+              >
+                {g === "all" ? "All categories" : genderLabel(g)}
+              </button>
+            ))}
+          </div>
+          <button
+            className={`site-stats-filter${luxOnly ? " site-stats-filter--active" : ""}`}
+            onClick={() => setLuxOnly((current) => !current)}
+          >
+            Luxembourg only
+          </button>
+        </div>
+      </div>
+      <div className="site-stats-summary" aria-label="Records summary">
+        <span className="site-stats-summary__item"><strong>{filtered.length}</strong> records shown</span>
+        <span className="site-stats-summary__item"><strong>{activeDisciplines}</strong> disciplines</span>
+        <span className="site-stats-summary__item"><strong>{activeNations}</strong> nations</span>
+        <span className="site-stats-summary__item"><strong>{latestRecordYear}</strong> latest record year</span>
       </div>
       <div className="site-stats-panel__body">
         <table className="site-data-table">
@@ -127,29 +266,41 @@ function RecordsPanel({ records, loading }) {
               <th>Year</th>
             </tr>
           </thead>
-          <tbody>
-            {loading ? <LoadingRows cols={6} /> : filtered.length === 0 ? (
-              <tr><td colSpan={6} className="site-empty-state">No records found</td></tr>
-            ) : filtered.map((r, i) => (
-              <tr key={r.id || i} className={r.noc === "LUX" ? "row--lux" : ""}>
-                <td style={{ fontWeight: 600 }}>{normDiscipline(r.discipline)}</td>
-                <td>
-                  <span className={`site-badge ${r.gender === "W" ? "site-badge--red" : "site-badge--blue"}`}>
-                    {r.gender === "W" ? "W" : "M"}
-                  </span>
+          {loading ? (
+            <tbody><LoadingRows cols={6} /></tbody>
+          ) : filtered.length === 0 ? (
+            <tbody><tr><td colSpan={6} className="site-empty-state">No records match your filters</td></tr></tbody>
+          ) : grouped.map((group) => (
+            <tbody key={group.key}>
+              <tr className="site-data-table__group-row">
+                <td colSpan={6}>
+                  <div className="site-data-table__group-meta">
+                    <span>{genderGroupLabel(group.key)}</span>
+                    <span>{group.rows.length} record{group.rows.length > 1 ? "s" : ""}</span>
+                  </div>
                 </td>
-                <td className="athlete-name" style={{ color: r.noc === "LUX" ? "var(--site-red)" : undefined, fontWeight: r.noc === "LUX" ? 700 : undefined }}>
-                  {r.fullName}
-                </td>
-                <td>
-                  <span title={r.noc} style={{ fontSize: "1.1rem", marginRight: 4 }}>{nocToFlag(r.noc)}</span>
-                  <span className="noc-badge">{r.noc}</span>
-                </td>
-                <td className="mark" style={{ color: "var(--site-red)", fontWeight: 700 }}>{formatMark(r.mark)}</td>
-                <td style={{ color: "var(--site-text-muted)", fontSize: "0.82rem" }}>{r.year}</td>
               </tr>
-            ))}
-          </tbody>
+              {group.rows.map((r, i) => (
+                <tr key={r.id || `${group.key}-${i}`} className={r.noc === "LUX" ? "row--lux" : ""}>
+                  <td style={{ fontWeight: 600, whiteSpace: "normal" }}>{normDiscipline(r.discipline)}</td>
+                  <td>
+                    <span className={`site-badge ${r.gender === "W" ? "site-badge--red" : "site-badge--blue"}`}>
+                      {r.gender === "W" ? "W" : r.gender === "M" ? "M" : "X"}
+                    </span>
+                  </td>
+                  <td className="athlete-name" style={{ color: r.noc === "LUX" ? "var(--site-red)" : undefined, fontWeight: r.noc === "LUX" ? 700 : undefined, whiteSpace: "normal" }}>
+                    {r.fullName}
+                  </td>
+                  <td>
+                    <span title={r.noc} style={{ fontSize: "1.1rem", marginRight: 4 }}>{nocToFlag(r.noc)}</span>
+                    <span className="noc-badge">{r.noc}</span>
+                  </td>
+                  <td className="mark" style={{ color: "var(--site-red)", fontWeight: 700 }}>{formatMark(r.mark)}</td>
+                  <td style={{ color: "var(--site-text-muted)", fontSize: "0.82rem" }}>{r.year}</td>
+                </tr>
+              ))}
+            </tbody>
+          ))}
         </table>
       </div>
     </div>
@@ -160,17 +311,13 @@ function RecordsPanel({ records, loading }) {
 function WinnersPanel({ winners, loading }) {
   const [disciplineFilter, setDisciplineFilter] = useState("all");
   const [genderFilter, setGenderFilter] = useState("all");
-  const [yearFilter, setYearFilter] = useState("all");
+  const [luxOnly, setLuxOnly] = useState(false);
   const [search, setSearch] = useState("");
+  const [openGroups, setOpenGroups] = useState([]);
 
   const disciplines = useMemo(() => {
     const set = new Set(winners.map((w) => normDiscipline(w.discipline)));
     return ["all", ...Array.from(set).sort((a, b) => discKey(a).localeCompare(discKey(b)))];
-  }, [winners]);
-
-  const years = useMemo(() => {
-    const set = new Set(winners.map((w) => String(w.year)));
-    return ["all", ...Array.from(set).sort((a, b) => Number(b) - Number(a))];
   }, [winners]);
 
   const filtered = useMemo(() => {
@@ -178,97 +325,230 @@ function WinnersPanel({ winners, loading }) {
     return winners
       .filter((w) => disciplineFilter === "all" || normDiscipline(w.discipline) === disciplineFilter)
       .filter((w) => genderFilter === "all" || w.gender === genderFilter)
-      .filter((w) => yearFilter === "all" || String(w.year) === yearFilter)
+      .filter((w) => !luxOnly || w.noc === "LUX")
       .filter((w) => {
         if (!search) return true;
         const q = search.toLowerCase();
         const full = `${w.lastName || ""} ${w.firstName || ""}`.toLowerCase();
-        return full.includes(q) || (w.noc || "").toLowerCase().includes(q) || normDiscipline(w.discipline).toLowerCase().includes(q);
+        return (
+          full.includes(q)
+          || (w.noc || "").toLowerCase().includes(q)
+          || normDiscipline(w.discipline).toLowerCase().includes(q)
+          || String(w.year || "").includes(q)
+          || String(w.result || "").toLowerCase().includes(q)
+        );
       })
+      .sort((a, b) =>
+        Number(b.year || 0) - Number(a.year || 0)
+        || discKey(a.discipline).localeCompare(discKey(b.discipline))
+        || (({ W: 0, M: 1, X: 2 }[a.gender] ?? 9) - ({ W: 0, M: 1, X: 2 }[b.gender] ?? 9))
+        || String(a.lastName || "").localeCompare(String(b.lastName || ""))
+        || String(a.firstName || "").localeCompare(String(b.firstName || "")),
+      )
       .filter((w) => {
         const key = `${w.year}_${normDiscipline(w.discipline)}_${w.gender}`;
         if (seen.has(key)) return false;
         seen.add(key);
         return true;
       });
-  }, [winners, disciplineFilter, genderFilter, yearFilter, search]);
+  }, [winners, disciplineFilter, genderFilter, luxOnly, search]);
+
+  const groupedByDiscipline = useMemo(() => {
+    const map = new Map();
+    filtered.forEach((winner) => {
+      const discipline = normDiscipline(winner.discipline);
+      const key = `${discipline}__${winner.gender || "X"}`;
+      if (!map.has(key)) {
+        map.set(key, {
+          key,
+          discipline,
+          gender: winner.gender || "X",
+          rows: [],
+        });
+      }
+      map.get(key).rows.push(winner);
+    });
+    return [...map.values()]
+      .map((group) => ({
+        ...group,
+        rows: [...group.rows].sort(
+          (a, b) =>
+            Number(b.year || 0) - Number(a.year || 0)
+            || String(a.lastName || "").localeCompare(String(b.lastName || ""))
+            || String(a.firstName || "").localeCompare(String(b.firstName || "")),
+        ),
+      }))
+      .sort(
+        (a, b) =>
+          discKey(a.discipline).localeCompare(discKey(b.discipline))
+          || (({ W: 0, M: 1, X: 2 }[a.gender] ?? 9) - ({ W: 0, M: 1, X: 2 }[b.gender] ?? 9)),
+      );
+  }, [filtered]);
+
+  const uniqueAthletes = useMemo(
+    () => new Set(filtered.map((winner) => `${winner.firstName || ""}|${winner.lastName || ""}`)).size,
+    [filtered],
+  );
+  const visibleGroups = useMemo(() => groupedByDiscipline.length, [groupedByDiscipline]);
+
+  function toggleGroup(groupKey) {
+    setOpenGroups((current) => (
+      current.includes(groupKey)
+        ? current.filter((value) => value !== groupKey)
+        : [...current, groupKey]
+    ));
+  }
 
   return (
     <div className="site-stats-panel site-stats-panel--full">
       <div className="site-stats-panel__head">
-        <span className="site-stats-panel__title">Winners History</span>
+        <div className="site-stats-heading">
+          <span className="site-stats-panel__title">Winners History</span>
+          <p>Browse every official winner edition by edition, with filters for discipline, year and nation.</p>
+        </div>
       </div>
-      <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--site-border)", display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-        <select
-          className="site-stats-select"
-          value={disciplineFilter}
-          onChange={(e) => setDisciplineFilter(e.target.value)}
-        >
-          {disciplines.map((d) => (
-            <option key={d} value={d}>{d === "all" ? "All disciplines" : d}</option>
-          ))}
-        </select>
-        <select
-          className="site-stats-select"
-          value={yearFilter}
-          onChange={(e) => setYearFilter(e.target.value)}
-        >
-          {years.map((y) => (
-            <option key={y} value={y}>{y === "all" ? "All years" : y}</option>
-          ))}
-        </select>
-        {["all", "M", "W"].map((g) => (
-          <button
-            key={g}
-            className={`site-stats-filter${genderFilter === g ? " site-stats-filter--active" : ""}`}
-            onClick={() => setGenderFilter(g)}
+      <div className="site-stats-toolbar">
+        <div className="site-stats-toolbar__row">
+          <input
+            className="site-stats-search site-stats-search--wide"
+            placeholder="Search athlete, nation, discipline, year or performance…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {search ? (
+            <button className="site-stats-clear" onClick={() => setSearch("")}>
+              Clear search
+            </button>
+          ) : null}
+        </div>
+        <div className="site-stats-toolbar__row">
+          <select
+            className="site-stats-select"
+            value={disciplineFilter}
+            onChange={(e) => setDisciplineFilter(e.target.value)}
           >
-            {g === "all" ? "All" : genderLabel(g)}
+            {disciplines.map((d) => (
+              <option key={d} value={d}>{d === "all" ? "All disciplines" : d}</option>
+            ))}
+          </select>
+          <div className="site-stats-segmented">
+            {["all", "W", "M"].map((g) => (
+              <button
+                key={g}
+                className={`site-stats-filter${genderFilter === g ? " site-stats-filter--active" : ""}`}
+                onClick={() => setGenderFilter(g)}
+              >
+                {g === "all" ? "All categories" : genderLabel(g)}
+              </button>
+            ))}
+          </div>
+          <button
+            className={`site-stats-filter${luxOnly ? " site-stats-filter--active" : ""}`}
+            onClick={() => setLuxOnly((current) => !current)}
+          >
+            Luxembourg only
           </button>
-        ))}
-        <input
-          className="site-stats-search"
-          placeholder="Search athlete or nation…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+        </div>
+      </div>
+      <div className="site-stats-summary" aria-label="Winners summary">
+        <span className="site-stats-summary__item"><strong>{filtered.length}</strong> wins shown</span>
+        <span className="site-stats-summary__item"><strong>{uniqueAthletes}</strong> unique athletes</span>
+        <span className="site-stats-summary__item"><strong>{disciplineFilter === "all" ? disciplines.length - 1 : 1}</strong> disciplines</span>
+        <span className="site-stats-summary__item"><strong>{visibleGroups}</strong> winner groups</span>
       </div>
       <div className="site-stats-panel__body">
-        <table className="site-data-table">
-          <thead>
-            <tr>
-              <th>Year</th>
-              <th>Discipline</th>
-              <th>Gender</th>
-              <th>Athlete</th>
-              <th>Nation</th>
-              <th>Performance</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? <LoadingRows cols={6} /> : filtered.length === 0 ? (
-              <tr><td colSpan={6} className="site-empty-state">No results found</td></tr>
-            ) : filtered.map((w, i) => (
-              <tr key={w.id || i} className={w.noc === "LUX" ? "row--lux" : ""}>
-                <td style={{ color: "var(--site-text-muted)", fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>{w.year}</td>
-                <td style={{ fontWeight: 600 }}>{normDiscipline(w.discipline)}</td>
-                <td>
-                  <span className={`site-badge ${w.gender === "W" ? "site-badge--red" : "site-badge--blue"}`}>
-                    {w.gender === "W" ? "W" : "M"}
-                  </span>
-                </td>
-                <td className="athlete-name" style={{ color: w.noc === "LUX" ? "var(--site-red)" : undefined, fontWeight: w.noc === "LUX" ? 700 : undefined }}>
-                  {w.firstName} {w.lastName}
-                </td>
-                <td>
-                  <span title={w.noc} style={{ fontSize: "1.1rem", marginRight: 4 }}>{nocToFlag(w.noc)}</span>
-                  <span className="noc-badge">{w.noc}</span>
-                </td>
-                <td className="mark">{formatMark(w.result)}</td>
-              </tr>
+        {loading ? (
+          <div className="site-stats-winner-list">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div key={index} className="site-stats-winner-card" style={{ opacity: 0.45 }}>
+                <div className="site-stats-winner-card__summary">
+                  <div style={{ height: 18, width: 180, background: "rgba(0,0,0,0.06)", borderRadius: 999 }} />
+                  <div style={{ height: 16, width: 300, background: "rgba(0,0,0,0.05)", borderRadius: 999 }} />
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
+          </div>
+        ) : groupedByDiscipline.length === 0 ? (
+          <div className="site-empty-state">No winners match your filters</div>
+        ) : (
+          <div className="site-stats-winner-list">
+            {groupedByDiscipline.map((group) => {
+              const latestWinner = group.rows[0];
+              const isOpen = openGroups.includes(group.key);
+              return (
+                <div key={group.key} className="site-stats-winner-card">
+                  <div className="site-stats-winner-card__summary">
+                    <div className="site-stats-winner-card__meta">
+                      <div className="site-stats-winner-card__title-row">
+                        <span className="site-stats-winner-card__discipline">{group.discipline}</span>
+                        <span className={`site-badge ${group.gender === "W" ? "site-badge--red" : "site-badge--blue"}`}>
+                          {winnerGroupLabel(group.gender)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="site-stats-winner-card__winner">
+                      <span className="site-stats-latest-pill">Latest winner</span>
+                      <div className="site-stats-winner-card__latest-row">
+                        <span className="site-stats-winner-card__year">{latestWinner.year}</span>
+                        <span className={`site-stats-winner-card__athlete${latestWinner.noc === "LUX" ? " is-lux" : ""}`}>
+                          {latestWinner.firstName} {latestWinner.lastName}
+                        </span>
+                        <span className="site-stats-winner-card__nation">
+                          <span title={latestWinner.noc} style={{ fontSize: "1.05rem" }}>{nocToFlag(latestWinner.noc)}</span>
+                          <span className="noc-badge">{latestWinner.noc}</span>
+                        </span>
+                        <span className="site-stats-winner-card__mark">{formatMark(latestWinner.result)}</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="site-stats-year-toggle"
+                      onClick={() => toggleGroup(group.key)}
+                      aria-expanded={isOpen}
+                    >
+                      <span className="site-stats-year-toggle__left">
+                        <span className={`site-stats-year-chevron${isOpen ? " is-open" : ""}`}>⌄</span>
+                        <span className="site-stats-year-label">{isOpen ? "Hide history" : "Voir plus"}</span>
+                      </span>
+                      <span className="site-stats-year-toggle__right">
+                        {group.rows.length} win{group.rows.length > 1 ? "s" : ""}
+                      </span>
+                    </button>
+                  </div>
+                  {isOpen ? (
+                    <div className="site-stats-winner-card__history">
+                      <table className="site-data-table">
+                        <thead>
+                          <tr>
+                            <th>Year</th>
+                            <th>Athlete</th>
+                            <th>Nation</th>
+                            <th>Performance</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {group.rows.map((winner, index) => (
+                            <tr key={winner.id || `${group.key}-${index}`} className={winner.noc === "LUX" ? "row--lux" : ""}>
+                              <td style={{ color: "var(--site-text-muted)", fontWeight: 700 }}>{winner.year}</td>
+                              <td className="athlete-name" style={{ whiteSpace: "normal", color: winner.noc === "LUX" ? "var(--site-red)" : undefined, fontWeight: winner.noc === "LUX" ? 700 : undefined }}>
+                                {winner.firstName} {winner.lastName}
+                              </td>
+                              <td>
+                                <span title={winner.noc} style={{ fontSize: "1.05rem", marginRight: 4 }}>{nocToFlag(winner.noc)}</span>
+                                <span className="noc-badge">{winner.noc}</span>
+                              </td>
+                              <td className="mark">{formatMark(winner.result)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
       <div style={{ padding: "16px 24px", borderTop: "1px solid var(--site-border)", color: "var(--site-text-muted)", fontSize: "0.82rem" }}>
         Showing {filtered.length} of {winners.length} results
@@ -286,6 +566,7 @@ function EditionResultsPanel({ editions }) {
   const [disciplineFilter, setDisciplineFilter] = useState("all");
   const [genderFilter, setGenderFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [expandedSections, setExpandedSections] = useState({});
 
   const { results, loading } = useMeetingResultsForYear(Number(selectedYear));
 
@@ -302,11 +583,90 @@ function EditionResultsPanel({ editions }) {
         if (!search) return true;
         const q = search.toLowerCase();
         const full = `${r.lastName || ""} ${r.firstName || ""}`.toLowerCase();
-        return full.includes(q) || (r.noc || "").toLowerCase().includes(q);
-      });
+        return (
+          full.includes(q)
+          || (r.noc || "").toLowerCase().includes(q)
+          || normDiscipline(r.discipline).toLowerCase().includes(q)
+          || String(r.result || "").toLowerCase().includes(q)
+        );
+      })
+      .sort((a, b) =>
+        discKey(a.discipline).localeCompare(discKey(b.discipline))
+        || genderSortValue(a.gender) - genderSortValue(b.gender)
+        || sectionSortValue(a) - sectionSortValue(b)
+        || sectionOrderValue(a.finalGroup || a.heat) - sectionOrderValue(b.finalGroup || b.heat)
+        || resultRankSortValue(resultDisplayRank(a)) - resultRankSortValue(resultDisplayRank(b))
+        || String(a.lastName || "").localeCompare(String(b.lastName || ""))
+        || String(a.firstName || "").localeCompare(String(b.firstName || "")),
+      );
   }, [results, disciplineFilter, genderFilter, search]);
 
+  const groupedResults = useMemo(() => {
+    const map = new Map();
+    filtered.forEach((result) => {
+      const discipline = normDiscipline(result.discipline);
+      const gender = result.gender || "X";
+      const groupKey = `${discipline}__${gender}`;
+      if (!map.has(groupKey)) {
+        map.set(groupKey, {
+          key: groupKey,
+          discipline,
+          gender,
+          sections: new Map(),
+        });
+      }
+      const group = map.get(groupKey);
+      const sectionKey = buildSectionKey(result);
+      if (!group.sections.has(sectionKey)) {
+        group.sections.set(sectionKey, {
+          key: sectionKey,
+          round: normalizeRoundLabel(result.round),
+          heat: result.heat || "",
+          finalGroup: result.finalGroup || "",
+          rows: [],
+        });
+      }
+      group.sections.get(sectionKey).rows.push(result);
+    });
+    return [...map.values()]
+      .sort((a, b) =>
+        discKey(a.discipline).localeCompare(discKey(b.discipline))
+        || genderSortValue(a.gender) - genderSortValue(b.gender),
+      )
+      .map((group) => {
+        const sections = [...group.sections.values()]
+          .sort((a, b) =>
+            sectionSortValue(a) - sectionSortValue(b)
+            || sectionOrderValue(a.finalGroup || a.heat) - sectionOrderValue(b.finalGroup || b.heat),
+          )
+          .map((section) => ({
+            ...section,
+            rows: [...section.rows].sort((a, b) =>
+              resultRankSortValue(resultDisplayRank(a)) - resultRankSortValue(resultDisplayRank(b))
+              || String(a.lastName || "").localeCompare(String(b.lastName || ""))
+              || String(a.firstName || "").localeCompare(String(b.firstName || "")),
+            ),
+          }));
+        return {
+          ...group,
+          sections,
+          totalRows: sections.reduce((total, section) => total + section.rows.length, 0),
+        };
+      });
+  }, [filtered]);
+
   const selectedEdition = editions.find((e) => String(e.year) === selectedYear);
+
+  useEffect(() => {
+    setExpandedSections({});
+  }, [selectedYear, disciplineFilter, genderFilter, search]);
+
+  function toggleSection(sectionId) {
+    setExpandedSections((current) => ({
+      ...current,
+      [sectionId]: !current[sectionId],
+    }));
+  }
 
   return (
     <div className="site-stats-panel site-stats-panel--full">
@@ -374,34 +734,103 @@ function EditionResultsPanel({ editions }) {
               <th>Notes</th>
             </tr>
           </thead>
-          <tbody>
-            {loading ? <LoadingRows cols={7} /> : filtered.length === 0 ? (
+          {loading ? (
+            <tbody>
+              <LoadingRows cols={7} />
+            </tbody>
+          ) : filtered.length === 0 ? (
+            <tbody>
               <tr><td colSpan={7} className="site-empty-state">
                 {results.length === 0 ? "No results available for this edition" : "No results match your filters"}
               </td></tr>
-            ) : filtered.map((r, i) => (
-              <tr key={r.id || i} className={r.rank === 1 ? "rank-1" : ""}>
-                <td style={{ fontWeight: r.rank === 1 ? 800 : 400, color: r.rank === 1 ? "var(--site-gold)" : "var(--site-text-muted)" }}>
-                  {r.rank === 1 ? "🥇" : r.rank === 2 ? "🥈" : r.rank === 3 ? "🥉" : r.rank || "—"}
+            </tbody>
+          ) : groupedResults.map((group) => (
+            <tbody key={group.key}>
+              <tr className="site-data-table__group-row">
+                <td colSpan={7}>
+                  <div className="site-data-table__group-meta">
+                    <span>{group.discipline}</span>
+                    <span style={{ display: "inline-flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                      <span className={`site-badge ${group.gender === "W" ? "site-badge--red" : group.gender === "M" ? "site-badge--blue" : ""}`}>
+                        {group.gender === "W" ? "Women" : group.gender === "M" ? "Men" : "Mixed"}
+                      </span>
+                      <span>
+                        {group.totalRows} result
+                        {group.totalRows > 1 ? "s" : ""}
+                      </span>
+                    </span>
+                  </div>
                 </td>
-                <td style={{ fontWeight: 600 }}>{normDiscipline(r.discipline)}</td>
-                <td>
-                  <span className={`site-badge ${r.gender === "W" ? "site-badge--red" : "site-badge--blue"}`}>
-                    {r.gender === "W" ? "W" : "M"}
-                  </span>
-                </td>
-                <td className="athlete-name" style={{ color: r.noc === "LUX" ? "var(--site-red)" : undefined, fontWeight: r.noc === "LUX" ? 700 : undefined }}>
-                  {r.firstName} {r.lastName}
-                </td>
-                <td>
-                  <span title={r.noc} style={{ fontSize: "1.1rem", marginRight: 4 }}>{nocToFlag(r.noc)}</span>
-                  <span className="noc-badge">{r.noc}</span>
-                </td>
-                <td className="mark">{formatMark(r.result)}</td>
-                <td style={{ color: "var(--site-text-dim)", fontSize: "0.78rem" }}>{r.notes || ""}</td>
               </tr>
-            ))}
-          </tbody>
+              {group.sections.map((section) => (
+                <Fragment key={`${group.key}-${section.key}`}>
+                  {(() => {
+                    const sectionId = `${selectedYear}-${group.key}-${section.key}`;
+                    const isHeatSection = isHeatRound(section.round);
+                    const isExpanded = isHeatSection ? Boolean(expandedSections[sectionId]) : true;
+                    return (
+                      <>
+                  <tr key={`${group.key}-${section.key}-header`} className="site-data-table__stage-row">
+                    <td colSpan={7}>
+                      <div className="site-data-table__stage-meta">
+                        <span>{formatSectionLabel(section)}</span>
+                        <span className="site-data-table__stage-actions">
+                          <span>{section.rows.length} result{section.rows.length > 1 ? "s" : ""}</span>
+                          {isHeatSection ? (
+                            <button
+                              type="button"
+                              className="site-stats-inline-toggle"
+                              onClick={() => toggleSection(sectionId)}
+                              aria-expanded={isExpanded}
+                            >
+                              {isExpanded ? "Hide heat" : "Show heat"}
+                            </button>
+                          ) : null}
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                  {isExpanded ? section.rows.map((r, i) => {
+                    const displayRank = resultDisplayRank(r);
+                    const showMedal = !isHeatRound(r.round) && Number(displayRank) >= 1 && Number(displayRank) <= 3;
+                    return (
+                      <tr key={r.id || `${group.key}-${section.key}-${i}`} className={!isHeatRound(r.round) && Number(displayRank) === 1 ? "rank-1" : ""}>
+                        <td style={{ fontWeight: showMedal ? 800 : 500, color: showMedal ? "var(--site-gold)" : "var(--site-text-muted)" }}>
+                          {showMedal
+                            ? Number(displayRank) === 1
+                              ? "🥇"
+                              : Number(displayRank) === 2
+                                ? "🥈"
+                                : "🥉"
+                            : displayRank || "—"}
+                        </td>
+                        <td style={{ fontWeight: 600 }}>{normDiscipline(r.discipline)}</td>
+                        <td>
+                          <span className={`site-badge ${r.gender === "W" ? "site-badge--red" : r.gender === "M" ? "site-badge--blue" : ""}`}>
+                            {r.gender === "W" ? "W" : r.gender === "M" ? "M" : "X"}
+                          </span>
+                        </td>
+                        <td className="athlete-name" style={{ color: r.noc === "LUX" ? "var(--site-red)" : undefined, fontWeight: r.noc === "LUX" ? 700 : undefined, whiteSpace: "normal" }}>
+                          {r.firstName} {r.lastName}
+                        </td>
+                        <td>
+                          <span title={r.noc} style={{ fontSize: "1.1rem", marginRight: 4 }}>{nocToFlag(r.noc)}</span>
+                          <span className="noc-badge">{r.noc}</span>
+                        </td>
+                        <td className="mark">{formatMark(r.result)}</td>
+                        <td style={{ color: "var(--site-text-dim)", fontSize: "0.78rem", whiteSpace: "normal" }}>
+                          {[r.qualification, r.notes].filter(Boolean).join(" · ")}
+                        </td>
+                      </tr>
+                    );
+                  }) : null}
+                      </>
+                    );
+                  })()}
+                </Fragment>
+              ))}
+            </tbody>
+          ))}
         </table>
       </div>
     </div>

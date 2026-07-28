@@ -9399,6 +9399,2042 @@ def build_year_results_2021(year, pdf_path):
     return results
 
 
+# ─── 2023-specific parsing ────────────────────────────────────────────────────
+
+TRACK_EVENT_HEADER_2023_RE = re.compile(
+    r"^(?P<prefix>.+?)\s+\d{2}\.\d{2}\.\d{4}\s*/\s*\d{2}:\d{2}$",
+    re.IGNORECASE,
+)
+EVENT_GENDER_2023_RE = re.compile(
+    r"^(?P<disc_raw>.+?),\s*(?P<gender>Women|Men)(?:\s+\([^)]*\))?(?:\s+-\s+Continuation)?$",
+    re.IGNORECASE,
+)
+FIELD_EVENT_HEADER_2023_RE = re.compile(
+    r"^(?P<prefix>(?:Triple Jump|High Jump|Shot Put),\s*(?:Women|Men)(?:\s+\([^)]*\))?)(?:\s+-\s+Continuation)?$",
+    re.IGNORECASE,
+)
+HEAT_2023_RE = re.compile(r"^Heat\s+(?P<heat>\d+)\s+of\s+\d+$", re.IGNORECASE)
+TIMED_HEATS_2023_RE = re.compile(r"^Heats$", re.IGNORECASE)
+FINAL_2023_RE = re.compile(r"^Final(?:\s+\d{2}\.\d{2}\.\d{4}\s*/\s*\d{2}:\d{2})?$", re.IGNORECASE)
+ROUND_WITH_DATE_2023_RE = re.compile(r"^(?P<label>Final|Heats)\s+\d{2}\.\d{2}\.\d{4}\s*/\s*\d{2}:\d{2}$", re.IGNORECASE)
+HEAT_MARKER_2023_RE = re.compile(r"^(?P<place>\d+)\./(?P<heat>[IVX]+)$", re.IGNORECASE)
+FIELD_DISCIPLINES_2023 = {"Triple Jump", "High Jump", "Shot Put"}
+
+COUNTRY_TOKEN_TO_NOC_2023 = {
+    **COUNTRY_TOKEN_TO_NOC_2021,
+    "ALGERIA": "ALG",
+    "BELGIUM": "BEL",
+    "BOSNIA-HERZEGOVINA": "BIH",
+    "BURKINA FASO": "BUR",
+    "CROATIA": "CRO",
+    "CYPRUS": "CYP",
+    "CZECH REPUBLIC": "CZE",
+    "DENMARK": "DEN",
+    "FINLAND": "FIN",
+    "FRANKREICH": "FRA",
+    "GREECE": "GRE",
+    "IRELAND": "IRL",
+    "JAPAN": "JPN",
+    "KENYA": "KEN",
+    "MONTENEGRO": "MNE",
+    "POLAND": "POL",
+    "PORTUGAL": "POR",
+    "ROMANIA": "ROU",
+    "SERBIA": "SRB",
+    "SLOVAK REPUBLIC": "SVK",
+    "SLOVENIA": "SLO",
+    "SPAIN": "ESP",
+    "SWITZERLAND": "SUI",
+    "UKRAINE": "UKR",
+}
+
+NAME_FIXES_2023 = {
+    **NAME_FIXES_2021,
+    ("KIPLANGAT", "Josephine"): ("KIPLANGAT CHELANGAT", "Josephine"),
+}
+
+ATHLETE_NOC_FIXES_2023 = {
+    ("VOORRIPS", "Suzanne"): "NED",
+}
+
+
+def preprocess_line_2023(line):
+    return preprocess_line_2021(line)
+
+
+def normalize_noc_2023(raw_token):
+    token = str(raw_token or "").strip().upper()
+    accentless = _strip_accents(token)
+    return COUNTRY_TOKEN_TO_NOC_2023.get(token) or COUNTRY_TOKEN_TO_NOC_2023.get(accentless) or token
+
+
+def normalize_club_2023(team_tokens, noc):
+    parts = [str(token or "").strip() for token in team_tokens if str(token or "").strip()]
+    if not parts:
+        return ""
+    club = " ".join(parts).strip()
+    if not club:
+        return ""
+    if normalize_noc_2023(club) == noc:
+        return ""
+    if len(parts) == 1 and normalize_noc_2023(parts[0]) == noc:
+        return ""
+    if all(normalize_noc_2023(part) == noc for part in parts if re.match(r"^[A-Za-zÀ-ÿ.'/-]+$", part)):
+        return ""
+    return "" if club.upper() == noc else club
+
+
+def normalize_name_2023(last_name, first_name):
+    return NAME_FIXES_2023.get((last_name, first_name), (last_name, first_name))
+
+
+def split_name_tokens_2023(tokens):
+    last_name, first_name = split_name_tokens_2014(tokens)
+    return normalize_name_2023(last_name, first_name)
+
+
+def infer_noc_and_club_2023(tokens_after_yob):
+    parts = [str(token or "").strip() for token in tokens_after_yob if str(token or "").strip()]
+    if not parts:
+        return "", ""
+
+    nat_token = parts[0]
+    normalized_nat = normalize_noc_2023(nat_token)
+    if len(parts) == 1:
+        return normalized_nat, ""
+    return normalized_nat, normalize_club_2023(parts[1:], normalized_nat)
+
+
+def normalize_gender_2023(raw):
+    return normalize_gender(raw)
+
+
+def normalize_event_disc_2023(raw):
+    return normalize_disc(preprocess_line_2023(raw))
+
+
+def parse_event_header_2023(line):
+    text = preprocess_line_2023(line)
+
+    m = TRACK_EVENT_HEADER_2023_RE.match(text)
+    if m:
+        prefix = m.group("prefix").strip()
+        gender_match = EVENT_GENDER_2023_RE.match(prefix)
+        if not gender_match:
+            return None
+        discipline = normalize_event_disc_2023(gender_match.group("disc_raw"))
+        gender = normalize_gender_2023(gender_match.group("gender"))
+        if not discipline or not gender:
+            return None
+        return {
+            "discipline": discipline,
+            "gender": gender,
+            "kind": "field" if discipline in FIELD_DISCIPLINES_2023 else "track",
+        }
+
+    m = FIELD_EVENT_HEADER_2023_RE.match(text)
+    if m:
+        prefix = m.group("prefix").strip()
+        gender_match = EVENT_GENDER_2023_RE.match(prefix)
+        if not gender_match:
+            return None
+        discipline = normalize_event_disc_2023(gender_match.group("disc_raw"))
+        gender = normalize_gender_2023(gender_match.group("gender"))
+        if not discipline or not gender:
+            return None
+        return {
+            "discipline": discipline,
+            "gender": gender,
+            "kind": "field",
+        }
+
+    return None
+
+
+def parse_round_2023(line, event=None):
+    text = preprocess_line_2023(line)
+
+    m = HEAT_2023_RE.match(text)
+    if m:
+        return {"round": "Heat", "heat": m.group("heat"), "finalGroup": "", "linkedRound": "Final"}
+
+    m = ROUND_WITH_DATE_2023_RE.match(text)
+    if m:
+        text = m.group("label")
+
+    if TIMED_HEATS_2023_RE.match(text):
+        return {"round": "Timed Final", "heat": "", "finalGroup": "", "linkedRound": ""}
+
+    if FINAL_2023_RE.match(text):
+        return {"round": "Final", "heat": "", "finalGroup": "", "linkedRound": ""}
+
+    return None
+
+
+def standardize_inline_note_2023(token):
+    value = str(token or "").strip().upper()
+    if value == "MR":
+        return "Meeting Record"
+    if value == "WL":
+        return "World Lead"
+    return None
+
+
+def extract_suffix_metadata_2023(tokens):
+    parts = list(tokens)
+    qualification = ""
+    note_tokens = []
+    heat_marker = ""
+
+    while parts:
+        last = parts[-1]
+        marker_match = HEAT_MARKER_2023_RE.match(last)
+        if marker_match:
+            heat_marker = marker_match.group("heat").upper()
+            parts = parts[:-1]
+            continue
+        if last in {"Q", "q"}:
+            qualification = last
+            parts = parts[:-1]
+            continue
+        note_parts = [piece.strip() for piece in last.split(",") if piece.strip()]
+        if note_parts and all(piece in {"WL", "MR", "PB", "SB", "=PB", "=SB"} for piece in note_parts):
+            note_tokens = note_parts + note_tokens
+            parts = parts[:-1]
+            continue
+        break
+
+    return parts, qualification, note_tokens, heat_marker
+
+
+def apply_athlete_fixes_2023(last_name, first_name, noc):
+    fixed_noc = ATHLETE_NOC_FIXES_2023.get((last_name, first_name), noc)
+    return last_name, first_name, fixed_noc
+
+
+def parse_result_line_2023(line, *, field_event=False, timed_heats=False):
+    text = preprocess_line_2023(line)
+    tokens = text.split()
+    if len(tokens) < 4:
+        return None
+
+    tokens, qualification, note_tokens, heat_marker = extract_suffix_metadata_2023(tokens)
+    if len(tokens) < 4:
+        return None
+
+    rank = None
+    global_rank = None
+    start_index = 0
+    bib_token = ""
+
+    if len(tokens) > 1 and tokens[0].isdigit() and tokens[1].isdigit():
+        rank = int(tokens[0])
+        global_rank = rank
+        bib_token = tokens[1]
+        start_index = 2
+    elif tokens and tokens[0].isdigit():
+        bib_token = tokens[0]
+        start_index = 1
+    else:
+        return None
+
+    yob_idx = None
+    for i in range(start_index + 1, len(tokens)):
+        if YOB_RE.match(tokens[i]):
+            yob_idx = i
+            break
+
+    if yob_idx is None or yob_idx + 1 >= len(tokens):
+        return None
+
+    name_tokens = tokens[start_index:yob_idx]
+    if not name_tokens:
+        return None
+
+    raw_result = tokens[-1]
+    context_tokens = tokens[yob_idx + 1:-1]
+    noc, club = infer_noc_and_club_2023(context_tokens)
+    last_name, first_name = split_name_tokens_2023(name_tokens)
+    if not last_name:
+        return None
+    last_name, first_name, noc = apply_athlete_fixes_2023(last_name, first_name, noc)
+    if club and normalize_noc_2023(club) == noc:
+        club = ""
+
+    if field_event:
+        result, status = normalize_perf_2014(raw_result, field_event=True)
+    else:
+        result, status = normalize_perf_2014(raw_result)
+
+    row_notes = []
+    for token in note_tokens:
+        note = standardize_inline_note_2023(token)
+        if note:
+            row_notes.append(note)
+
+    row = {
+        "sectionRank": rank,
+        "globalRank": global_rank,
+        "lastName": last_name,
+        "firstName": first_name,
+        "noc": noc,
+        "club": club,
+        "bib": bib_token,
+        "result": result,
+        "rawResult": raw_result,
+        "status": status,
+        "qualification": qualification,
+        "notes": "",
+        "_heatMarker": heat_marker,
+    }
+    for note in row_notes:
+        append_note_2019(row, note)
+
+    if timed_heats and heat_marker:
+        row["heat"] = {"I": "1", "II": "2", "III": "3", "IV": "4"}.get(heat_marker, heat_marker)
+
+    return row
+
+
+def standardize_note_2023(line, *, discipline=None):
+    text = preprocess_line_2023(line)
+    lower = _strip_accents(text).lower()
+
+    if lower.startswith("new national") and lower.endswith("record"):
+        if discipline in FIELD_DISCIPLINES_2023:
+            return "National Record"
+        return "National Record Indoor"
+    return None
+
+
+def dedupe_rows_2023(rows):
+    seen = set()
+    unique = []
+    for row in rows:
+        key = (
+            row["lastName"],
+            row["firstName"],
+            row["noc"],
+            row.get("club", ""),
+            row["rawResult"],
+            row["status"],
+            row.get("qualification", ""),
+            row.get("notes", ""),
+            row.get("globalRank"),
+            row.get("heat", ""),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(row)
+    return unique
+
+
+def build_year_results_2023(year, pdf_path):
+    with pdfplumber.open(pdf_path) as pdf:
+        page_texts = [page.extract_text() or "" for page in pdf.pages]
+
+    sections = []
+    section_index = {}
+    current = None
+    pending_event = None
+
+    for page_text in page_texts:
+        for raw_line in page_text.splitlines():
+            line = preprocess_line_2023(raw_line)
+            if not line:
+                continue
+
+            if (
+                line == "CMCM Indoor Meeting / Bronze Label Worldtour RESULTS"
+                or line.startswith("Luxembourg, Coque, ")
+                or line.startswith("Dataservice by Internet-Service:")
+                or line.startswith("Printed at ")
+                or line.startswith("Organisation : ")
+                or line.startswith("Page ")
+                or line == "Chelangat"
+                or line == "I"
+                or line.startswith("First 2 in each heat")
+                or line.startswith("Rank Bib Name YoB NOC Club Result")
+                or line.startswith("- T1 ")
+            ):
+                continue
+
+            note = standardize_note_2023(line, discipline=current["discipline"] if current else None)
+            if note:
+                if current and current.get("rows"):
+                    append_note_2019(current["rows"][-1], note)
+                continue
+
+            event_header = parse_event_header_2023(line)
+            if event_header:
+                pending_event = event_header
+                current = None
+                continue
+
+            round_info = parse_round_2023(line, pending_event)
+            if round_info and pending_event:
+                section_key = (
+                    pending_event["discipline"],
+                    pending_event["gender"],
+                    round_info["round"],
+                    round_info["heat"],
+                    round_info["finalGroup"],
+                )
+                current = section_index.get(section_key)
+                if current is None:
+                    current = {
+                        "discipline": pending_event["discipline"],
+                        "gender": pending_event["gender"],
+                        "round": round_info["round"],
+                        "heat": round_info["heat"],
+                        "finalGroup": round_info["finalGroup"],
+                        "linkedRound": round_info["linkedRound"],
+                        "rows": [],
+                    }
+                    sections.append(current)
+                    section_index[section_key] = current
+                pending_event = None
+                continue
+
+            if not current:
+                continue
+
+            parsed = parse_result_line_2023(
+                line,
+                field_event=current["discipline"] in FIELD_DISCIPLINES_2023,
+                timed_heats=current["round"] == "Timed Final",
+            )
+            if not parsed:
+                continue
+
+            if parsed["sectionRank"] is None:
+                parsed["sectionRank"] = len(current["rows"]) + 1
+            if parsed["globalRank"] is None:
+                parsed["globalRank"] = parsed["sectionRank"]
+            current["rows"].append(parsed)
+
+    edition_date = "2023-01-22"
+    results = []
+    has_heat_rounds = {
+        (section["discipline"], section["gender"])
+        for section in sections
+        if section["round"] == "Heat"
+    }
+
+    for section in sections:
+        if not section["rows"]:
+            continue
+
+        linked_round = section["linkedRound"]
+        if not linked_round and section["round"] == "Final" and (section["discipline"], section["gender"]) in has_heat_rounds:
+            linked_round = "Heat"
+
+        for row in dedupe_rows_2023(section["rows"]):
+            results.append({
+                "rank": row.get("globalRank") or row["sectionRank"],
+                "sectionRank": row["sectionRank"],
+                "lastName": row["lastName"],
+                "firstName": row["firstName"],
+                "noc": row["noc"],
+                "club": row["club"],
+                "result": row["result"],
+                "rawResult": row["rawResult"],
+                "status": row["status"],
+                "qualification": row["qualification"],
+                "discipline": section["discipline"],
+                "gender": section["gender"],
+                "year": year,
+                "date": edition_date,
+                "round": section["round"],
+                "heat": row.get("heat", section["heat"]),
+                "finalGroup": section["finalGroup"],
+                "linkedRound": linked_round,
+                "notes": row["notes"],
+            })
+
+    return results
+
+
+# ─── 2024-specific parsing ────────────────────────────────────────────────────
+
+TRACK_EVENT_HEADER_2024_RE = re.compile(
+    r"^(?P<prefix>.+?)\s+\d{2}\.\d{2}\.\d{4}\s*/\s*\d{2}:\d{2}$",
+    re.IGNORECASE,
+)
+BRONZE_EVENT_2024_RE = re.compile(
+    r"^(?P<disc_raw>.+?)\s+BRONZE\s+Label,\s*(?P<gender>Women|Men)(?:\s+\([^)]*\))?(?:\s+-\s+Continuation)?$",
+    re.IGNORECASE,
+)
+SPECIAL_OLYMPICS_2024_RE = re.compile(
+    r"^(?P<disc_raw>.+?)\s+Pre-Programme,\s+Special\s+Olym(?:i)?cs\s+Mixte(?:\s+-\s+Continuation)?$",
+    re.IGNORECASE,
+)
+PRELIM_HEAT_2024_RE = re.compile(r"^Preliminary Heat\s+(?P<heat>\d+)\s+of\s+\d+$", re.IGNORECASE)
+TIMED_HEAT_OF_2024_RE = re.compile(r"^Timed Heat\s+(?P<heat>\d+)\s+of\s+\d+$", re.IGNORECASE)
+TIMED_HEAT_NUMBER_2024_RE = re.compile(r"^Timed Heat\s+(?P<heat>\d+)$", re.IGNORECASE)
+TIMED_HEAT_2024_RE = re.compile(r"^Timed Heat$", re.IGNORECASE)
+FINAL_2024_RE = re.compile(r"^Final(?:\s+\d{2}\.\d{2}\.\d{4}\s*/\s*\d{2}:\d{2})?$", re.IGNORECASE)
+FIELD_DISCIPLINES_2024 = {"Long Jump", "Shot Put", "Pole Vault", "High Jump"}
+
+COUNTRY_TOKEN_TO_NOC_2024 = {
+    **COUNTRY_TOKEN_TO_NOC_2023,
+    "AUSTRIA": "AUT",
+    "BELGIUM": "BEL",
+    "BULGARIA": "BUL",
+    "CANADA": "CAN",
+    "CYPRUS": "CYP",
+    "EGYTE": "EGY",
+    "HUNGARY": "HUN",
+    "ITALIA": "ITA",
+    "JAMAICA": "JAM",
+    "KENIA": "KEN",
+    "LITHUANIA": "LTU",
+    "LUXEMBOURG": "LUX",
+    "MOROCCO": "MAR",
+    "NETHERLANDS": "NED",
+    "NEW ZEALAND": "NZL",
+    "NORWAY": "NOR",
+    "POLAND": "POL",
+    "PORTUGAL": "POR",
+    "ROMANIA": "ROU",
+    "SLOVENIA": "SLO",
+    "SPAIN": "ESP",
+    "SUISSE": "SUI",
+    "SWEDEN": "SWE",
+}
+
+
+def preprocess_line_2024(line):
+    return preprocess_line_2021(line)
+
+
+def normalize_noc_2024(raw_token):
+    token = str(raw_token or "").strip().upper()
+    accentless = _strip_accents(token)
+    return COUNTRY_TOKEN_TO_NOC_2024.get(token) or COUNTRY_TOKEN_TO_NOC_2024.get(accentless) or token
+
+
+def normalize_club_2024(team_tokens, noc):
+    parts = [str(token or "").strip() for token in team_tokens if str(token or "").strip()]
+    if not parts:
+        return ""
+    club = " ".join(parts).strip()
+    if not club:
+        return ""
+    if normalize_noc_2024(club) == noc:
+        return ""
+    if len(parts) == 1 and normalize_noc_2024(parts[0]) == noc:
+        return ""
+    if all(normalize_noc_2024(part) == noc for part in parts if re.match(r"^[A-Za-zÀ-ÿ.'/-]+$", part)):
+        return ""
+    return "" if club.upper() == noc else club
+
+
+def infer_noc_and_club_2024(tokens_after_yob):
+    parts = [str(token or "").strip() for token in tokens_after_yob if str(token or "").strip()]
+    if not parts:
+        return "", ""
+
+    nat_token = parts[0]
+    normalized_nat = normalize_noc_2024(nat_token)
+    if len(parts) == 1:
+        return normalized_nat, ""
+    return normalized_nat, normalize_club_2024(parts[1:], normalized_nat)
+
+
+def normalize_event_disc_2024(raw):
+    base = normalize_disc(preprocess_line_2024(raw))
+    return base
+
+
+def parse_event_header_2024(line):
+    text = preprocess_line_2024(line)
+    m = TRACK_EVENT_HEADER_2024_RE.match(text)
+    if not m:
+        return None
+
+    prefix = m.group("prefix").strip()
+
+    special = SPECIAL_OLYMPICS_2024_RE.match(prefix)
+    if special:
+        discipline = normalize_event_disc_2024(special.group("disc_raw"))
+        if not discipline:
+            return "skip"
+        return {
+            "discipline": f"{discipline} - Special Olympics",
+            "gender": "X",
+            "kind": "track",
+        }
+
+    if "Pre-Programme" in prefix or "Post-Programme" in prefix:
+        return "skip"
+
+    bronze = BRONZE_EVENT_2024_RE.match(prefix)
+    if not bronze:
+        return "skip"
+
+    discipline = normalize_event_disc_2024(bronze.group("disc_raw"))
+    gender = normalize_gender(bronze.group("gender"))
+    if not discipline or not gender:
+        return "skip"
+
+    return {
+        "discipline": discipline,
+        "gender": gender,
+        "kind": "field" if discipline in FIELD_DISCIPLINES_2024 else "track",
+    }
+
+
+def parse_round_2024(line, event=None):
+    text = preprocess_line_2024(line)
+
+    m = PRELIM_HEAT_2024_RE.match(text)
+    if m:
+        return {"round": "Heat", "heat": m.group("heat"), "finalGroup": "", "linkedRound": "Final"}
+
+    m = TIMED_HEAT_OF_2024_RE.match(text)
+    if m:
+        if event and event.get("discipline") == "60m Hurdles":
+            return {"round": "Heat", "heat": m.group("heat"), "finalGroup": "", "linkedRound": "Final"}
+        return {"round": "Timed Final", "heat": m.group("heat"), "finalGroup": "", "linkedRound": ""}
+
+    m = TIMED_HEAT_NUMBER_2024_RE.match(text)
+    if m:
+        if event and event.get("discipline") == "60m Hurdles":
+            return {"round": "Heat", "heat": m.group("heat"), "finalGroup": "", "linkedRound": "Final"}
+        return {"round": "Timed Final", "heat": m.group("heat"), "finalGroup": "", "linkedRound": ""}
+
+    if TIMED_HEAT_2024_RE.match(text):
+        if event and event.get("discipline") == "60m Hurdles":
+            return {"round": "Heat", "heat": "", "finalGroup": "", "linkedRound": "Final"}
+        return {"round": "Timed Final", "heat": "", "finalGroup": "", "linkedRound": ""}
+
+    if FINAL_2024_RE.match(text):
+        return {"round": "Final", "heat": "", "finalGroup": "", "linkedRound": ""}
+
+    return None
+
+
+def standardize_inline_note_2024(token):
+    value = str(token or "").strip().upper()
+    if value == "MR":
+        return "Meeting Record"
+    if value == "WL":
+        return "World Lead"
+    if value == "NR":
+        return "National Record Indoor"
+    if value in {"=MR,NR", "MR,NR"}:
+        return "Meeting Record; National Record Indoor"
+    return None
+
+
+def extract_suffix_metadata_2024(tokens):
+    parts = list(tokens)
+    qualification = ""
+    note_tokens = []
+
+    while parts:
+        last = parts[-1]
+        if last in {"Q", "q"}:
+            qualification = last
+            parts = parts[:-1]
+            continue
+        if re.match(r"^\(\.\d+\)$", last):
+            parts = parts[:-1]
+            continue
+        note_parts = [piece.strip() for piece in last.split(",") if piece.strip()]
+        if note_parts and all(piece in {"WL", "MR", "NR", "PB", "SB", "=PB", "=SB"} for piece in note_parts):
+            note_tokens = note_parts + note_tokens
+            parts = parts[:-1]
+            continue
+        break
+
+    return parts, qualification, note_tokens
+
+
+def parse_result_line_2024(line, *, field_event=False):
+    text = preprocess_line_2024(line)
+    tokens = text.split()
+    if len(tokens) < 4:
+        return None
+
+    tokens, qualification, note_tokens = extract_suffix_metadata_2024(tokens)
+    if len(tokens) < 4:
+        return None
+
+    rank = None
+    global_rank = None
+    start_index = 0
+    bib_token = ""
+
+    if len(tokens) > 1 and tokens[0].isdigit() and tokens[1].isdigit():
+        rank = int(tokens[0])
+        global_rank = rank
+        bib_token = tokens[1]
+        start_index = 2
+    elif tokens and tokens[0].isdigit():
+        bib_token = tokens[0]
+        start_index = 1
+    else:
+        return None
+
+    yob_idx = None
+    for i in range(start_index + 1, len(tokens)):
+        if YOB_RE.match(tokens[i]):
+            yob_idx = i
+            break
+
+    if yob_idx is None or yob_idx + 1 >= len(tokens):
+        return None
+
+    name_tokens = tokens[start_index:yob_idx]
+    if not name_tokens:
+        return None
+
+    raw_result = tokens[-1]
+    context_tokens = tokens[yob_idx + 1:-1]
+    noc, club = infer_noc_and_club_2024(context_tokens)
+    last_name, first_name = split_name_tokens_2014(name_tokens)
+    if not last_name:
+        return None
+    if club and normalize_noc_2024(club) == noc:
+        club = ""
+
+    if field_event:
+        result, status = normalize_perf_2014(raw_result, field_event=True)
+    else:
+        result, status = normalize_perf_2014(raw_result)
+
+    row = {
+        "sectionRank": rank,
+        "globalRank": global_rank,
+        "lastName": last_name,
+        "firstName": first_name,
+        "noc": noc,
+        "club": club,
+        "bib": bib_token,
+        "result": result,
+        "rawResult": raw_result,
+        "status": status,
+        "qualification": qualification,
+        "notes": "",
+    }
+
+    for token in note_tokens:
+        note = standardize_inline_note_2024(token)
+        if note:
+            append_note_2019(row, note)
+
+    return row
+
+
+def standardize_note_2024(line, *, discipline=None):
+    text = preprocess_line_2024(line)
+    lower = _strip_accents(text).lower()
+
+    if lower == "meeting record" or lower == "record cmcm":
+        return "Meeting Record"
+    if lower == "record national - record cmcm":
+        if discipline in FIELD_DISCIPLINES_2024:
+            return "National Record; Meeting Record"
+        return "National Record Indoor; Meeting Record"
+    if lower == "record national" or lower == "record national":
+        if discipline in FIELD_DISCIPLINES_2024:
+            return "National Record"
+        return "National Record Indoor"
+    if lower == "european record u20":
+        return "European Record U20"
+    return None
+
+
+def comparable_mark_2024(row):
+    status = str(row.get("status") or "").upper()
+    if status and status != "OK":
+        return (1, float("inf"))
+    raw = str(row.get("result") or "").strip()
+    if not raw:
+        return (1, float("inf"))
+    if ":" in raw:
+        minutes, seconds = raw.split(":")
+        return (0, float(minutes) * 60 + float(seconds.replace(",", ".")))
+    return (0, float(raw.replace(",", ".")))
+
+
+def assign_global_ranks_2024(section_rows):
+    ordered = sorted(section_rows, key=lambda row: (comparable_mark_2024(row), row["lastName"], row["firstName"]))
+    previous_value = None
+    current_rank = 0
+    for index, row in enumerate(ordered, 1):
+        value = comparable_mark_2024(row)
+        if previous_value is None or value != previous_value:
+            current_rank = index
+            previous_value = value
+        row["_computedGlobalRank"] = current_rank
+
+
+def dedupe_rows_2024(rows):
+    seen = set()
+    unique = []
+    for row in rows:
+        key = (
+            row["lastName"],
+            row["firstName"],
+            row["noc"],
+            row.get("club", ""),
+            row["rawResult"],
+            row["status"],
+            row.get("qualification", ""),
+            row.get("notes", ""),
+            row.get("globalRank"),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(row)
+    return unique
+
+
+def build_year_results_2024(year, pdf_path):
+    with pdfplumber.open(pdf_path) as pdf:
+        page_texts = [page.extract_text() or "" for page in pdf.pages]
+
+    sections = []
+    section_index = {}
+    current = None
+    pending_event = None
+
+    for page_text in page_texts:
+        for raw_line in page_text.splitlines():
+            line = preprocess_line_2024(raw_line)
+            if not line:
+                continue
+
+            if (
+                line == "Meeting CMCM Bronze Label and Pré+Post Prog. RESULTS"
+                or line.startswith("Luxembourg, Coque, ")
+                or line.startswith("Dataservice by Internet-Service:")
+                or line.startswith("Printed at ")
+                or line.startswith("Organisation:")
+                or line.startswith("First 2 in each heat")
+                or line.startswith("First 3 in each heat")
+                or line.startswith("Rank Bib Name YoB NOC Club Result")
+                or line.startswith("Intermediate Times")
+                or line.startswith("- T1 ")
+            ):
+                continue
+
+            note = standardize_note_2024(line, discipline=current["discipline"] if current else None)
+            if note:
+                if current and current.get("rows"):
+                    append_note_2019(current["rows"][-1], note)
+                continue
+
+            event_header = parse_event_header_2024(line)
+            if event_header == "skip":
+                pending_event = None
+                current = None
+                continue
+            if event_header:
+                pending_event = event_header
+                current = None
+                continue
+
+            round_info = parse_round_2024(line, pending_event)
+            if round_info and pending_event:
+                section_key = (
+                    pending_event["discipline"],
+                    pending_event["gender"],
+                    round_info["round"],
+                    round_info["heat"],
+                    round_info["finalGroup"],
+                )
+                current = section_index.get(section_key)
+                if current is None:
+                    current = {
+                        "discipline": pending_event["discipline"],
+                        "gender": pending_event["gender"],
+                        "round": round_info["round"],
+                        "heat": round_info["heat"],
+                        "finalGroup": round_info["finalGroup"],
+                        "linkedRound": round_info["linkedRound"],
+                        "rows": [],
+                    }
+                    sections.append(current)
+                    section_index[section_key] = current
+                pending_event = None
+                continue
+
+            if current is None and pending_event:
+                parsed = parse_result_line_2024(
+                    line,
+                    field_event=pending_event["discipline"] in FIELD_DISCIPLINES_2024,
+                )
+                if parsed:
+                    section_key = (
+                        pending_event["discipline"],
+                        pending_event["gender"],
+                        "Final",
+                        "",
+                        "",
+                    )
+                    current = section_index.get(section_key)
+                    if current is None:
+                        current = {
+                            "discipline": pending_event["discipline"],
+                            "gender": pending_event["gender"],
+                            "round": "Final",
+                            "heat": "",
+                            "finalGroup": "",
+                            "linkedRound": "",
+                            "rows": [],
+                        }
+                        sections.append(current)
+                        section_index[section_key] = current
+                    current["rows"].append(parsed)
+                    pending_event = None
+                continue
+
+            if not current:
+                continue
+
+            parsed = parse_result_line_2024(
+                line,
+                field_event=current["discipline"] in FIELD_DISCIPLINES_2024,
+            )
+            if not parsed:
+                continue
+
+            if parsed["sectionRank"] is None:
+                parsed["sectionRank"] = len(current["rows"]) + 1
+            if parsed["globalRank"] is None:
+                parsed["globalRank"] = parsed["sectionRank"]
+            current["rows"].append(parsed)
+
+    timed_final_groups = {}
+    for section in sections:
+        if section["round"] != "Timed Final":
+            continue
+        key = (section["discipline"], section["gender"])
+        timed_final_groups.setdefault(key, []).append(section)
+
+    for key, grouped_sections in timed_final_groups.items():
+        if len(grouped_sections) > 1:
+            all_rows = []
+            for section in grouped_sections:
+                all_rows.extend(section["rows"])
+            assign_global_ranks_2024(all_rows)
+        else:
+            only_section = grouped_sections[0]
+            only_section["heat"] = ""
+
+    edition_date = "2024-01-21"
+    results = []
+    has_heat_rounds = {
+        (section["discipline"], section["gender"])
+        for section in sections
+        if section["round"] == "Heat"
+    }
+
+    for section in sections:
+        if not section["rows"]:
+            continue
+
+        linked_round = section["linkedRound"]
+        if not linked_round and section["round"] == "Final" and (section["discipline"], section["gender"]) in has_heat_rounds:
+            linked_round = "Heat"
+
+        for row in dedupe_rows_2024(section["rows"]):
+            results.append({
+                "rank": row.get("_computedGlobalRank") or row.get("globalRank") or row["sectionRank"],
+                "sectionRank": row["sectionRank"],
+                "lastName": row["lastName"],
+                "firstName": row["firstName"],
+                "noc": row["noc"],
+                "club": row["club"],
+                "result": row["result"],
+                "rawResult": row["rawResult"],
+                "status": row["status"],
+                "qualification": row["qualification"],
+                "discipline": section["discipline"],
+                "gender": section["gender"],
+                "year": year,
+                "date": edition_date,
+                "round": section["round"],
+                "heat": section["heat"],
+                "finalGroup": section["finalGroup"],
+                "linkedRound": linked_round,
+                "notes": row["notes"],
+            })
+
+    return results
+
+
+# ─── 2025-specific parsing ────────────────────────────────────────────────────
+
+TRACK_EVENT_HEADER_2025_RE = re.compile(
+    r"^(?P<prefix>.+?)\s+\d{2}\s+[A-Z]{3}\s+\d{4}\s*/\s*\d{2}:\d{2}$",
+    re.IGNORECASE,
+)
+EVENT_GENDER_2025_RE = re.compile(
+    r"^(?P<disc_raw>.+?),\s*(?P<gender>Women|Men)(?:\s+\([^)]*\))?(?:\s+-\s+Continuation)?$",
+    re.IGNORECASE,
+)
+FIELD_EVENT_HEADER_2025_RE = re.compile(
+    r"^(?P<prefix>(?:Long Jump|Shot Put|Pole Vault),\s*(?:Women|Men)(?:\s+\([^)]*\))?)(?:\s+-\s+Continuation)?$",
+    re.IGNORECASE,
+)
+SPECIAL_OLYMPICS_2025_RE = re.compile(
+    r"^(?P<disc_raw>.+?)\s+Special\s+Olympics,\s*Special\s+Olympics(?:\s+-\s+Continuation)?$",
+    re.IGNORECASE,
+)
+SKIP_EVENT_2025_RE = re.compile(
+    r"\b(U12|U14|NATIONAL|Relais\s+Australien)\b",
+    re.IGNORECASE,
+)
+PRELIM_HEAT_2025_RE = re.compile(r"^Preliminary Heat\s+(?P<heat>\d+)\s+of\s+\d+$", re.IGNORECASE)
+TIMED_HEATS_2025_RE = re.compile(r"^Timed Heats$", re.IGNORECASE)
+FINAL_WITH_DATE_2025_RE = re.compile(
+    r"^Final(?:\s+\d{2}\s+[A-Z]{3}\s+\d{4}\s*/\s*\d{2}:\d{2})?$",
+    re.IGNORECASE,
+)
+A_FINAL_2025_RE = re.compile(r"^A Final$", re.IGNORECASE)
+B_FINAL_2025_RE = re.compile(r"^B Final$", re.IGNORECASE)
+HEAT_MARKER_2025_RE = re.compile(r"^(?P<place>\d+|-)\.?/(?P<heat>[IVX]+)$", re.IGNORECASE)
+PRECISE_TIME_2025_RE = re.compile(r"^\d+\.\d{3}$")
+PARENTHESIS_THOUSANDTH_2025_RE = re.compile(r"^\(\.(?P<thousandths>\d{3})\)$")
+FIELD_DISCIPLINES_2025 = {"Long Jump", "Shot Put", "Pole Vault"}
+
+COUNTRY_TOKEN_TO_NOC_2025 = {
+    **COUNTRY_TOKEN_TO_NOC_2024,
+    "JAPAN": "JPN",
+    "NEW ZEALAND": "NZL",
+}
+
+
+def preprocess_line_2025(line):
+    return preprocess_line_2021(line)
+
+
+def normalize_noc_2025(raw_token):
+    token = str(raw_token or "").strip().upper()
+    accentless = _strip_accents(token)
+    return COUNTRY_TOKEN_TO_NOC_2025.get(token) or COUNTRY_TOKEN_TO_NOC_2025.get(accentless) or token
+
+
+def normalize_club_2025(team_tokens, noc):
+    parts = [str(token or "").strip() for token in team_tokens if str(token or "").strip()]
+    if not parts:
+        return ""
+    club = " ".join(parts).strip()
+    if not club:
+        return ""
+    if normalize_noc_2025(club) == noc:
+        return ""
+    if len(parts) == 1 and normalize_noc_2025(parts[0]) == noc:
+        return ""
+    if all(normalize_noc_2025(part) == noc for part in parts if re.match(r"^[A-Za-zÀ-ÿ.'/-]+$", part)):
+        return ""
+    return "" if club.upper() == noc else club
+
+
+def infer_noc_and_club_2025(tokens_after_yob):
+    parts = [str(token or "").strip() for token in tokens_after_yob if str(token or "").strip()]
+    if not parts:
+        return "", ""
+
+    nat_token = parts[0]
+    normalized_nat = normalize_noc_2025(nat_token)
+    if len(parts) == 1:
+        return normalized_nat, ""
+    return normalized_nat, normalize_club_2025(parts[1:], normalized_nat)
+
+
+def normalize_event_disc_2025(raw):
+    return normalize_disc(preprocess_line_2025(raw))
+
+
+def split_name_tokens_2025(tokens):
+    last_name, first_name = split_name_tokens_2014(tokens)
+    if last_name:
+        return last_name, first_name
+    if len(tokens) >= 2:
+        return " ".join(tokens[:-1]).upper(), tokens[-1]
+    return last_name, first_name
+
+
+def parse_event_header_2025(line):
+    text = preprocess_line_2025(line)
+
+    m = FIELD_EVENT_HEADER_2025_RE.match(text)
+    if m:
+        prefix = m.group("prefix").strip()
+        event_match = EVENT_GENDER_2025_RE.match(prefix)
+        if not event_match:
+            return "skip"
+        discipline = normalize_event_disc_2025(event_match.group("disc_raw"))
+        gender = normalize_gender(event_match.group("gender"))
+        if not discipline or not gender:
+            return "skip"
+        return {
+            "discipline": discipline,
+            "gender": gender,
+            "kind": "field",
+        }
+
+    m = TRACK_EVENT_HEADER_2025_RE.match(text)
+    if not m:
+        return None
+
+    prefix = m.group("prefix").strip()
+
+    special = SPECIAL_OLYMPICS_2025_RE.match(prefix)
+    if special:
+        discipline = normalize_event_disc_2025(special.group("disc_raw"))
+        if not discipline:
+            return "skip"
+        return {
+            "discipline": f"{discipline} - Special Olympics",
+            "gender": "X",
+            "kind": "track",
+        }
+
+    if SKIP_EVENT_2025_RE.search(prefix):
+        return "skip"
+
+    event_match = EVENT_GENDER_2025_RE.match(prefix)
+    if not event_match:
+        return None
+
+    discipline = normalize_event_disc_2025(event_match.group("disc_raw"))
+    gender = normalize_gender(event_match.group("gender"))
+    if not discipline or not gender:
+        return "skip"
+
+    return {
+        "discipline": discipline,
+        "gender": gender,
+        "kind": "field" if discipline in FIELD_DISCIPLINES_2025 else "track",
+    }
+
+
+def parse_round_2025(line, event=None):
+    text = preprocess_line_2025(line)
+
+    m = PRELIM_HEAT_2025_RE.match(text)
+    if m:
+        return {"round": "Heat", "heat": m.group("heat"), "finalGroup": "", "linkedRound": "Final"}
+
+    if A_FINAL_2025_RE.match(text):
+        return {"round": "Final", "heat": "A", "finalGroup": "A", "linkedRound": ""}
+
+    if B_FINAL_2025_RE.match(text):
+        return {"round": "Final", "heat": "B", "finalGroup": "B", "linkedRound": ""}
+
+    if TIMED_HEATS_2025_RE.match(text):
+        return {"round": "Timed Final", "heat": "", "finalGroup": "", "linkedRound": ""}
+
+    if FINAL_WITH_DATE_2025_RE.match(text):
+        return {"round": "Final", "heat": "", "finalGroup": "", "linkedRound": ""}
+
+    return None
+
+
+def standardize_inline_note_2025(token):
+    value = str(token or "").strip().upper()
+    if value == "MR":
+        return "Meeting Record"
+    if value == "NR":
+        return "National Record"
+    if value == "NIR":
+        return "National Record Indoor"
+    if value == "WL":
+        return "World Lead"
+    return None
+
+
+def extract_suffix_metadata_2025(tokens):
+    parts = list(tokens)
+    qualification = ""
+    note_tokens = []
+    heat_marker = ""
+    thousandth_hint = ""
+
+    while parts:
+        last = parts[-1]
+        marker_match = HEAT_MARKER_2025_RE.match(last)
+        if marker_match:
+            heat_marker = marker_match.group("heat").upper()
+            parts = parts[:-1]
+            continue
+        if last in {"Q", "q"}:
+            qualification = last
+            parts = parts[:-1]
+            continue
+        precise_match = PARENTHESIS_THOUSANDTH_2025_RE.match(last)
+        if precise_match:
+            thousandth_hint = precise_match.group("thousandths")
+            parts = parts[:-1]
+            continue
+        note_parts = [piece.strip() for piece in last.split(",") if piece.strip()]
+        if note_parts and all(piece in {"WL", "MR", "NR", "NIR", "PB", "SB", "=PB", "=SB"} for piece in note_parts):
+            note_tokens = note_parts + note_tokens
+            parts = parts[:-1]
+            continue
+        break
+
+    return parts, qualification, note_tokens, heat_marker, thousandth_hint
+
+
+def apply_thousandth_hint_2025(raw_result, thousandth_hint):
+    raw = str(raw_result or "").strip()
+    hint = str(thousandth_hint or "").strip()
+    if not raw or not hint:
+        return raw
+    if ":" in raw:
+        return raw
+    if "." not in raw:
+        return raw
+    base, _ = raw.split(".", 1)
+    return f"{base}.{hint}"
+
+
+def parse_result_line_2025(line, *, field_event=False, timed_heats=False):
+    text = preprocess_line_2025(line)
+    tokens = text.split()
+    if len(tokens) < 4:
+        return None
+
+    tokens, qualification, note_tokens, heat_marker, thousandth_hint = extract_suffix_metadata_2025(tokens)
+    if len(tokens) < 4:
+        return None
+
+    rank = None
+    global_rank = None
+    start_index = 0
+    bib_token = ""
+
+    if len(tokens) > 1 and tokens[0].isdigit() and tokens[1].isdigit():
+        rank = int(tokens[0])
+        global_rank = rank
+        bib_token = tokens[1]
+        start_index = 2
+    elif tokens and tokens[0].isdigit():
+        bib_token = tokens[0]
+        start_index = 1
+    else:
+        return None
+
+    yob_idx = None
+    for i in range(start_index + 1, len(tokens)):
+        if YOB_RE.match(tokens[i]):
+            yob_idx = i
+            break
+
+    if yob_idx is None or yob_idx + 1 >= len(tokens):
+        return None
+
+    name_tokens = tokens[start_index:yob_idx]
+    if not name_tokens:
+        return None
+
+    raw_result = tokens[-1]
+    context_tokens = tokens[yob_idx + 1:-1]
+    noc, club = infer_noc_and_club_2025(context_tokens)
+    last_name, first_name = split_name_tokens_2025(name_tokens)
+    if not last_name:
+        return None
+    if club and normalize_noc_2025(club) == noc:
+        club = ""
+
+    precise_result = apply_thousandth_hint_2025(raw_result, thousandth_hint)
+
+    if field_event:
+        result, status = normalize_perf_2014(raw_result, field_event=True)
+        precise_result = result if result else precise_result
+    else:
+        result, status = normalize_perf_2014(precise_result or raw_result)
+
+    row = {
+        "sectionRank": rank,
+        "globalRank": global_rank,
+        "lastName": last_name,
+        "firstName": first_name,
+        "noc": noc,
+        "club": club,
+        "bib": bib_token,
+        "result": result,
+        "rawResult": precise_result or raw_result,
+        "status": status,
+        "qualification": qualification,
+        "notes": "",
+        "_heatMarker": heat_marker,
+    }
+
+    for token in note_tokens:
+        note = standardize_inline_note_2025(token)
+        if note:
+            append_note_2019(row, note)
+
+    if timed_heats and heat_marker:
+        row["heat"] = {"I": "1", "II": "2", "III": "3", "IV": "4"}.get(heat_marker, heat_marker)
+
+    return row
+
+
+def standardize_note_2025(line, *, discipline=None):
+    text = preprocess_line_2025(line)
+    lower = _strip_accents(text).lower()
+
+    if lower == "meeting record" or lower == "record meeting" or lower == "new meeting record":
+        return "Meeting Record"
+    if lower == "record national indoor dames" or lower == "record national indoor":
+        return "National Record Indoor"
+    if lower == "record national":
+        return "National Record"
+    if lower == "meill.perf nat. indoor espoirs masc.":
+        return "National Record Indoor U23"
+    if lower == "european record u20":
+        return "European Record U20"
+    if re.fullmatch(r"tr\d+\.\d+(?:\.\d+)?", lower):
+        return text
+    return None
+
+
+def dedupe_rows_2025(rows):
+    seen = set()
+    unique = []
+    for row in rows:
+        key = (
+            row["lastName"],
+            row["firstName"],
+            row["noc"],
+            row.get("club", ""),
+            row["rawResult"],
+            row["status"],
+            row.get("qualification", ""),
+            row.get("notes", ""),
+            row.get("globalRank"),
+            row.get("heat", ""),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(row)
+    return unique
+
+
+def build_year_results_2025(year, pdf_path):
+    with pdfplumber.open(pdf_path) as pdf:
+        page_texts = [page.extract_text() or "" for page in pdf.pages]
+
+    sections = []
+    section_index = {}
+    current = None
+    pending_event = None
+
+    for page_text in page_texts:
+        for raw_line in page_text.splitlines():
+            line = preprocess_line_2025(raw_line)
+            if not line:
+                continue
+
+            if (
+                line == "CMCM Luxembourg Indoor Meeting RESULTS"
+                or line.startswith("Luxembourg, Coque, ")
+                or line.startswith("Dataservice by Internet-Service:")
+                or line.startswith("Printed at ")
+                or line.startswith("Rank Bib Name Date of Birth NOC Result")
+                or line.startswith("First 2 in each heat")
+                or line.startswith("First 3 in each heat")
+                or line.startswith("World Record ")
+                or line.startswith("European Record ")
+                or line.startswith("Meeting Record ")
+                or line.startswith("Intermediate Times")
+                or line.startswith("- T1 ")
+            ):
+                continue
+
+            if current and current.get("rows") and PRECISE_TIME_2025_RE.match(line):
+                last_row = current["rows"][-1]
+                last_row["result"] = line
+                last_row["rawResult"] = line
+                continue
+
+            note = standardize_note_2025(line, discipline=current["discipline"] if current else None)
+            if note:
+                if current and current.get("rows"):
+                    append_note_2019(current["rows"][-1], note)
+                continue
+
+            event_header = parse_event_header_2025(line)
+            if event_header == "skip":
+                pending_event = None
+                current = None
+                continue
+            if event_header:
+                pending_event = event_header
+                current = None
+                continue
+
+            round_info = parse_round_2025(line, pending_event)
+            if round_info and pending_event:
+                section_key = (
+                    pending_event["discipline"],
+                    pending_event["gender"],
+                    round_info["round"],
+                    round_info["heat"],
+                    round_info["finalGroup"],
+                )
+                current = section_index.get(section_key)
+                if current is None:
+                    current = {
+                        "discipline": pending_event["discipline"],
+                        "gender": pending_event["gender"],
+                        "round": round_info["round"],
+                        "heat": round_info["heat"],
+                        "finalGroup": round_info["finalGroup"],
+                        "linkedRound": round_info["linkedRound"],
+                        "rows": [],
+                    }
+                    sections.append(current)
+                    section_index[section_key] = current
+                pending_event = None
+                continue
+
+            if current is None and pending_event:
+                parsed = parse_result_line_2025(
+                    line,
+                    field_event=pending_event["discipline"] in FIELD_DISCIPLINES_2025,
+                    timed_heats=False,
+                )
+                if parsed:
+                    section_key = (
+                        pending_event["discipline"],
+                        pending_event["gender"],
+                        "Final",
+                        "",
+                        "",
+                    )
+                    current = section_index.get(section_key)
+                    if current is None:
+                        current = {
+                            "discipline": pending_event["discipline"],
+                            "gender": pending_event["gender"],
+                            "round": "Final",
+                            "heat": "",
+                            "finalGroup": "",
+                            "linkedRound": "",
+                            "rows": [],
+                        }
+                        sections.append(current)
+                        section_index[section_key] = current
+                    current["rows"].append(parsed)
+                    pending_event = None
+                continue
+
+            if not current:
+                continue
+
+            parsed = parse_result_line_2025(
+                line,
+                field_event=current["discipline"] in FIELD_DISCIPLINES_2025,
+                timed_heats=current["round"] == "Timed Final",
+            )
+            if not parsed:
+                continue
+
+            if parsed["sectionRank"] is None:
+                parsed["sectionRank"] = len(current["rows"]) + 1
+            if parsed["globalRank"] is None:
+                parsed["globalRank"] = parsed["sectionRank"]
+            current["rows"].append(parsed)
+
+    edition_date = "2025-01-19"
+    results = []
+    has_heat_rounds = {
+        (section["discipline"], section["gender"])
+        for section in sections
+        if section["round"] == "Heat"
+    }
+
+    for section in sections:
+        if not section["rows"]:
+            continue
+
+        linked_round = section["linkedRound"]
+        if not linked_round and section["round"] == "Final" and (section["discipline"], section["gender"]) in has_heat_rounds:
+            linked_round = "Heat"
+
+        for row in dedupe_rows_2025(section["rows"]):
+            results.append({
+                "rank": row.get("globalRank") or row["sectionRank"],
+                "sectionRank": row["sectionRank"],
+                "lastName": row["lastName"],
+                "firstName": row["firstName"],
+                "noc": row["noc"],
+                "club": row["club"],
+                "result": row["result"],
+                "rawResult": row["rawResult"],
+                "status": row["status"],
+                "qualification": row["qualification"],
+                "discipline": section["discipline"],
+                "gender": section["gender"],
+                "year": year,
+                "date": edition_date,
+                "round": section["round"],
+                "heat": row.get("heat", section["heat"]),
+                "finalGroup": section["finalGroup"],
+                "linkedRound": linked_round,
+                "notes": row["notes"],
+            })
+
+    return results
+
+
+# ─── 2026-specific parsing ────────────────────────────────────────────────────
+
+TRACK_EVENT_HEADER_2026_RE = re.compile(
+    r"^(?P<prefix>.+?)\s+\d{2}\.\d{2}\.\d{4}\s*/\s*\d{2}:\d{2}$",
+    re.IGNORECASE,
+)
+EVENT_GENDER_2026_RE = re.compile(
+    r"^(?P<disc_raw>.+?),\s*(?P<gender>Women|Men)(?:\s+\([^)]*\))?(?:\s+-\s+Continuation)?$",
+    re.IGNORECASE,
+)
+FIELD_EVENT_HEADER_2026_RE = re.compile(
+    r"^(?P<prefix>(?:Long Jump|Pole Vault),\s*(?:Women|Men)(?:\s+\([^)]*\))?)(?:\s+-\s+Continuation)?$",
+    re.IGNORECASE,
+)
+SPECIAL_OLYMPICS_2026_RE = re.compile(
+    r"^(?P<disc_raw>.+?),\s*Special\s+Olympics(?:\s+-\s+Continuation)?$",
+    re.IGNORECASE,
+)
+SKIP_EVENT_2026_RE = re.compile(
+    r"\b(U12|U14|Influencer|Business|Relay)\b",
+    re.IGNORECASE,
+)
+HEAT_2026_RE = re.compile(r"^Heat\s+(?P<heat>\d+)\s+of\s+\d+$", re.IGNORECASE)
+FINAL_WITH_DATE_2026_RE = re.compile(
+    r"^Final(?:\s+\d{2}\.\d{2}\.\d{4}\s*/\s*\d{2}:\d{2})?$",
+    re.IGNORECASE,
+)
+PRECISE_TIME_2026_RE = re.compile(r"^\d+(?::\d+)?\.\d{3}$")
+FIELD_DISCIPLINES_2026 = {"Long Jump", "Pole Vault"}
+MIXED_FINAL_DISCIPLINES_2026 = {("400m", "M"), ("200m", "W")}
+
+COUNTRY_TOKEN_TO_NOC_2026 = {
+    **COUNTRY_TOKEN_TO_NOC_2025,
+    "LIB": "LBR",
+    "LBR": "LBR",
+    "MOR": "MAR",
+    "MAR": "MAR",
+    "NIG": "NGR",
+    "NGR": "NGR",
+}
+
+NAME_FIXES_2026 = {
+    ("VAN DER", "Weken Patrizia"): ("VAN DER WEKEN", "Patrizia"),
+    ("", "McTAGGART Olivia"): ("MCTAGGART", "Olivia"),
+    ("", "Jaguscik Julia"): ("JAGUSCIK", "Julia"),
+}
+
+
+def preprocess_line_2026(line):
+    return preprocess_line_2021(line)
+
+
+def normalize_noc_2026(raw_token):
+    token = str(raw_token or "").strip().upper()
+    accentless = _strip_accents(token)
+    return COUNTRY_TOKEN_TO_NOC_2026.get(token) or COUNTRY_TOKEN_TO_NOC_2026.get(accentless) or token
+
+
+def normalize_club_2026(team_tokens, noc):
+    parts = [str(token or "").strip() for token in team_tokens if str(token or "").strip()]
+    if not parts:
+        return ""
+    club = " ".join(parts).strip()
+    if not club:
+        return ""
+    if club.upper() in {"SPECIAL OLYMPICS", "INFLUENCER", "BUSINESS"}:
+        return ""
+    if normalize_noc_2026(club) == noc:
+        return ""
+    if len(parts) == 1 and normalize_noc_2026(parts[0]) == noc:
+        return ""
+    if all(normalize_noc_2026(part) == noc for part in parts if re.match(r"^[A-Za-zÀ-ÿ.'/-]+$", part)):
+        return ""
+    return "" if club.upper() == noc else club
+
+
+def infer_noc_and_club_2026(tokens_after_yob):
+    parts = [str(token or "").strip() for token in tokens_after_yob if str(token or "").strip()]
+    if not parts:
+        return "", ""
+
+    nat_token = parts[0]
+    normalized_nat = normalize_noc_2026(nat_token)
+    if len(parts) == 1:
+        return normalized_nat, ""
+    return normalized_nat, normalize_club_2026(parts[1:], normalized_nat)
+
+
+def normalize_event_disc_2026(raw):
+    return normalize_disc(preprocess_line_2026(raw))
+
+
+def split_name_tokens_2026(tokens):
+    last_name, first_name = split_name_tokens_2025(tokens)
+    fixed_last, fixed_first = NAME_FIXES_2026.get((last_name, first_name), (last_name, first_name))
+    return fixed_last, fixed_first
+
+
+def parse_event_header_2026(line):
+    text = preprocess_line_2026(line)
+
+    m = FIELD_EVENT_HEADER_2026_RE.match(text)
+    if m:
+        prefix = m.group("prefix").strip()
+        event_match = EVENT_GENDER_2026_RE.match(prefix)
+        if not event_match:
+            return "skip"
+        discipline = normalize_event_disc_2026(event_match.group("disc_raw"))
+        gender = normalize_gender(event_match.group("gender"))
+        if not discipline or not gender:
+            return "skip"
+        return {
+            "discipline": discipline,
+            "gender": gender,
+            "kind": "field",
+        }
+
+    m = TRACK_EVENT_HEADER_2026_RE.match(text)
+    if not m:
+        return None
+
+    prefix = m.group("prefix").strip()
+
+    special = SPECIAL_OLYMPICS_2026_RE.match(prefix)
+    if special:
+        discipline = normalize_event_disc_2026(special.group("disc_raw"))
+        if not discipline:
+            return "skip"
+        return {
+            "discipline": f"{discipline} - Special Olympics",
+            "gender": "X",
+            "kind": "track",
+        }
+
+    if SKIP_EVENT_2026_RE.search(prefix):
+        return "skip"
+
+    event_match = EVENT_GENDER_2026_RE.match(prefix)
+    if not event_match:
+        return None
+
+    discipline = normalize_event_disc_2026(event_match.group("disc_raw"))
+    gender = normalize_gender(event_match.group("gender"))
+    if not discipline or not gender:
+        return "skip"
+
+    return {
+        "discipline": discipline,
+        "gender": gender,
+        "kind": "field" if discipline in FIELD_DISCIPLINES_2026 else "track",
+    }
+
+
+def parse_round_2026(line, event=None):
+    text = preprocess_line_2026(line)
+
+    m = HEAT_2026_RE.match(text)
+    if m:
+        return {"round": "Heat", "heat": m.group("heat"), "finalGroup": "", "linkedRound": "Final"}
+
+    if FINAL_WITH_DATE_2026_RE.match(text):
+        return {"round": "Final", "heat": "", "finalGroup": "", "linkedRound": ""}
+
+    return None
+
+
+def standardize_inline_note_2026(token, *, discipline=None):
+    value = str(token or "").strip().upper()
+    if value in {"MR", "=MR"}:
+        return "Meeting Record"
+    if value == "NR":
+        if discipline in FIELD_DISCIPLINES_2026:
+            return "National Record"
+        return "National Record Indoor"
+    if value in {"MR,NR", "=MR,NR"}:
+        if discipline in FIELD_DISCIPLINES_2026:
+            return "Meeting Record; National Record"
+        return "Meeting Record; National Record Indoor"
+    if value == "WL":
+        return "World Lead"
+    return None
+
+
+def extract_suffix_metadata_2026(tokens):
+    parts = list(tokens)
+    qualification = ""
+    note_tokens = []
+    heat_marker = ""
+    thousandth_hint = ""
+
+    while parts:
+        last = parts[-1]
+        marker_match = HEAT_MARKER_2025_RE.match(last)
+        if marker_match:
+            heat_marker = marker_match.group("heat").upper()
+            parts = parts[:-1]
+            continue
+        if last in {"Q", "q"}:
+            qualification = last
+            parts = parts[:-1]
+            continue
+        precise_match = PARENTHESIS_THOUSANDTH_2025_RE.match(last)
+        if precise_match:
+            thousandth_hint = precise_match.group("thousandths")
+            parts = parts[:-1]
+            continue
+        note_parts = [piece.strip() for piece in last.split(",") if piece.strip()]
+        if last in {"MR,NR", "=MR,NR"}:
+            note_tokens = note_parts + note_tokens
+            parts = parts[:-1]
+            continue
+        if note_parts and all(piece in {"WL", "MR", "=MR", "NR", "PB", "SB", "=PB", "=SB"} for piece in note_parts):
+            note_tokens = note_parts + note_tokens
+            parts = parts[:-1]
+            continue
+        break
+
+    return parts, qualification, note_tokens, heat_marker, thousandth_hint
+
+
+def parse_result_line_2026(line, *, field_event=False, timed_heats=False, discipline=None):
+    text = preprocess_line_2026(line)
+    tokens = text.split()
+    if len(tokens) < 4:
+        return None
+
+    tokens, qualification, note_tokens, heat_marker, thousandth_hint = extract_suffix_metadata_2026(tokens)
+    if len(tokens) < 4:
+        return None
+
+    rank = None
+    global_rank = None
+    start_index = 0
+    bib_token = ""
+
+    if len(tokens) > 1 and tokens[0].isdigit() and tokens[1].isdigit():
+        rank = int(tokens[0])
+        global_rank = rank
+        bib_token = tokens[1]
+        start_index = 2
+    elif tokens and tokens[0].isdigit():
+        bib_token = tokens[0]
+        start_index = 1
+    else:
+        return None
+
+    yob_idx = None
+    for i in range(start_index + 1, len(tokens)):
+        if YOB_RE.match(tokens[i]):
+            yob_idx = i
+            break
+
+    if yob_idx is None or yob_idx + 1 >= len(tokens):
+        return None
+
+    name_tokens = tokens[start_index:yob_idx]
+    if not name_tokens:
+        return None
+
+    raw_result = tokens[-1]
+    context_tokens = tokens[yob_idx + 1:-1]
+    noc, club = infer_noc_and_club_2026(context_tokens)
+    last_name, first_name = split_name_tokens_2026(name_tokens)
+    if not last_name and not first_name:
+        return None
+    if club and normalize_noc_2026(club) == noc:
+        club = ""
+
+    precise_result = apply_thousandth_hint_2025(raw_result, thousandth_hint)
+
+    if field_event:
+        result, status = normalize_perf_2014(raw_result, field_event=True)
+        precise_result = result if result else precise_result
+    else:
+        result, status = normalize_perf_2014(precise_result or raw_result)
+
+    row = {
+        "sectionRank": rank,
+        "globalRank": global_rank,
+        "lastName": last_name,
+        "firstName": first_name,
+        "noc": noc,
+        "club": club,
+        "bib": bib_token,
+        "result": result,
+        "rawResult": precise_result or raw_result,
+        "status": status,
+        "qualification": qualification,
+        "notes": "",
+        "_heatMarker": heat_marker,
+    }
+
+    for token in note_tokens:
+        note = standardize_inline_note_2026(token, discipline=discipline)
+        if note:
+            append_note_2019(row, note)
+
+    if timed_heats and heat_marker:
+        row["heat"] = {"I": "1", "II": "2", "III": "3", "IV": "4"}.get(heat_marker, heat_marker)
+
+    return row
+
+
+def standardize_note_2026(line, *, discipline=None):
+    text = preprocess_line_2026(line)
+    lower = _strip_accents(text).lower()
+
+    if lower in {"meeting record", "record de meeting", "record meeting", "new meeting record"}:
+        return "Meeting Record"
+    if lower in {"nr lux. u20", "national record indoor u20"}:
+        return "National Record Indoor U20"
+    if re.fullmatch(r"nr", lower):
+        if discipline in FIELD_DISCIPLINES_2026:
+            return "National Record"
+        return "National Record Indoor"
+    if re.fullmatch(r"dnf|dns", lower):
+        return None
+    return None
+
+
+def is_name_continuation_2026(line):
+    text = preprocess_line_2026(line)
+    if not text or text.lower() in {"dnf", "dns"}:
+        return False
+    if re.fullmatch(r"[xXOo\- ]+", text):
+        return False
+    if re.search(r"\d", text):
+        return False
+    if any(ch in text for ch in {"/", ":", "(", ")", "."}):
+        return False
+    if not bool(re.fullmatch(r"[A-Za-zÀ-ÿ' -]+", text)):
+        return False
+    return bool(re.search(r"[a-zà-ÿ]", text))
+
+
+def append_name_continuation_2026(row, line):
+    extra = preprocess_line_2026(line).strip()
+    if not row or not extra:
+        return
+    current_first = str(row.get("firstName") or "").strip()
+    if current_first:
+        row["firstName"] = f"{current_first} {extra}".strip()
+    else:
+        row["firstName"] = extra
+
+
+def dedupe_rows_2026(rows):
+    seen = set()
+    unique = []
+    for row in rows:
+        key = (
+            row["lastName"],
+            row["firstName"],
+            row["noc"],
+            row.get("club", ""),
+            row["rawResult"],
+            row["status"],
+            row.get("qualification", ""),
+            row.get("notes", ""),
+            row.get("globalRank"),
+            row.get("heat", ""),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(row)
+    return unique
+
+
+def build_year_results_2026(year, pdf_path):
+    with pdfplumber.open(pdf_path) as pdf:
+        page_texts = [page.extract_text() or "" for page in pdf.pages]
+
+    sections = []
+    section_index = {}
+    current = None
+    pending_event = None
+
+    for page_text in page_texts:
+        for raw_line in page_text.splitlines():
+            line = preprocess_line_2026(raw_line)
+            if not line:
+                continue
+
+            if (
+                line == "CMCM Luxembourg Indoor Meeting 2026 RESULTS"
+                or line.startswith("Luxembourg, Coque, ")
+                or line.startswith("Dataservice by Internet-Service:")
+                or line.startswith("Printed at ")
+                or line.startswith("Rank Bib Name YoB NOC Club Result")
+                or line.startswith("Rank Name NOC Club Result")
+                or line.startswith("First 2 in each heat")
+                or line.startswith("First 3 in each heat")
+                or line.startswith("- T1 ")
+            ):
+                continue
+
+            if current and current.get("rows") and PRECISE_TIME_2026_RE.match(line):
+                last_row = current["rows"][-1]
+                last_row["result"] = line
+                last_row["rawResult"] = line
+                continue
+
+            note = standardize_note_2026(line, discipline=current["discipline"] if current else None)
+            if note:
+                if current and current.get("rows"):
+                    append_note_2019(current["rows"][-1], note)
+                continue
+
+            if current and current.get("rows") and is_name_continuation_2026(line):
+                append_name_continuation_2026(current["rows"][-1], line)
+                continue
+
+            event_header = parse_event_header_2026(line)
+            if event_header == "skip":
+                pending_event = None
+                current = None
+                continue
+            if event_header:
+                pending_event = event_header
+                current = None
+                continue
+
+            round_info = parse_round_2026(line, pending_event)
+            if round_info and pending_event:
+                section_key = (
+                    pending_event["discipline"],
+                    pending_event["gender"],
+                    round_info["round"],
+                    round_info["heat"],
+                    round_info["finalGroup"],
+                )
+                current = section_index.get(section_key)
+                if current is None:
+                    current = {
+                        "discipline": pending_event["discipline"],
+                        "gender": pending_event["gender"],
+                        "round": round_info["round"],
+                        "heat": round_info["heat"],
+                        "finalGroup": round_info["finalGroup"],
+                        "linkedRound": round_info["linkedRound"],
+                        "rows": [],
+                    }
+                    sections.append(current)
+                    section_index[section_key] = current
+                pending_event = None
+                continue
+
+            if current is None and pending_event:
+                parsed = parse_result_line_2026(
+                    line,
+                    field_event=pending_event["discipline"] in FIELD_DISCIPLINES_2026,
+                    timed_heats=False,
+                    discipline=pending_event["discipline"],
+                )
+                if parsed:
+                    section_key = (
+                        pending_event["discipline"],
+                        pending_event["gender"],
+                        "Final",
+                        "",
+                        "",
+                    )
+                    current = section_index.get(section_key)
+                    if current is None:
+                        current = {
+                            "discipline": pending_event["discipline"],
+                            "gender": pending_event["gender"],
+                            "round": "Final",
+                            "heat": "",
+                            "finalGroup": "",
+                            "linkedRound": "",
+                            "rows": [],
+                        }
+                        sections.append(current)
+                        section_index[section_key] = current
+                    current["rows"].append(parsed)
+                    pending_event = None
+                continue
+
+            if not current:
+                continue
+
+            parsed = parse_result_line_2026(
+                line,
+                field_event=current["discipline"] in FIELD_DISCIPLINES_2026,
+                timed_heats=current["round"] == "Timed Final" or (current["discipline"], current["gender"]) in MIXED_FINAL_DISCIPLINES_2026,
+                discipline=current["discipline"],
+            )
+            if not parsed:
+                continue
+
+            if parsed["sectionRank"] is None:
+                parsed["sectionRank"] = len(current["rows"]) + 1
+            if parsed["globalRank"] is None:
+                parsed["globalRank"] = parsed["sectionRank"]
+            current["rows"].append(parsed)
+
+    edition_date = "2026-01-18"
+    results = []
+    has_heat_rounds = {
+        (section["discipline"], section["gender"])
+        for section in sections
+        if section["round"] == "Heat"
+    }
+
+    for section in sections:
+        if not section["rows"]:
+            continue
+
+        linked_round = section["linkedRound"]
+        output_round = section["round"]
+        if (section["discipline"], section["gender"]) in MIXED_FINAL_DISCIPLINES_2026 and section["round"] == "Final":
+            output_round = "Timed Final"
+        if not linked_round and output_round == "Final" and (section["discipline"], section["gender"]) in has_heat_rounds:
+            linked_round = "Heat"
+
+        for row in dedupe_rows_2026(section["rows"]):
+            results.append({
+                "rank": row.get("globalRank") or row["sectionRank"],
+                "sectionRank": row["sectionRank"],
+                "lastName": row["lastName"],
+                "firstName": row["firstName"],
+                "noc": row["noc"],
+                "club": "" if section["discipline"].endswith("Special Olympics") else row["club"],
+                "result": row["result"],
+                "rawResult": row["rawResult"],
+                "status": row["status"],
+                "qualification": row["qualification"],
+                "discipline": section["discipline"],
+                "gender": section["gender"],
+                "year": year,
+                "date": edition_date,
+                "round": output_round,
+                "heat": row.get("heat", section["heat"]),
+                "finalGroup": section["finalGroup"],
+                "linkedRound": linked_round,
+                "notes": row["notes"],
+            })
+
+    return results
+
+
 def parse_result_line(line):
     """Returns dict {rank, lastName, firstName, noc, result} or None."""
     line = line.strip()
@@ -10064,6 +12100,14 @@ def build_year_results(year, pdf_path, debug=False):
         return build_year_results_2020(year, pdf_path)
     if year == 2021:
         return build_year_results_2021(year, pdf_path)
+    if year == 2023:
+        return build_year_results_2023(year, pdf_path)
+    if year == 2024:
+        return build_year_results_2024(year, pdf_path)
+    if year == 2025:
+        return build_year_results_2025(year, pdf_path)
+    if year == 2026:
+        return build_year_results_2026(year, pdf_path)
 
     sections = extract_sections(pdf_path, debug=debug)
 

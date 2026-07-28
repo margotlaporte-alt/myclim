@@ -36,6 +36,23 @@ const DISCIPLINE_ORDER = [
   // field events follow alphabetically — handled by fallback
 ];
 
+const RECORD_TRACK_ORDER = [
+  "50m",
+  "60m",
+  "60m hurdles",
+  "200m",
+  "200m - Special Olympics",
+  "400m",
+  "400m hurdles",
+  "400m - Special Olympics",
+  "800m",
+  "800m - Special Olympics",
+  "1000m",
+  "1500m",
+  "3000m",
+  "5000m",
+];
+
 function disciplineSortKey(name) {
   const idx = DISCIPLINE_ORDER.indexOf(name);
   if (idx !== -1) return `0_${String(idx).padStart(3, "0")}`;
@@ -43,13 +60,39 @@ function disciplineSortKey(name) {
   return `1_${name}`;
 }
 
+function normalizeRecordDiscipline(name) {
+  return String(name || "")
+    .replace(/(\d)\s+(m\b)/gi, "$1$2")
+    .replace(/Hurdles/g, "hurdles")
+    .trim();
+}
+
+function recordDisciplineSortKey(name) {
+  const normalized = normalizeRecordDiscipline(name);
+  const trackIndex = RECORD_TRACK_ORDER.indexOf(normalized);
+  if (trackIndex !== -1) return `0_${String(trackIndex).padStart(3, "0")}`;
+  return `1_${normalized.toLowerCase()}`;
+}
+
+function compareRecordsDisplay(a, b) {
+  const genderOrder = { W: 0, M: 1, X: 2 };
+  const genderDiff = (genderOrder[a.gender] ?? 9) - (genderOrder[b.gender] ?? 9);
+  if (genderDiff !== 0) return genderDiff;
+
+  const disciplineDiff = recordDisciplineSortKey(a.discipline).localeCompare(recordDisciplineSortKey(b.discipline));
+  if (disciplineDiff !== 0) return disciplineDiff;
+
+  return String(a.fullName || "").localeCompare(String(b.fullName || ""));
+}
+
 /** Compare two discipline+gender group objects for display order.
  *  Within the same discipline, Women first. */
 function compareDisciplineGender(a, b) {
   const dk = disciplineSortKey(a.discipline).localeCompare(disciplineSortKey(b.discipline));
   if (dk !== 0) return dk;
-  // same discipline: W before M
-  const gc = (a.gender === "W" ? 0 : 1) - (b.gender === "W" ? 0 : 1);
+  // same discipline: W before M before mixed/other
+  const genderOrder = { W: 0, M: 1, X: 2 };
+  const gc = (genderOrder[a.gender] ?? 9) - (genderOrder[b.gender] ?? 9);
   if (gc !== 0) return gc;
   const roundOrder = { Final: 0, Heat: 1 };
   const rc = (roundOrder[a.round] ?? 9) - (roundOrder[b.round] ?? 9);
@@ -180,6 +223,9 @@ function RankBadge({ rank }) {
 }
 
 function GenderTag({ gender }) {
+  const label = gender === "W" ? "Women" : gender === "M" ? "Men" : "Mixed";
+  const background = gender === "W" ? "#fce7f3" : gender === "M" ? "#dbeafe" : "#ecfeff";
+  const color = gender === "W" ? "#be185d" : gender === "M" ? "#1d4ed8" : "#0f766e";
   return (
     <span style={{
       display: "inline-block",
@@ -187,11 +233,11 @@ function GenderTag({ gender }) {
       borderRadius: 20,
       fontSize: "0.72rem",
       fontWeight: 700,
-      background: gender === "W" ? "#fce7f3" : "#dbeafe",
-      color: gender === "W" ? "#be185d" : "#1d4ed8",
+      background,
+      color,
       letterSpacing: "0.04em",
     }}>
-      {gender === "W" ? "Women" : "Men"}
+      {label}
     </span>
   );
 }
@@ -644,7 +690,7 @@ function WinnersComparisonPanel({ editions, allWinners, Panel }) {
   }
 
   return (
-    <Panel title="Comparaison Winners vs Résultats" subtitle="Divergences entre palmarès PDF (meetingWinners) et résultats officiels (meetingResults rank=1)">
+    <Panel title="Comparaison Winners vs Résultats" subtitle="Divergences entre le PDF Hall of Winners (meetingWinners) et les résultats officiels (meetingResults rank=1)">
       <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 16 }}>
         <select className="input" value={year ?? ""} onChange={(e) => { setYear(Number(e.target.value)); setSyncMsg(null); }} style={{ minWidth: 120 }}>
           {editions.map((e) => <option key={e.year} value={e.year}>{e.year}</option>)}
@@ -1314,7 +1360,7 @@ function MeetingRecordsPage({ Panel }) {
 
   const displayed = useMemo(() => {
     const base = genderFilter === "all" ? records : records.filter((r) => r.gender === genderFilter);
-    return [...base].sort(compareDisciplineGender);
+    return [...base].sort(compareRecordsDisplay);
   }, [records, genderFilter]);
 
   return (
