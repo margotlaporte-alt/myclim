@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { collection, doc, onSnapshot, query, setDoc, serverTimestamp, where } from "firebase/firestore";
+import { collection, doc, getDocs, onSnapshot, query, serverTimestamp, setDoc, where, writeBatch } from "firebase/firestore";
 import { db } from "../services/firebase";
 import { recordMatchesEdition, useActiveEdition } from "./edition";
 
@@ -387,10 +387,102 @@ function normalizeBirthYear(raw) {
   return n < 50 ? 2000 + n : 1900 + n;
 }
 
+function normalizeIdentityFragment(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function resolveAthleteBirthYear(fields = {}) {
+  return (
+    normalizeBirthYear(fields.birthYear)
+    ?? normalizeBirthYear(fields.yob)
+    ?? (fields.birthDate ? normalizeBirthYear(String(fields.birthDate).slice(0, 4)) : null)
+    ?? null
+  );
+}
+
+function buildAthleteIdentityKeys(fields = {}) {
+  const lastName = normalizeIdentityFragment(fields.lastName);
+  const firstName = normalizeIdentityFragment(fields.firstName);
+  const nationality = normalizeIdentityFragment(fields.nationality || fields.countryCode);
+  const birthYear = resolveAthleteBirthYear(fields);
+
+  if (!lastName && !firstName) return [];
+
+  const keys = [
+    [lastName, firstName, birthYear, nationality].filter(Boolean).join("|"),
+    [lastName, firstName, birthYear].filter(Boolean).join("|"),
+    [lastName, firstName, nationality].filter(Boolean).join("|"),
+    [lastName, firstName].filter(Boolean).join("|"),
+  ].filter(Boolean);
+
+  return [...new Set(keys)];
+}
+
 function athleteMergeKey(lastName, firstName, nationality) {
   return [lastName, firstName, nationality]
     .map((s) => String(s || "").trim().toLowerCase().replace(/\s+/g, " "))
     .join("|");
+}
+
+function registryParticipationKey(row) {
+  return `${Number(row.year)}||${String(row.discipline || "").trim()}`;
+}
+
+function registryRoundOrder(round) {
+  const value = String(round || "").trim().toLowerCase();
+  if (
+    value === "final" ||
+    value === "timed final" ||
+    value === "final a" ||
+    value === "final b" ||
+    value === "final 1" ||
+    value === "final 2"
+  ) return 0;
+  if (value === "heat" || value === "timed heats") return 1;
+  return 2;
+}
+
+function registryStatusOrder(status) {
+  const value = String(status || "").trim().toUpperCase();
+  if (!value || value === "OK") return 0;
+  if (value === "DNF") return 1;
+  if (value === "DNS") return 2;
+  if (value === "DSQ" || value === "DQ") return 3;
+  return 4;
+}
+
+function compareRegistryRows(a, b) {
+  const roundDiff = registryRoundOrder(a.round) - registryRoundOrder(b.round);
+  if (roundDiff !== 0) return roundDiff;
+
+  const statusDiff = registryStatusOrder(a.status) - registryStatusOrder(b.status);
+  if (statusDiff !== 0) return statusDiff;
+
+  const rankA = Number(a.rank);
+  const rankB = Number(b.rank);
+  const rankDiff = (Number.isFinite(rankA) ? rankA : 9999) - (Number.isFinite(rankB) ? rankB : 9999);
+  if (rankDiff !== 0) return rankDiff;
+
+  return String(a.result || "").localeCompare(String(b.result || ""));
+}
+
+function buildHistoricalRegistryDocId(row) {
+  const norm = (value) => String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
+  const birthYear = row.yob ?? row.birthYear ?? "na";
+  return `hist_${norm(row.lastName)}_${norm(row.firstName)}_${birthYear}_${norm(row.noc)}`;
 }
 
 // ─── Athlete Registry ─────────────────────────────────────────────────────────
@@ -413,19 +505,54 @@ function registryDocId(waid, lastName, firstName, birthYear) {
  *   { lastName, firstName, nationality, birthYear, birthDate, waid, waUrl, gender }
  */
 async function upsertAthleteRegistry(fields) {
-  const { lastName, firstName, nationality, birthYear, birthDate, waid, waUrl, gender } = fields;
+  const { lastName, firstName, nationality, birthDate, waid, waUrl, gender } = fields;
   if (!lastName && !firstName) return; // nothing useful to store
 
-  const docId = registryDocId(waid, lastName, firstName, birthYear);
+  const normalizedBirthYear = resolveAthleteBirthYear(fields);
+  const identityKeys = buildAthleteIdentityKeys({
+    ...fields,
+    nationality: nationality || fields.countryCode || "",
+    birthYear: normalizedBirthYear,
+  });
+
+  let existingDoc = null;
+
+  if (waid) {
+    const waidSnap = await getDocs(
+      query(collection(db, ATHLETE_REGISTRY_COLLECTION), where("waid", "==", Number(waid))),
+    );
+    existingDoc = waidSnap.docs[0] || null;
+  }
+
+  if (!existingDoc) {
+    for (const identityKey of identityKeys) {
+      const keySnap = await getDocs(
+        query(collection(db, ATHLETE_REGISTRY_COLLECTION), where("identityKeys", "array-contains", identityKey)),
+      );
+      if (keySnap.docs[0]) {
+        existingDoc = keySnap.docs[0];
+        break;
+      }
+    }
+  }
+
+  const docId = existingDoc?.id || registryDocId(waid, lastName, firstName, normalizedBirthYear);
+  const existingData = existingDoc?.data() || {};
   const record = {};
   if (lastName)     record.lastName     = lastName;
   if (firstName)    record.firstName    = firstName;
-  if (nationality)  record.nationality  = nationality;
-  if (birthYear)    record.birthYear    = Number(birthYear);
+  if (nationality || fields.countryCode)  record.nationality  = nationality || fields.countryCode;
+  if (normalizedBirthYear)    record.birthYear    = Number(normalizedBirthYear);
   if (birthDate)    record.birthDate    = birthDate;
   if (waid)         record.waid         = Number(waid);
   if (waUrl)        record.waUrl        = waUrl;
   if (gender)       record.gender       = gender;
+  record.identityKeys = [
+    ...new Set([
+      ...(Array.isArray(existingData.identityKeys) ? existingData.identityKeys : []),
+      ...identityKeys,
+    ]),
+  ];
   record.updatedAt = serverTimestamp();
 
   await setDoc(
@@ -433,6 +560,121 @@ async function upsertAthleteRegistry(fields) {
     { ...record, createdAt: serverTimestamp() },
     { merge: true },  // merge so createdAt is only written on first insert
   );
+
+  return { docId };
+}
+
+async function rebuildAthleteRegistryFromHistoricalResults(onProgress) {
+  const resultsJson = await import("../data/meetingResults.json").then((m) => m.default);
+  const rows = Object.values(resultsJson)
+    .flatMap((items) => items || [])
+    .filter((row) => row && (row.lastName || row.firstName));
+
+  onProgress?.(`Résultats historiques chargés : ${rows.length} lignes.`);
+
+  onProgress?.("Suppression de la base athlètes existante…");
+  const existingSnap = await getDocs(collection(db, ATHLETE_REGISTRY_COLLECTION));
+  let batch = writeBatch(db);
+  let deleted = 0;
+  for (const docSnap of existingSnap.docs) {
+    batch.delete(docSnap.ref);
+    deleted++;
+    if (deleted % 400 === 0) {
+      await batch.commit();
+      batch = writeBatch(db);
+    }
+  }
+  if (deleted % 400 !== 0 || deleted === 0) {
+    await batch.commit();
+  }
+  onProgress?.(`${deleted} fiches athlètes supprimées.`);
+
+  onProgress?.("Regroupement des athlètes à partir des résultats historiques…");
+  const athletes = new Map();
+  for (const row of rows) {
+    const key = athleteMergeKey(row.lastName, row.firstName, row.noc);
+    if (!key.replace(/\|/g, "")) continue;
+
+    if (!athletes.has(key)) {
+      athletes.set(key, {
+        docId: buildHistoricalRegistryDocId(row),
+        lastName: row.lastName || "",
+        firstName: row.firstName || "",
+        nationality: row.noc || "",
+        gender: row.gender || "",
+        birthYear: row.yob ?? row.birthYear ?? null,
+        participations: new Map(),
+      });
+    }
+
+    const athlete = athletes.get(key);
+    const participationKey = registryParticipationKey(row);
+    const current = athlete.participations.get(participationKey);
+    if (!current || compareRegistryRows(row, current) < 0) {
+      athlete.participations.set(participationKey, row);
+    }
+  }
+
+  const payloads = [...athletes.values()].map((athlete) => {
+    const editions = [...athlete.participations.values()]
+      .map((row) => ({
+        year: Number(row.year),
+        discipline: row.discipline || "",
+        gender: row.gender || "",
+        rank: row.rank ?? null,
+        result: row.result || "",
+        noc: row.noc || "",
+        round: row.round || "",
+        heat: row.heat || "",
+        finalGroup: row.finalGroup || "",
+        status: row.status || "",
+        date: row.date || "",
+      }))
+      .sort((a, b) => a.year - b.year || String(a.discipline || "").localeCompare(String(b.discipline || "")));
+
+    const payload = {
+      lastName: athlete.lastName,
+      firstName: athlete.firstName,
+      nationality: athlete.nationality,
+      identityKeys: buildAthleteIdentityKeys({
+        lastName: athlete.lastName,
+        firstName: athlete.firstName,
+        nationality: athlete.nationality,
+        birthYear: athlete.birthYear,
+      }),
+      editions,
+      rebuiltFromHistoricalResults: true,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
+
+    if (athlete.gender) payload.gender = athlete.gender;
+    if (athlete.birthYear != null && athlete.birthYear !== "") {
+      payload.yob = Number(athlete.birthYear);
+      payload.birthYear = Number(athlete.birthYear);
+    }
+
+    return { docId: athlete.docId, payload };
+  });
+
+  onProgress?.(`${payloads.length} fiches athlètes reconstruites.`);
+  onProgress?.("Réécriture de la base athlètes…");
+  batch = writeBatch(db);
+  let written = 0;
+  for (const entry of payloads) {
+    batch.set(doc(db, ATHLETE_REGISTRY_COLLECTION, entry.docId), entry.payload, { merge: false });
+    written++;
+    if (written % 400 === 0) {
+      await batch.commit();
+      batch = writeBatch(db);
+    }
+  }
+  if (written % 400 !== 0 || written === 0) {
+    await batch.commit();
+  }
+
+  onProgress?.(`${written} fiches athlètes écrites.`);
+  return { deleted, written, sourceRows: rows.length };
 }
 
 /**
@@ -523,6 +765,7 @@ export {
   useAthletePortalSettings,
   useAthletes,
   useAthleteRegistry,
+  rebuildAthleteRegistryFromHistoricalResults,
   fetchAthleteFromWaService,
   upsertAthleteRegistry,
   canAccessAthletePortal,
@@ -531,6 +774,8 @@ export {
   extractWaid,
   parsePb,
   normalizeBirthYear,
+  resolveAthleteBirthYear,
+  buildAthleteIdentityKeys,
   athleteMergeKey,
   ALL_ATHLETE_FIELDS,
   FIELD_GROUPS,

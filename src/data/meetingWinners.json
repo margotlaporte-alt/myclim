@@ -237,6 +237,33 @@
     "result": "20.77"
   },
   {
+    "year": 2024,
+    "discipline": "200m - Special Olympics",
+    "gender": "X",
+    "lastName": "VITTORELLI",
+    "firstName": "Ryan",
+    "noc": "LUX",
+    "result": "30.44"
+  },
+  {
+    "year": 2025,
+    "discipline": "200m - Special Olympics",
+    "gender": "X",
+    "lastName": "LELUEL",
+    "firstName": "Daniel",
+    "noc": "LUX",
+    "result": "30.86"
+  },
+  {
+    "year": 2026,
+    "discipline": "200m - Special Olympics",
+    "gender": "X",
+    "lastName": "WIRTZ",
+    "firstName": "Leo",
+    "noc": "LUX",
+    "result": "28.96"
+  },
+  {
     "year": 2004,
     "discipline": "400m",
     "gender": "M",
@@ -388,6 +415,24 @@
     "firstName": "Maksymillian",
     "noc": "POL",
     "result": "46.51"
+  },
+  {
+    "year": 2026,
+    "discipline": "400m",
+    "gender": "M",
+    "lastName": "BREDAU",
+    "firstName": "Jean-Paul",
+    "noc": "DEU",
+    "result": "45.94"
+  },
+  {
+    "year": 2024,
+    "discipline": "400m - Special Olympics",
+    "gender": "X",
+    "lastName": "SCHRÖDER",
+    "firstName": "Eike",
+    "noc": "LUX",
+    "result": "61.12"
   },
   {
     "year": 2003,
@@ -550,6 +595,42 @@
     "firstName": "Elvin Josue",
     "noc": "ESP",
     "result": "1.44.65"
+  },
+  {
+    "year": 2026,
+    "discipline": "800m",
+    "gender": "M",
+    "lastName": "ENGLISH",
+    "firstName": "Mark",
+    "noc": "IRL",
+    "result": "1.44.65"
+  },
+  {
+    "year": 2018,
+    "discipline": "800m - Special Olympics",
+    "gender": "M",
+    "lastName": "SCHRÖDER",
+    "firstName": "Eike",
+    "noc": "LUX",
+    "result": "2.22.14"
+  },
+  {
+    "year": 2019,
+    "discipline": "800m - Special Olympics",
+    "gender": "M",
+    "lastName": "SCHRÖDER",
+    "firstName": "Eike",
+    "noc": "LUX",
+    "result": "2.20.72"
+  },
+  {
+    "year": 2020,
+    "discipline": "800m - Special Olympics",
+    "gender": "M",
+    "lastName": "SCHRÖDER",
+    "firstName": "Eike",
+    "noc": "LUX",
+    "result": "2.23.43"
   },
   {
     "year": 2004,
@@ -732,6 +813,15 @@
     "result": "3.36.71"
   },
   {
+    "year": 2026,
+    "discipline": "1500m",
+    "gender": "M",
+    "lastName": "SISK",
+    "firstName": "Pieter",
+    "noc": "BEL",
+    "result": "3.34.63"
+  },
+  {
     "year": 2004,
     "discipline": "3000m",
     "gender": "M",
@@ -793,6 +883,15 @@
     "firstName": "Florian",
     "noc": "DEU",
     "result": "7.39.01"
+  },
+  {
+    "year": 2026,
+    "discipline": "3000m",
+    "gender": "M",
+    "lastName": "VERHEYDEN",
+    "firstName": "Ruben",
+    "noc": "BEL",
+    "result": "7.40.31"
   },
   {
     "year": 2003,
@@ -966,6 +1065,15 @@
     "result": "7.41"
   },
   {
+    "year": 2026,
+    "discipline": "60m Hurdles",
+    "gender": "M",
+    "lastName": "SZYMANSKI",
+    "firstName": "Jakub",
+    "noc": "POL",
+    "result": "7.48"
+  },
+  {
     "year": 2003,
     "discipline": "Long Jump",
     "gender": "M",
@@ -1045,6 +1153,15 @@
     "firstName": "Augustin",
     "noc": "FRA",
     "result": "7.63 m"
+  },
+  {
+    "year": 2026,
+    "discipline": "Long Jump",
+    "gender": "M",
+    "lastName": "GUERRA",
+    "firstName": "Jaime",
+    "noc": "ESP",
+    "result": "7.84 m"
   },
   {
     "year": 2012,
@@ -1321,7 +1438,7 @@
   },
   {
     "year": 2016,
-    "discipline": "Shot Put",
+    "discipline": "Shot Put F42",
     "gender": "M",
     "lastName": "TINNEMEIER",
     "firstName": "Frank",
@@ -1330,7 +1447,7 @@
   },
   {
     "year": 2018,
-    "discipline": "Shot Put",
+    "discipline": "Shot Put F42",
     "gender": "M",
     "lastName": "HABSCHEID",
     "firstName": "Tom",
@@ -1339,7 +1456,7 @@
   },
   {
     "year": 2019,
-    "discipline": "Shot Put",
+    "discipline": "Shot Put F63",
     "gender": "M",
     "lastName": "HABSCHEID",
     "firstName": "Tom",
@@ -1572,6 +1689,15 @@
     "result": "7.07"
   },
   {
+    "year": 2026,
+    "discipline": "60m",
+    "gender": "W",
+    "lastName": "VAN DER WEKEN",
+    "firstName": "Patrizia",
+    "noc": "LUX",
+    "result": "7.14"
+  },
+  {
     "year": 2004,
     "discipline": "200m",
     "gender": "W",
@@ -1624,6 +1750,15 @@
     "firstName": "Jessica-Bianca",
     "noc": "DEU",
     "result": "22.84"
+  },
+  {
+    "year": 2026,
+    "discipline": "200m",
+    "gender": "W",
+    "lastName": "SEVILLA",
+    "firstName": "Paula",
+    "noc": "ESP",
+    "result": "23.16"
   },
   {
     "year": 2010,
@@ -1887,6 +2022,15 @@
     "result": "2.02.79"
   },
   {
+    "year": 2026,
+    "discipline": "800m",
+    "gender": "W",
+    "lastName": "ARENDT",
+    "firstName": "Fanny",
+    "noc": "LUX",
+    "result": "2.00.83"
+  },
+  {
     "year": 2003,
     "discipline": "1500m",
     "gender": "W",
@@ -2029,6 +2173,15 @@
     "firstName": "Marta",
     "noc": "ITA",
     "result": "4.03.59"
+  },
+  {
+    "year": 2026,
+    "discipline": "1500m",
+    "gender": "W",
+    "lastName": "MULUGETA",
+    "firstName": "Samrawit",
+    "noc": "ETH",
+    "result": "4.07.59"
   },
   {
     "year": 2004,
@@ -2200,6 +2353,15 @@
     "firstName": "Marione",
     "noc": "RSA",
     "result": "7.98"
+  },
+  {
+    "year": 2026,
+    "discipline": "60m Hurdles",
+    "gender": "W",
+    "lastName": "ALESSANDRINI",
+    "firstName": "Sacha",
+    "noc": "FRA",
+    "result": "8.00"
   },
   {
     "year": 2004,
@@ -2578,6 +2740,15 @@
     "firstName": "Angelica",
     "noc": "SUI",
     "result": "4.65 m"
+  },
+  {
+    "year": 2026,
+    "discipline": "Pole Vault",
+    "gender": "W",
+    "lastName": "PETIT",
+    "firstName": "Berenice",
+    "noc": "FRA",
+    "result": "4.45 m"
   },
   {
     "year": 2005,

@@ -172,7 +172,7 @@ function buildAthletePortalNavigation(roles, portalSettings, { canImport }) {
     links.push(makeLink("/app/athlete-portal/registry", "Base athlètes", "users"));
     links.push(makeLink("/app/athlete-portal/history", "Résultats meeting", "calendar"));
     links.push(makeLink("/app/athlete-portal/records", "Records meeting", "star"));
-    links.push(makeLink("/app/athlete-portal/winners", "Palmarès", "trophy"));
+    links.push(makeLink("/app/athlete-portal/winners", "Hall of Winners", "trophy"));
   }
 
   if (roles.includes("chef_transport_athletes") || roles.includes("admin")) {

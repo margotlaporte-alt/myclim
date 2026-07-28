@@ -4,10 +4,12 @@ import { formatEditionLabel } from "./meeting-edition-utils";
 import { getActiveRoles } from "./navigation";
 import {
   MEETING_EDITIONS_COL,
-  clearResultsForYear,
   closeEdition,
   deleteResult,
+  getOfficialWinnersFromResults,
+  rebuildMeetingRecords,
   resetAndReseedWinners,
+  reseedMeetingYearFromJson,
   saveResult,
   seedMeetingDatabase,
   setEditionVisibility,
@@ -34,6 +36,23 @@ const DISCIPLINE_ORDER = [
   // field events follow alphabetically — handled by fallback
 ];
 
+const RECORD_TRACK_ORDER = [
+  "50m",
+  "60m",
+  "60m hurdles",
+  "200m",
+  "200m - Special Olympics",
+  "400m",
+  "400m hurdles",
+  "400m - Special Olympics",
+  "800m",
+  "800m - Special Olympics",
+  "1000m",
+  "1500m",
+  "3000m",
+  "5000m",
+];
+
 function disciplineSortKey(name) {
   const idx = DISCIPLINE_ORDER.indexOf(name);
   if (idx !== -1) return `0_${String(idx).padStart(3, "0")}`;
@@ -41,13 +60,92 @@ function disciplineSortKey(name) {
   return `1_${name}`;
 }
 
+function normalizeRecordDiscipline(name) {
+  return String(name || "")
+    .replace(/(\d)\s+(m\b)/gi, "$1$2")
+    .replace(/Hurdles/g, "hurdles")
+    .trim();
+}
+
+function recordDisciplineSortKey(name) {
+  const normalized = normalizeRecordDiscipline(name);
+  const trackIndex = RECORD_TRACK_ORDER.indexOf(normalized);
+  if (trackIndex !== -1) return `0_${String(trackIndex).padStart(3, "0")}`;
+  return `1_${normalized.toLowerCase()}`;
+}
+
+function compareRecordsDisplay(a, b) {
+  const genderOrder = { W: 0, M: 1, X: 2 };
+  const genderDiff = (genderOrder[a.gender] ?? 9) - (genderOrder[b.gender] ?? 9);
+  if (genderDiff !== 0) return genderDiff;
+
+  const disciplineDiff = recordDisciplineSortKey(a.discipline).localeCompare(recordDisciplineSortKey(b.discipline));
+  if (disciplineDiff !== 0) return disciplineDiff;
+
+  return String(a.fullName || "").localeCompare(String(b.fullName || ""));
+}
+
 /** Compare two discipline+gender group objects for display order.
  *  Within the same discipline, Women first. */
 function compareDisciplineGender(a, b) {
   const dk = disciplineSortKey(a.discipline).localeCompare(disciplineSortKey(b.discipline));
   if (dk !== 0) return dk;
-  // same discipline: W before M
-  return (a.gender === "W" ? 0 : 1) - (b.gender === "W" ? 0 : 1);
+  // same discipline: W before M before mixed/other
+  const genderOrder = { W: 0, M: 1, X: 2 };
+  const gc = (genderOrder[a.gender] ?? 9) - (genderOrder[b.gender] ?? 9);
+  if (gc !== 0) return gc;
+  const roundOrder = { Final: 0, Heat: 1 };
+  const rc = (roundOrder[a.round] ?? 9) - (roundOrder[b.round] ?? 9);
+  if (rc !== 0) return rc;
+  const aSection = String(a.finalGroup || a.heat || "");
+  const bSection = String(b.finalGroup || b.heat || "");
+  return aSection.localeCompare(bSection, undefined, { numeric: true });
+}
+
+function normalizeRoundLabel(round) {
+  const value = String(round || "").trim().toLowerCase();
+  if (value === "heat") return "Heat";
+  if (value === "final") return "Final";
+  return String(round || "").trim();
+}
+
+function isHeatRound(round) {
+  return normalizeRoundLabel(round) === "Heat";
+}
+
+function isFinalRound(round) {
+  return normalizeRoundLabel(round) === "Final";
+}
+
+function sectionOrderValue(token) {
+  const value = String(token || "").trim().toUpperCase();
+  if (!value) return 0;
+  if (value === "1" || value === "A") return 1;
+  if (value === "2" || value === "B") return 2;
+  if (value === "3" || value === "C") return 3;
+  const numeric = Number(value);
+  if (Number.isFinite(numeric)) return numeric;
+  return 99;
+}
+
+function compareSectionGroups(a, b) {
+  return sectionOrderValue(a.finalGroup || a.heat) - sectionOrderValue(b.finalGroup || b.heat);
+}
+
+function formatSectionLabel(group) {
+  if (group.round === "Heat") return group.heat ? `Série ${group.heat}` : "Série";
+  if (group.finalGroup) return `Finale ${group.finalGroup}`;
+  return group.round || "";
+}
+
+function getDisplayRank(result) {
+  return result?.sectionRank || result?.rank || null;
+}
+
+function formatSectionCell(result) {
+  if (isHeatRound(result?.round)) return result?.heat || "—";
+  if (result?.finalGroup) return result.finalGroup;
+  return "—";
 }
 
 function formatEditionDate(value) {
@@ -108,21 +206,26 @@ function FlagImg({ noc }) {
 }
 
 function RankBadge({ rank }) {
+  const safeRank = Number(rank);
+  const hasRank = Number.isFinite(safeRank) && safeRank > 0;
   const colors = { 1: "#f5c842", 2: "#b0b8c1", 3: "#cd7f32" };
-  const bg = colors[rank] || "#e5e7eb";
-  const color = rank <= 3 ? "#1a1a1a" : "#374151";
+  const bg = colors[safeRank] || "#e5e7eb";
+  const color = hasRank && safeRank <= 3 ? "#1a1a1a" : "#374151";
   return (
     <span style={{
       display: "inline-flex", alignItems: "center", justifyContent: "center",
       width: 24, height: 24, borderRadius: "50%",
       background: bg, color, fontWeight: 700, fontSize: "0.78rem",
     }}>
-      {rank}
+      {hasRank ? safeRank : "—"}
     </span>
   );
 }
 
 function GenderTag({ gender }) {
+  const label = gender === "W" ? "Women" : gender === "M" ? "Men" : "Mixed";
+  const background = gender === "W" ? "#fce7f3" : gender === "M" ? "#dbeafe" : "#ecfeff";
+  const color = gender === "W" ? "#be185d" : gender === "M" ? "#1d4ed8" : "#0f766e";
   return (
     <span style={{
       display: "inline-block",
@@ -130,11 +233,11 @@ function GenderTag({ gender }) {
       borderRadius: 20,
       fontSize: "0.72rem",
       fontWeight: 700,
-      background: gender === "W" ? "#fce7f3" : "#dbeafe",
-      color: gender === "W" ? "#be185d" : "#1d4ed8",
+      background,
+      color,
       letterSpacing: "0.04em",
     }}>
-      {gender === "W" ? "Women" : "Men"}
+      {label}
     </span>
   );
 }
@@ -541,10 +644,7 @@ function WinnersComparisonPanel({ editions, allWinners, Panel }) {
 
   const { results, loading } = useMeetingResultsForYear(year);
 
-  const rank1 = useMemo(() =>
-    results.filter((r) => Number(r.rank) === 1),
-    [results],
-  );
+  const rank1 = useMemo(() => getOfficialWinnersFromResults(results), [results]);
 
   const winnersByKey = useMemo(() => {
     const map = new Map();
@@ -590,7 +690,7 @@ function WinnersComparisonPanel({ editions, allWinners, Panel }) {
   }
 
   return (
-    <Panel title="Comparaison Winners vs Résultats" subtitle="Divergences entre palmarès PDF (meetingWinners) et résultats officiels (meetingResults rank=1)">
+    <Panel title="Comparaison Winners vs Résultats" subtitle="Divergences entre le PDF Hall of Winners (meetingWinners) et les résultats officiels (meetingResults rank=1)">
       <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 16 }}>
         <select className="input" value={year ?? ""} onChange={(e) => { setYear(Number(e.target.value)); setSyncMsg(null); }} style={{ minWidth: 120 }}>
           {editions.map((e) => <option key={e.year} value={e.year}>{e.year}</option>)}
@@ -657,6 +757,7 @@ function MeetingHistoryPage({ Panel }) {
   const [addingResult, setAddingResult] = useState(false);
   const [editingResult, setEditingResult] = useState(null);
   const [editMode, setEditMode] = useState(false);
+  const [expandedHeatGroups, setExpandedHeatGroups] = useState({});
   const registryIdx = useRegistryIndex();
 
   // Pick the most recent non-closed edition by default once loaded
@@ -671,12 +772,64 @@ function MeetingHistoryPage({ Panel }) {
   const groups = useMemo(() => {
     const map = new Map();
     for (const r of results) {
-      const key = `${r.discipline}||${r.gender}||${r.round || ""}`;
-      if (!map.has(key)) map.set(key, { discipline: r.discipline, gender: r.gender, round: r.round || "", rows: [] });
+      const round = normalizeRoundLabel(r.round);
+      const key = `${r.discipline}||${r.gender}||${round}||${r.finalGroup || ""}||${r.heat || ""}`;
+      if (!map.has(key)) {
+        map.set(key, {
+          discipline: r.discipline,
+          gender: r.gender,
+          round,
+          heat: r.heat || "",
+          finalGroup: r.finalGroup || "",
+          rows: [],
+        });
+      }
       map.get(key).rows.push(r);
     }
-    return [...map.values()].sort(compareDisciplineGender);
+    return [...map.values()]
+      .map((group) => ({
+        ...group,
+        rows: [...group.rows].sort((a, b) => {
+          const rankDiff = (getDisplayRank(a) ?? 999) - (getDisplayRank(b) ?? 999);
+          if (rankDiff !== 0) return rankDiff;
+          return `${a.lastName || ""} ${a.firstName || ""}`.localeCompare(`${b.lastName || ""} ${b.firstName || ""}`);
+        }),
+      }))
+      .sort(compareDisciplineGender);
   }, [results]);
+
+  const eventGroups = useMemo(() => {
+    const map = new Map();
+    for (const group of groups) {
+      const key = `${group.discipline}||${group.gender}`;
+      if (!map.has(key)) {
+        map.set(key, {
+          key,
+          discipline: group.discipline,
+          gender: group.gender,
+          finals: [],
+          heats: [],
+          others: [],
+        });
+      }
+      const entry = map.get(key);
+      if (isFinalRound(group.round)) entry.finals.push(group);
+      else if (isHeatRound(group.round)) entry.heats.push(group);
+      else entry.others.push(group);
+    }
+    return [...map.values()]
+      .map((entry) => ({
+        ...entry,
+        finals: [...entry.finals].sort(compareSectionGroups),
+        heats: [...entry.heats].sort(compareSectionGroups),
+        others: [...entry.others].sort(compareSectionGroups),
+      }))
+      .sort(compareDisciplineGender);
+  }, [groups]);
+
+  function toggleHeatDetails(eventKey) {
+    setExpandedHeatGroups((prev) => ({ ...prev, [eventKey]: !prev[eventKey] }));
+  }
 
   async function handleSeed() {
     setSeeding(true);
@@ -725,6 +878,69 @@ function MeetingHistoryPage({ Panel }) {
   }
 
   const selectedEdition = editions.find((e) => e.year === effectiveYear);
+
+  function renderSectionRows(group, options = {}) {
+    const useSectionPosition = options.useSectionPosition === true;
+    return [
+      <tr key={`grp-${group.discipline}-${group.gender}-${group.round}-${group.finalGroup}-${group.heat}`} className="event-group-header">
+        <td colSpan={isAdmin ? 9 : 8} style={{ paddingTop: "0.65rem", paddingBottom: "0.4rem" }}>
+          <span style={{ fontWeight: 700, fontSize: "0.88rem", marginRight: 8 }}>
+            {group.discipline}
+          </span>
+          <GenderTag gender={group.gender} />
+          {formatSectionLabel(group) && (
+            <span style={{ marginLeft: 8, fontSize: "0.75rem", fontWeight: 600, color: "#6b7280", background: "#f3f4f6", padding: "1px 7px", borderRadius: 10 }}>
+              {formatSectionLabel(group)}
+            </span>
+          )}
+        </td>
+      </tr>,
+      ...group.rows.map((r, index) => (
+        <tr key={r.id}>
+          <td style={{ textAlign: "center" }}>
+            <RankBadge rank={useSectionPosition ? index + 1 : getDisplayRank(r)} />
+          </td>
+          <td style={{ fontSize: "0.78rem", color: "#888" }}>{r.discipline}</td>
+          <td className="col-sticky col-sticky--last">
+            <AthleteNameCell
+              lastName={r.lastName}
+              firstName={r.firstName}
+              yob={r.yob}
+              registryIdx={registryIdx}
+            />
+          </td>
+          <td>
+            <FlagImg noc={r.noc} />
+            {r.noc}
+          </td>
+          <td style={{ fontWeight: 600, fontFamily: "monospace" }}>
+            {r.result || "—"}
+          </td>
+          <td style={{ color: "#6b7280", fontSize: "0.75rem", textAlign: "center" }}>
+            {formatSectionCell(r)}
+          </td>
+          <td style={{ color: "#888", fontSize: "0.82rem" }}>{r.yob || "—"}</td>
+          <td style={{ color: "#888", fontSize: "0.82rem" }}>
+            {r.points != null ? r.points : "—"}
+          </td>
+          {isAdmin && (
+            <td style={{ whiteSpace: "nowrap" }}>
+              <button
+                onClick={() => { setEditingResult(r); setAddingResult(false); }}
+                style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.75rem", color: "#6b7280", padding: "2px 4px" }}
+                title="Modifier"
+              >✏️</button>
+              <button
+                onClick={() => handleDeleteResult(r.id, `${r.discipline} ${r.lastName}`)}
+                style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.75rem", color: "#dc2626", padding: "2px 4px" }}
+                title="Supprimer"
+              >🗑</button>
+            </td>
+          )}
+        </tr>
+      )),
+    ];
+  }
 
   return (
     <div className="page">
@@ -942,67 +1158,47 @@ function MeetingHistoryPage({ Panel }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {groups.map((grp) => [
-                    // Event group header
-                    <tr key={`grp-${grp.discipline}-${grp.gender}-${grp.round}`} className="event-group-header">
-                      <td colSpan={isAdmin ? 8 : 7} style={{ paddingTop: "0.65rem", paddingBottom: "0.4rem" }}>
-                        <span style={{ fontWeight: 700, fontSize: "0.88rem", marginRight: 8 }}>
-                          {grp.discipline}
-                        </span>
-                        <GenderTag gender={grp.gender} />
-                        {grp.round && (
-                          <span style={{ marginLeft: 8, fontSize: "0.75rem", fontWeight: 600, color: "#6b7280", background: "#f3f4f6", padding: "1px 7px", borderRadius: 10 }}>
-                            {grp.round}
-                          </span>
-                        )}
-                      </td>
-                    </tr>,
-                    // Result rows
-                    ...grp.rows.map((r) => (
-                      <tr key={r.id}>
-                        <td style={{ textAlign: "center" }}>
-                          <RankBadge rank={r.rank} />
+                  {eventGroups.flatMap((eventGroup) => {
+                    const primarySections = eventGroup.finals.length
+                      ? eventGroup.finals
+                      : (eventGroup.others.length ? eventGroup.others : eventGroup.heats);
+                    const qualifyingHeats = eventGroup.finals.length ? eventGroup.heats : [];
+                    const showHeats = !!expandedHeatGroups[eventGroup.key];
+                    const rows = primarySections.flatMap((group) => renderSectionRows(group));
+
+                    if (!qualifyingHeats.length) return rows;
+
+                    rows.push(
+                      <tr key={`toggle-${eventGroup.key}`}>
+                        <td colSpan={isAdmin ? 9 : 8} style={{ padding: "0.15rem 0 0.65rem" }}>
+                          <button
+                            type="button"
+                            onClick={() => toggleHeatDetails(eventGroup.key)}
+                            style={{
+                              border: "1px solid #dbe4ef",
+                              background: "#f8fafc",
+                              color: "#334155",
+                              borderRadius: 999,
+                              padding: "0.28rem 0.7rem",
+                              fontSize: "0.78rem",
+                              fontWeight: 600,
+                              cursor: "pointer",
+                            }}
+                          >
+                            {showHeats ? "Masquer les séries qualificatives" : `Voir les séries qualificatives (${qualifyingHeats.length})`}
+                          </button>
                         </td>
-                        <td style={{ fontSize: "0.78rem", color: "#888" }}>{r.discipline}</td>
-                        <td className="col-sticky col-sticky--last">
-                          <AthleteNameCell
-                            lastName={r.lastName}
-                            firstName={r.firstName}
-                            yob={r.yob}
-                            registryIdx={registryIdx}
-                          />
-                        </td>
-                        <td>
-                          <FlagImg noc={r.noc} />
-                          {r.noc}
-                        </td>
-                        <td style={{ fontWeight: 600, fontFamily: "monospace" }}>
-                          {r.result || "—"}
-                        </td>
-                        <td style={{ color: "#6b7280", fontSize: "0.75rem", textAlign: "center" }}>
-                          {r.heat || "—"}
-                        </td>
-                        <td style={{ color: "#888", fontSize: "0.82rem" }}>{r.yob || "—"}</td>
-                        <td style={{ color: "#888", fontSize: "0.82rem" }}>
-                          {r.points != null ? r.points : "—"}
-                        </td>
-                        {isAdmin && (
-                          <td style={{ whiteSpace: "nowrap" }}>
-                            <button
-                              onClick={() => { setEditingResult(r); setAddingResult(false); }}
-                              style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.75rem", color: "#6b7280", padding: "2px 4px" }}
-                              title="Modifier"
-                            >✏️</button>
-                            <button
-                              onClick={() => handleDeleteResult(r.id, `${r.discipline} ${r.lastName}`)}
-                              style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.75rem", color: "#dc2626", padding: "2px 4px" }}
-                              title="Supprimer"
-                            >🗑</button>
-                          </td>
-                        )}
-                      </tr>
-                    )),
-                  ])}
+                      </tr>,
+                    );
+
+                    if (showHeats) {
+                      qualifyingHeats.forEach((group) => {
+                        rows.push(...renderSectionRows(group, { useSectionPosition: true }));
+                      });
+                    }
+
+                    return rows;
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1024,37 +1220,33 @@ function MeetingHistoryPage({ Panel }) {
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
               <div>
                 <p className="panel-note" style={{ marginBottom: "0.5rem" }}>
-                  Seeds all historical data (editions, results, records, winners) from the bundled
-                  JSON files into Firestore. Safe to re-run — uses merge writes.
+                  Importez l'année sélectionnée depuis le JSON local, puis synchronisez automatiquement
+                  les winners et les records.
                 </p>
-                <SeedButton onSeed={handleSeed} seeding={seeding} seedLog={seedLog} />
-              </div>
-              <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: "0.75rem" }}>
-                <p className="panel-note" style={{ marginBottom: "0.5rem" }}>
-                  <strong>Réinitialiser les winners</strong> — supprime tous les documents de la collection meetingWinners
-                  (y compris les anciens IDs avec disciplines "60 m" vs "60m") puis recharge depuis le JSON corrigé.
-                  À utiliser si des doublons de noms apparaissent dans Winners History ou Luxembourg.
-                </p>
-                <button
-                  className="btn btn--danger"
-                  style={{ fontSize: "0.82rem" }}
-                  onClick={async () => {
-                    if (!window.confirm("Supprimer TOUS les winners et re-seeder depuis le JSON ? (les données 2026 seront perdues — relancer Close Edition ensuite)")) return;
-                    setSeedLog([]);
-                    setSeeding(true);
-                    try {
-                      const result = await resetAndReseedWinners((msg) => setSeedLog((p) => [...p, msg]));
-                      setSeedLog((p) => [...p, `✅ ${result}`]);
-                    } catch (err) {
-                      setSeedLog((p) => [...p, `❌ ${err.message}`]);
-                    } finally {
-                      setSeeding(false);
-                    }
-                  }}
-                  disabled={seeding}
-                >
-                  🔄 Réinitialiser winners (purge + re-seed)
-                </button>
+                {effectiveYear && !selectedEdition?.cancelled ? (
+                  <button
+                    className="btn btn--primary"
+                    style={{ fontSize: "0.82rem" }}
+                    onClick={async () => {
+                      if (!window.confirm(`Importer ${effectiveYear} depuis le JSON local, synchroniser les winners puis recalculer tous les records ?`)) return;
+                      setSeedLog([`Import ${effectiveYear} depuis le JSON local…`]);
+                      setSeeding(true);
+                      try {
+                        const summary = await reseedMeetingYearFromJson(effectiveYear, (msg) => setSeedLog((p) => [...p, msg]));
+                        setSeedLog((p) => [...p, `✅ ${effectiveYear}: ${summary.results} résultats, ${summary.winners} winners, ${summary.records} records.`]);
+                      } catch (err) {
+                        setSeedLog((p) => [...p, `❌ ${err.message}`]);
+                      } finally {
+                        setSeeding(false);
+                      }
+                    }}
+                    disabled={seeding}
+                  >
+                    Importer {effectiveYear} depuis JSON + winners + records
+                  </button>
+                ) : (
+                  <p className="panel-note">Sélectionnez une édition active pour lancer l'import.</p>
+                )}
               </div>
               <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: "0.75rem" }}>
                 <p className="panel-note" style={{ marginBottom: "0.5rem" }}>
@@ -1064,35 +1256,94 @@ function MeetingHistoryPage({ Panel }) {
                 <p className="panel-note" style={{ marginBottom: "0.5rem" }}>
                   <strong>Visibilité dans les stats publiques :</strong> cochez/décochez la case "stats" sous chaque année dans le sélecteur d'édition.
                 </p>
-                <button
-                  className="btn"
-                  style={{ fontSize: "0.82rem" }}
-                  onClick={async () => {
-                    const years = editions.filter((e) => e.year >= 2004 && e.year <= 2018).map((e) => e.year);
-                    if (!years.length) return;
-                    if (!window.confirm(`Masquer les années ${years.join(", ")} des statistiques ?`)) return;
-                    await Promise.all(years.map((y) => setEditionVisibility(y, false)));
-                  }}
-                >
-                  Masquer 2004–2018 des stats
-                </button>
-                {effectiveYear && !selectedEdition?.cancelled && (
+                <details style={{ marginTop: "0.75rem" }}>
+                  <summary style={{ cursor: "pointer", fontSize: "0.82rem", fontWeight: 600, color: "#4b5563" }}>
+                    Maintenance avancée
+                  </summary>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "0.75rem" }}>
+                    <p className="panel-note" style={{ marginBottom: 0 }}>
+                      À utiliser seulement pour corriger ou reconstruire la base historique.
+                    </p>
+                    <SeedButton onSeed={handleSeed} seeding={seeding} seedLog={seedLog} />
+                    <button
+                      className="btn btn--danger"
+                      style={{ fontSize: "0.82rem", width: "fit-content" }}
+                      onClick={async () => {
+                        if (!window.confirm("Supprimer TOUS les winners et re-seeder depuis le JSON ? (les données 2026 seront perdues — relancer Close Edition ensuite)")) return;
+                        setSeedLog([]);
+                        setSeeding(true);
+                        try {
+                          const result = await resetAndReseedWinners((msg) => setSeedLog((p) => [...p, msg]));
+                          setSeedLog((p) => [...p, `✅ ${result}`]);
+                        } catch (err) {
+                          setSeedLog((p) => [...p, `❌ ${err.message}`]);
+                        } finally {
+                          setSeeding(false);
+                        }
+                      }}
+                      disabled={seeding}
+                    >
+                      🔄 Réinitialiser winners (purge + re-seed)
+                    </button>
+                    <button
+                      className="btn"
+                      style={{ fontSize: "0.82rem", width: "fit-content" }}
+                      onClick={async () => {
+                        const years = editions.filter((e) => e.year >= 2004 && e.year <= 2018).map((e) => e.year);
+                        if (!years.length) return;
+                        if (!window.confirm(`Masquer les années ${years.join(", ")} des statistiques ?`)) return;
+                        await Promise.all(years.map((y) => setEditionVisibility(y, false)));
+                      }}
+                    >
+                      Masquer 2004–2018 des stats
+                    </button>
+                    <button
+                      className="btn"
+                      style={{ fontSize: "0.82rem", width: "fit-content" }}
+                      onClick={async () => {
+                        if (!window.confirm("Recalculer tous les records à partir des résultats déjà en base ?")) return;
+                        setSeedLog(["Recalcul des records…"]);
+                        setSeeding(true);
+                        try {
+                          const n = await rebuildMeetingRecords((msg) => setSeedLog((p) => [...p, msg]));
+                          setSeedLog((p) => [...p, `✅ ${n} records recalculés.`]);
+                        } catch (err) {
+                          setSeedLog((p) => [...p, `❌ ${err.message}`]);
+                        } finally {
+                          setSeeding(false);
+                        }
+                      }}
+                      disabled={seeding}
+                    >
+                      Recalculer les records
+                    </button>
+                  </div>
+                </details>
+              </div>
+              {effectiveYear && !selectedEdition?.cancelled && (
+                <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: "0.75rem" }}>
                   <button
                     className="btn"
-                    style={{ fontSize: "0.82rem", marginTop: "0.5rem", color: "#dc2626", borderColor: "#dc2626" }}
+                    style={{ fontSize: "0.82rem", color: "#dc2626", borderColor: "#dc2626" }}
                     onClick={async () => {
-                      if (!window.confirm(`Vider TOUS les résultats ${effectiveYear} de Firestore et les réimporter depuis le JSON ?`)) return;
-                      setSeedLog([`Suppression des résultats ${effectiveYear}…`]);
-                      const n = await clearResultsForYear(effectiveYear);
-                      setSeedLog((p) => [...p, `${n} résultats supprimés. Réimport en cours…`]);
-                      await seedMeetingDatabase((msg) => setSeedLog((p) => [...p, msg]));
-                      setSeedLog((p) => [...p, `✅ Résultats ${effectiveYear} réimportés.`]);
+                      if (!window.confirm(`Vous avez déjà importé ${effectiveYear}. Voulez-vous vraiment le relancer ?`)) return;
+                      setSeedLog([`Import ${effectiveYear} relancé…`]);
+                      setSeeding(true);
+                      try {
+                        const summary = await reseedMeetingYearFromJson(effectiveYear, (msg) => setSeedLog((p) => [...p, msg]));
+                        setSeedLog((p) => [...p, `✅ ${effectiveYear}: ${summary.results} résultats, ${summary.winners} winners, ${summary.records} records.`]);
+                      } catch (err) {
+                        setSeedLog((p) => [...p, `❌ ${err.message}`]);
+                      } finally {
+                        setSeeding(false);
+                      }
                     }}
+                    disabled={seeding}
                   >
-                    Vider et réimporter {effectiveYear}
+                    Relancer l'import {effectiveYear}
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </Panel>
         </section>
@@ -1109,7 +1360,7 @@ function MeetingRecordsPage({ Panel }) {
 
   const displayed = useMemo(() => {
     const base = genderFilter === "all" ? records : records.filter((r) => r.gender === genderFilter);
-    return [...base].sort(compareDisciplineGender);
+    return [...base].sort(compareRecordsDisplay);
   }, [records, genderFilter]);
 
   return (
