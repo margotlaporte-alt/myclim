@@ -8,10 +8,11 @@ import {
   normalizeEditionId,
   useActiveEdition,
 } from "./edition";
-import { buildAthletePortalNavigation, buildNavigationFromRoles, getActiveRoles, getPrimaryRole } from "./navigation";
+import { buildAthletePortalNavigation, buildNavigationFromRoles, buildStatisticsNavigation, getActiveRoles, getPrimaryRole } from "./navigation";
 import { canAccessAthletePortal, canImportAthletes, useAthletePortalSettings } from "./athlete-portal-hooks";
 import { useTeamConfiguration } from "./config-hooks";
 import { useDocumentsCollection } from "./documents-hooks";
+import { useMeetingEditions } from "./meeting-history-hooks";
 import { useVolunteerApplication, useVolunteerApplicationsList } from "./volunteer-hooks";
 import { useParentU14Children, useU14RequestsList } from "./u14-hooks";
 import { buildUserIdentitySet, formatVolunteerApplicationStatus, isTeamLeadAssignment } from "./common-helpers";
@@ -107,9 +108,27 @@ function AppShell(props) {
       links: buildAthletePortalNavigation(effectiveRoles, portalSettings, { canImport: portalCanImport }),
     };
   }, [effectiveRoles, portalCanImport, portalSettings, portalSettingsLoading]);
+  const statisticsSection = useMemo(() => {
+    const links = buildStatisticsNavigation(effectiveRoles);
+    if (!links.length) return null;
+    return {
+      type: "section",
+      title: "Statistiques",
+      links,
+    };
+  }, [effectiveRoles]);
 
   const mainNavigation = useMemo(() => {
     const nav = buildNavigationFromRoles(effectiveRoles);
+
+    if (statisticsSection && Array.isArray(nav)) {
+      const settingsIndex = nav.findIndex((item) => item.type === "section" && item.title === "Réglages");
+      if (settingsIndex >= 0) {
+        nav.splice(settingsIndex, 0, statisticsSection);
+      } else {
+        nav.push(statisticsSection);
+      }
+    }
 
     if (portalSection && Array.isArray(nav)) {
       const settingsIndex = nav.findIndex((item) => item.type === "section" && item.title === "Réglages");
@@ -121,7 +140,7 @@ function AppShell(props) {
     }
 
     return nav;
-  }, [effectiveRoles, portalSection]);
+  }, [effectiveRoles, portalSection, statisticsSection]);
 
   const navigation = mainNavigation;
   const flatNavigation = useMemo(() => flattenNavigationItems(navigation), [navigation]);
@@ -383,6 +402,23 @@ function DashboardHome(props) {
   const [editionDraft, setEditionDraft] = useState(activeEditionId);
   const [preprogramOpeningDraft, setPreprogramOpeningDraft] = useState("");
   const [editionSaveStatus, setEditionSaveStatus] = useState("");
+  const currentPreprogramOpeningValue = preprogramOpeningByEdition?.[normalizeEditionId(activeEditionId)] || "";
+  const { editions: meetingEditions } = useMeetingEditions();
+  const availableEditionOptions = useMemo(() => {
+    const numericEditionIds = [...new Set((meetingEditions || []).map((edition) => normalizeEditionId(edition.year)).filter(Boolean))]
+      .sort((left, right) => Number(right) - Number(left));
+
+    return [
+      { value: "test", label: "test — configuration modèle" },
+      ...numericEditionIds.map((editionId) => {
+        const edition = (meetingEditions || []).find((entry) => normalizeEditionId(entry.year) === editionId);
+        return {
+          value: editionId,
+          label: edition?.isClosed ? `édition ${editionId} — clôturée` : `édition ${editionId}`,
+        };
+      }),
+    ];
+  }, [meetingEditions]);
 
   useEffect(() => {
     setEditionDraft(activeEditionId);
@@ -394,7 +430,7 @@ function DashboardHome(props) {
         ? formatDateTimeLocalValue(preprogramOpeningDate)
         : "",
     );
-  }, [preprogramOpeningDate]);
+  }, [activeEditionId, currentPreprogramOpeningValue]);
   const { application: volunteerApplication } = useVolunteerApplication(currentUser?.uid);
   const { roles: teamRoles, teamAssignments, loading: teamsLoading } = useTeamConfiguration();
   const { applications: volunteerApplications, loading: volunteerApplicationsLoading } = useVolunteerApplicationsList(
@@ -530,8 +566,41 @@ function DashboardHome(props) {
     try {
       if (nextEditionId !== activeEditionId) {
         await archiveCurrentEditionData(activeEditionId);
+        if (activeEditionId === "test" && nextEditionId !== "test") {
+          await copyEditionStructureToArchive(activeEditionId, nextEditionId);
+        }
+        const currentEditionYear = Number(activeEditionId);
+        const nextEditionYear = Number(nextEditionId);
+        if (
+          activeEditionId !== "test" &&
+          nextEditionId !== "test" &&
+          Number.isFinite(currentEditionYear) &&
+          Number.isFinite(nextEditionYear) &&
+          nextEditionYear > currentEditionYear
+        ) {
+          await setDoc(
+            doc(db, "meetingEditions", String(currentEditionYear)),
+            {
+              isClosed: true,
+              closedAt: serverTimestamp(),
+            },
+            { merge: true },
+          );
+        }
+        if (nextEditionId !== "test" && Number.isFinite(nextEditionYear)) {
+          await setDoc(
+            doc(db, "meetingEditions", String(nextEditionYear)),
+            {
+              isClosed: false,
+              updatedAt: serverTimestamp(),
+            },
+            { merge: true },
+          );
+        }
         await resetEditionScopedData();
-        await restoreEditionScopedData(nextEditionId);
+        await restoreEditionScopedData(nextEditionId, {
+          restoreAssignments: nextEditionId === "test",
+        });
       }
 
       await setDoc(
@@ -643,6 +712,7 @@ function DashboardHome(props) {
 
     const teamsData = teamsSnapshot.exists() ? teamsSnapshot.data() : {};
     const accreditationData = accreditationSnapshot.exists() ? accreditationSnapshot.data() : {};
+    const archivedAtIso = new Date().toISOString();
 
     await setDoc(
       doc(db, "editionArchives", normalizedEditionId),
@@ -669,9 +739,80 @@ function DashboardHome(props) {
       },
       { merge: true },
     );
+
+    if (!userAssignmentSnapshots.length) return;
+
+    const historyBatch = writeBatch(db);
+
+    userAssignmentSnapshots.forEach((userSnapshot) => {
+      const userId = String(userSnapshot?.userId || userSnapshot?.uid || "").trim();
+      if (!userId) return;
+
+      historyBatch.set(
+        doc(db, "users", userId),
+        {
+          assignmentHistoryByEdition: {
+            [normalizedEditionId]: {
+              editionId: normalizedEditionId,
+              archivedAt: archivedAtIso,
+              assignedRole: String(userSnapshot?.assignedRole || "").trim(),
+              assignedTeams: Array.isArray(userSnapshot?.assignedTeams) ? userSnapshot.assignedTeams : [],
+              assignmentStatus: String(userSnapshot?.assignmentStatus || "").trim() || "En attente",
+              teamRole: String(userSnapshot?.teamRole || "").trim(),
+              teamRoleAssignments:
+                userSnapshot?.teamRoleAssignments && typeof userSnapshot.teamRoleAssignments === "object"
+                  ? userSnapshot.teamRoleAssignments
+                  : {},
+            },
+          },
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      );
+    });
+
+    await historyBatch.commit();
   }
 
-  async function restoreEditionScopedData(editionId) {
+  async function copyEditionStructureToArchive(sourceEditionId, targetEditionId) {
+    const normalizedSourceEditionId = normalizeEditionId(sourceEditionId);
+    const normalizedTargetEditionId = normalizeEditionId(targetEditionId);
+    const sourceArchiveSnapshot = await getDoc(doc(db, "editionArchives", normalizedSourceEditionId));
+
+    if (!sourceArchiveSnapshot.exists()) return;
+
+    const sourceArchiveData = sourceArchiveSnapshot.data() || {};
+    const sourceTeamConfigurationSnapshot =
+      sourceArchiveData?.teamConfigurationSnapshot && typeof sourceArchiveData.teamConfigurationSnapshot === "object"
+        ? sourceArchiveData.teamConfigurationSnapshot
+        : {};
+
+    await setDoc(
+      doc(db, "editionArchives", normalizedTargetEditionId),
+      {
+        editionId: normalizedTargetEditionId,
+        preparedFromEditionId: normalizedSourceEditionId,
+        preparedAt: serverTimestamp(),
+        teamConfigurationSnapshot: {
+          roles: Array.isArray(sourceTeamConfigurationSnapshot?.roles) ? sourceTeamConfigurationSnapshot.roles : [],
+          teamAssignments: [],
+          supportTasks: Array.isArray(sourceTeamConfigurationSnapshot?.supportTasks)
+            ? sourceTeamConfigurationSnapshot.supportTasks
+            : [],
+        },
+        accreditationSnapshot: {
+          volunteerOverrides: {},
+          badgeStorageLocations: {},
+          printHistory: [],
+        },
+        userAssignmentSnapshots: [],
+      },
+      { merge: true },
+    );
+  }
+
+  async function restoreEditionScopedData(editionId, options = {}) {
+    const { restoreAssignments = true } = options;
     const normalizedEditionId = normalizeEditionId(editionId);
     const archiveSnapshot = await getDoc(doc(db, "editionArchives", normalizedEditionId));
 
@@ -691,34 +832,37 @@ function DashboardHome(props) {
         : {};
     const batch = writeBatch(db);
 
-    userAssignmentSnapshots.forEach((userSnapshot) => {
-      const userId = String(userSnapshot?.userId || userSnapshot?.uid || "").trim();
-      if (!userId) return;
+    if (restoreAssignments) {
+      userAssignmentSnapshots.forEach((userSnapshot) => {
+        const userId = String(userSnapshot?.userId || userSnapshot?.uid || "").trim();
+        if (!userId) return;
 
-      batch.set(
-        doc(db, "users", userId),
-        {
-          assignedRole: String(userSnapshot?.assignedRole || "").trim() || deleteField(),
-          assignedTeams: Array.isArray(userSnapshot?.assignedTeams) ? userSnapshot.assignedTeams : [],
-          assignmentStatus: String(userSnapshot?.assignmentStatus || "").trim() || "En attente",
-          teamRole: String(userSnapshot?.teamRole || "").trim() || deleteField(),
-          teamRoleAssignments:
-            userSnapshot?.teamRoleAssignments && typeof userSnapshot.teamRoleAssignments === "object"
-              ? userSnapshot.teamRoleAssignments
-              : {},
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true },
-      );
-    });
+        batch.set(
+          doc(db, "users", userId),
+          {
+            assignedRole: String(userSnapshot?.assignedRole || "").trim() || deleteField(),
+            assignedTeams: Array.isArray(userSnapshot?.assignedTeams) ? userSnapshot.assignedTeams : [],
+            assignmentStatus: String(userSnapshot?.assignmentStatus || "").trim() || "En attente",
+            teamRole: String(userSnapshot?.teamRole || "").trim() || deleteField(),
+            teamRoleAssignments:
+              userSnapshot?.teamRoleAssignments && typeof userSnapshot.teamRoleAssignments === "object"
+                ? userSnapshot.teamRoleAssignments
+                : {},
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true },
+        );
+      });
+    }
 
     batch.set(
       doc(db, ...TEAM_CONFIGURATION_DOC_PATH),
       {
         roles: Array.isArray(teamConfigurationSnapshot?.roles) ? teamConfigurationSnapshot.roles : [],
-        teamAssignments: Array.isArray(teamConfigurationSnapshot?.teamAssignments)
-          ? teamConfigurationSnapshot.teamAssignments
-          : [],
+        teamAssignments:
+          restoreAssignments && Array.isArray(teamConfigurationSnapshot?.teamAssignments)
+            ? teamConfigurationSnapshot.teamAssignments
+            : [],
         supportTasks: Array.isArray(teamConfigurationSnapshot?.supportTasks) ? teamConfigurationSnapshot.supportTasks : [],
         updatedAt: serverTimestamp(),
       },
@@ -729,15 +873,21 @@ function DashboardHome(props) {
       doc(db, ...ACCREDITATION_CONFIGURATION_DOC_PATH),
       {
         volunteerOverrides:
-          accreditationSnapshot?.volunteerOverrides && typeof accreditationSnapshot.volunteerOverrides === "object"
+          restoreAssignments &&
+          accreditationSnapshot?.volunteerOverrides &&
+          typeof accreditationSnapshot.volunteerOverrides === "object"
             ? accreditationSnapshot.volunteerOverrides
             : {},
         badgeStorageLocations:
+          restoreAssignments &&
           accreditationSnapshot?.badgeStorageLocations &&
           typeof accreditationSnapshot.badgeStorageLocations === "object"
             ? accreditationSnapshot.badgeStorageLocations
             : {},
-        printHistory: Array.isArray(accreditationSnapshot?.printHistory) ? accreditationSnapshot.printHistory : [],
+        printHistory:
+          restoreAssignments && Array.isArray(accreditationSnapshot?.printHistory)
+            ? accreditationSnapshot.printHistory
+            : [],
         updatedAt: serverTimestamp(),
       },
       { merge: true },
@@ -765,8 +915,8 @@ function DashboardHome(props) {
               <NavLink className="button button--secondary button-link" to="/app/postes">Ajuster les équipes</NavLink>
               <NavLink className="button button--secondary button-link" to="/app/accreditations">Produire les badges</NavLink>
               <NavLink className="button button--secondary button-link" to="/app/website">Gérer le site internet</NavLink>
-              <NavLink className="button button--secondary button-link" to="/app/athlete-portal">Gérer les athlètes</NavLink>
-              <NavLink className="button button--secondary button-link" to="/app/athlete-portal/records">Gérer les résultats</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/athlete-portal/athletes">Gérer les athlètes</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/statistics/results">Gérer les résultats</NavLink>
             </div>
           </Panel>
         </section>
@@ -891,6 +1041,7 @@ function DashboardHome(props) {
                 activeEditionLabel={activeEditionLabel}
                 editionDraft={editionDraft}
                 editionLoading={editionLoading}
+                editionOptions={availableEditionOptions}
                 onEditionDraftChange={setEditionDraft}
                 preprogramOpeningDraft={preprogramOpeningDraft}
                 onPreprogramOpeningDraftChange={setPreprogramOpeningDraft}
@@ -899,12 +1050,6 @@ function DashboardHome(props) {
                 <button className="button button--primary" disabled={editionLoading} type="submit">
                   Changer d'édition
                 </button>
-                <button className="button button--secondary" type="button" onClick={() => setEditionDraft("test")}>
-                  Passer sur test
-                </button>
-                <button className="button button--secondary" type="button" onClick={() => setEditionDraft("2027")}>
-                  Préparer 2027
-                </button>
               </div>
               {editionSaveStatus ? <p className="panel-note">{editionSaveStatus}</p> : null}
             </form>
@@ -912,8 +1057,10 @@ function DashboardHome(props) {
           <Panel title="Effet de la bascule" subtitle="Ce que la plateforme fera immédiatement après changement.">
             <ul className="compact-list">
               <li>Les comptes existants restent intacts dans `users`.</li>
+              <li>Les rôles et tâches support servent de base pour préparer l'édition suivante.</li>
               <li>Le module bénévole redevient vide pour la nouvelle édition tant qu'un nouveau dossier n'est pas rempli.</li>
               <li>Les inscriptions pré-programme repartent de zéro sur la nouvelle édition.</li>
+              <li>Si tu avances vers une édition plus récente, l'édition quittée est marquée comme clôturée.</li>
               <li>Les données des anciennes éditions restent conservées en base et peuvent être consultées en rebasculant.</li>
             </ul>
           </Panel>
@@ -1001,6 +1148,7 @@ function AuthEditionField(props) {
     activeEditionLabel,
     editionDraft,
     editionLoading,
+    editionOptions,
     onEditionDraftChange,
     preprogramOpeningDraft,
     onPreprogramOpeningDraftChange,
@@ -1009,13 +1157,18 @@ function AuthEditionField(props) {
   return (
     <>
       <label className="field">
-        <span>Identifiant d'édition</span>
-        <input
+        <span>Édition cible</span>
+        <select
           disabled={editionLoading}
           onChange={(event) => onEditionDraftChange(event.target.value)}
-          placeholder="test ou 2027"
           value={editionDraft}
-        />
+        >
+          {editionOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
       </label>
       <p className="panel-note">
         Édition actuellement visible dans l'application: {editionLoading ? "Chargement..." : activeEditionLabel}

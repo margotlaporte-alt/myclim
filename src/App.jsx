@@ -3,6 +3,7 @@ import {
   addDoc,
   arrayRemove,
   arrayUnion,
+  deleteDoc,
   doc,
   getDocs,
   serverTimestamp,
@@ -20,6 +21,7 @@ import { LanguageProvider } from "./app/language";
 import { SiteLayout } from "./site/site-layout";
 import { SiteHome } from "./site/site-home";
 import { SiteEvent } from "./site/site-event";
+import { SiteEmagazine } from "./site/site-emagazine";
 import { SiteStatistics } from "./site/site-statistics";
 import { SitePress } from "./site/site-press";
 import { SitePartners } from "./site/site-partners";
@@ -77,7 +79,6 @@ const VipPartnerPortalPage = lazyNamed(() => import("./app/vip-pages"), "VipPart
 const VipAdminPage = lazyNamed(() => import("./app/vip-admin-page"), "VipAdminPage");
 const PressRegistrationPage = lazyNamed(() => import("./app/press-registration-page"), "PressRegistrationPage");
 const PressAdminPageScreen = lazyNamed(() => import("./app/press-admin-page"), "PressAdminPage");
-const AthletePortalOverviewPage = lazyNamed(() => import("./app/athlete-portal-pages"), "AthletePortalOverview");
 const AthletesListPageScreen = lazyNamed(() => import("./app/athlete-portal-pages"), "AthletesListPage");
 const AthletePortalSettingsPageScreen = lazyNamed(() => import("./app/athlete-portal-pages"), "AthletePortalSettingsPage");
 const AthleteRegistryPageScreen = lazyNamed(() => import("./app/athlete-portal-pages"), "AthleteRegistryPage");
@@ -91,6 +92,7 @@ const WebsiteNewsPageScreen = lazyNamed(() => import("./app/website-admin-pages"
 const WebsiteSponsorsPageScreen = lazyNamed(() => import("./app/website-admin-pages"), "WebsiteSponsorsPage");
 const WebsitePressPageScreen = lazyNamed(() => import("./app/website-admin-pages"), "WebsitePressPage");
 const WebsiteEditionPageScreen = lazyNamed(() => import("./app/website-admin-pages"), "WebsiteEditionPage");
+const WebsiteEmagazinePageScreen = lazyNamed(() => import("./app/website-emagazine-page"), "WebsiteEmagazinePage");
 const InvitationAdminPageScreen = lazyNamed(() => import("./app/invitation-admin-page"), "InvitationAdminPage");
 const InvitePage = lazyNamed(() => import("./app/invite-page"), "InvitePage");
 
@@ -283,10 +285,6 @@ function PressAdminPage() {
   return <PressAdminPageScreen Panel={Panel} loadMailQueueModule={loadMailQueueModule} />;
 }
 
-function AthletePortalOverview() {
-  return <AthletePortalOverviewPage Panel={Panel} />;
-}
-
 function AthletesListPage() {
   return <AthletesListPageScreen Panel={Panel} />;
 }
@@ -339,6 +337,10 @@ function WebsiteEditionPage() {
   return <WebsiteEditionPageScreen Panel={Panel} />;
 }
 
+function WebsiteEmagazinePage() {
+  return <WebsiteEmagazinePageScreen Panel={Panel} />;
+}
+
 function InvitationAdminPage() {
   return <InvitationAdminPageScreen Panel={Panel} />;
 }
@@ -362,6 +364,7 @@ function U14Page() {
       DataTable={DataTable}
       Panel={Panel}
       addDoc={addDoc}
+      deleteDoc={deleteDoc}
       doc={doc}
       getDocs={getDocs}
       loadMailQueueModule={loadMailQueueModule}
@@ -442,6 +445,7 @@ export default function App() {
           <Route element={<SiteLayout />}>
             <Route path="/" element={<SiteHome />} />
             <Route path="/event" element={<SiteEvent />} />
+            <Route path="/e-magazine" element={<SiteEmagazine />} />
             <Route path="/statistics" element={<SiteStatistics />} />
             <Route path="/press" element={<SitePress />} />
             <Route path="/partners" element={<SitePartners />} />
@@ -499,14 +503,8 @@ export default function App() {
               </Route>
               <Route path="profil" element={<ProfilePage />} />
               <Route path="athlete-portal">
-                <Route index element={<AthletePortalOverview />} />
+                <Route index element={<Navigate replace to="athletes" />} />
                 <Route path="athletes" element={<AthletesListPage />} />
-                <Route element={<RequireRouteAccess allowedRoles={["admin", "meeting_director"]} />}>
-                  <Route path="registry" element={<AthleteRegistryPage />} />
-                  <Route path="history" element={<MeetingHistoryPage />} />
-                  <Route path="records" element={<MeetingRecordsPage />} />
-                  <Route path="winners" element={<MeetingWinnersPage />} />
-                </Route>
                 <Route element={<RequireRouteAccess allowedRoles={["admin"]} />}>
                   <Route path="settings" element={<AthletePortalSettingsPage />} />
                 </Route>
@@ -516,12 +514,26 @@ export default function App() {
                 <Route element={<RequireRouteAccess allowedRoles={["benevole_transport_athletes"]} />}>
                   <Route path="mes-transport" element={<AthleteTransportVolunteerPage />} />
                 </Route>
+                <Route path="registry" element={<Navigate replace to="/app/statistics/registry" />} />
+                <Route path="history" element={<Navigate replace to="/app/statistics/results" />} />
+                <Route path="records" element={<Navigate replace to="/app/statistics/records" />} />
+                <Route path="winners" element={<Navigate replace to="/app/statistics/winners" />} />
+              </Route>
+              <Route element={<RequireRouteAccess allowedRoles={["admin", "meeting_director"]} />}>
+                <Route path="statistics">
+                  <Route index element={<Navigate replace to="results" />} />
+                  <Route path="registry" element={<AthleteRegistryPage />} />
+                  <Route path="results" element={<MeetingHistoryPage />} />
+                  <Route path="records" element={<MeetingRecordsPage />} />
+                  <Route path="winners" element={<MeetingWinnersPage />} />
+                </Route>
               </Route>
               <Route element={<RequireRouteAccess allowedRoles={["admin", "gestionnaire", "gestionnaire_site"]} />}>
                 <Route path="website">
-                  <Route index element={<WebsiteDashboardPage />} />
-                  <Route path="edition" element={<WebsiteEditionPage />} />
-                  <Route path="news" element={<WebsiteNewsPage />} />
+                <Route index element={<WebsiteDashboardPage />} />
+                <Route path="edition" element={<WebsiteEditionPage />} />
+                <Route path="emagazine" element={<WebsiteEmagazinePage />} />
+                <Route path="news" element={<WebsiteNewsPage />} />
                   <Route path="sponsors" element={<WebsiteSponsorsPage />} />
                   <Route path="press" element={<WebsitePressPage />} />
                 </Route>

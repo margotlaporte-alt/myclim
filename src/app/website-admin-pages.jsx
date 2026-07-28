@@ -1044,6 +1044,13 @@ export function WebsiteDashboardPage({ Panel }) {
       cta: "Configurer l'édition",
     },
     {
+      to: "/app/website/emagazine",
+      icon: "📖",
+      title: "E-magazine",
+      desc: "Welcome page, highlights, partner ads, startlists",
+      cta: "Configure magazine",
+    },
+    {
       to: "/app/website/news",
       icon: "📰",
       title: "News",
@@ -1139,6 +1146,7 @@ export function WebsiteEditionPage({ Panel }) {
   // Liens live
   const [streamingUrlInput, setStreamingUrlInput] = useState("");
   const [resultsUrlInput, setResultsUrlInput] = useState("");
+  const [nationalRacesUrlInput, setNationalRacesUrlInput] = useState("");
   const [liveUrlsSaving, setLiveUrlsSaving] = useState(false);
 
   // Disciplines
@@ -1457,6 +1465,54 @@ export function WebsiteEditionPage({ Panel }) {
                     onClick={async () => {
                       setLiveUrlsSaving(true);
                       try { await updateEdition(effectiveYear, { resultsUrl: null }); }
+                      finally { setLiveUrlsSaving(false); }
+                    }}
+                    style={{ whiteSpace: "nowrap", fontSize: "0.8rem", color: "#dc2626", borderColor: "#fca5a5" }}
+                  >
+                    Supprimer
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Pré-programme national races */}
+            <div>
+              <div style={{ fontWeight: 600, fontSize: "0.78rem", color: "#6b7280", marginBottom: 6 }}>
+                Pré-programme — lien SELTEC pour les courses nationales (60m M/W, 800m M/W)
+              </div>
+              {selectedEdition.preprogrammeNationalRacesUrl && (
+                <div style={{ fontSize: "0.72rem", color: "#6b7280", marginBottom: 6, wordBreak: "break-all" }}>
+                  Actuel : <code style={{ background: "#f1f5f9", padding: "1px 4px", borderRadius: 4 }}>{selectedEdition.preprogrammeNationalRacesUrl}</code>
+                </div>
+              )}
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <input
+                  type="url"
+                  placeholder="https://www.seltec-sports.net/…"
+                  value={nationalRacesUrlInput}
+                  onChange={(e) => setNationalRacesUrlInput(e.target.value)}
+                  onFocus={() => !nationalRacesUrlInput && setNationalRacesUrlInput(selectedEdition.preprogrammeNationalRacesUrl || "")}
+                  style={{ ...inp, flex: 1 }}
+                />
+                <button
+                  className="btn btn--secondary"
+                  disabled={liveUrlsSaving || !nationalRacesUrlInput.trim()}
+                  onClick={async () => {
+                    setLiveUrlsSaving(true);
+                    try { await updateEdition(effectiveYear, { preprogrammeNationalRacesUrl: nationalRacesUrlInput.trim() }); setNationalRacesUrlInput(""); }
+                    finally { setLiveUrlsSaving(false); }
+                  }}
+                  style={{ whiteSpace: "nowrap", fontSize: "0.8rem" }}
+                >
+                  {liveUrlsSaving ? "…" : "Sauvegarder"}
+                </button>
+                {selectedEdition.preprogrammeNationalRacesUrl && (
+                  <button
+                    className="btn btn--secondary"
+                    disabled={liveUrlsSaving}
+                    onClick={async () => {
+                      setLiveUrlsSaving(true);
+                      try { await updateEdition(effectiveYear, { preprogrammeNationalRacesUrl: null }); }
                       finally { setLiveUrlsSaving(false); }
                     }}
                     style={{ whiteSpace: "nowrap", fontSize: "0.8rem", color: "#dc2626", borderColor: "#fca5a5" }}

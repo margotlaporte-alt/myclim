@@ -2,6 +2,8 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { addDoc, collection, doc, onSnapshot, serverTimestamp, setDoc, updateDoc, writeBatch } from "firebase/firestore";
 import { db } from "../services/firebase";
 import { useAuth } from "../context/auth-context";
+import meetingLogoUrl from "../assets/cmcm-logo.png";
+import sponsorsStripUrl from "../assets/accreditation-sponsors-strip.png";
 import { useBudgetInvoiceConfiguration } from "./config-hooks";
 import { useDocumentsCollection } from "./documents-hooks";
 import { useActiveEdition } from "./edition";
@@ -61,6 +63,22 @@ const historyFieldLabels = {
   created: "Création",
   deleted: "Suppression",
 };
+
+const EXCEL_EXPORT_BRAND = {
+  navy: "163C6B",
+  navySoft: "EAF2FB",
+  red: "D61F2C",
+  redSoft: "FBEAEC",
+  ink: "172033",
+  muted: "607086",
+  line: "D7E1EB",
+  soft: "F7FAFC",
+  white: "FFFFFF",
+  good: "176F3F",
+  bad: "B42318",
+};
+
+const EXCEL_CURRENCY_FORMAT = '[$€-x-euro2] #,##0.00;[Red]-[$€-x-euro2] #,##0.00';
 
 function formatCurrency(value) {
   if (value == null) return "—";
@@ -265,13 +283,385 @@ function buildBudgetOverviewExportRows({ budget, totals, hasComparison }) {
   ];
 }
 
+function triggerExcelDownload(buffer, filename) {
+  const blob = new Blob(
+    [buffer],
+    { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+  );
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+async function loadWorkbookImage(url) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Unable to load workbook image: ${url}`);
+  }
+  return response.arrayBuffer();
+}
+
+function applyCellBorder(cell, overrides = {}) {
+  cell.border = {
+    top: { style: "thin", color: { argb: overrides.top || EXCEL_EXPORT_BRAND.line } },
+    left: { style: "thin", color: { argb: overrides.left || EXCEL_EXPORT_BRAND.line } },
+    bottom: { style: "thin", color: { argb: overrides.bottom || EXCEL_EXPORT_BRAND.line } },
+    right: { style: "thin", color: { argb: overrides.right || EXCEL_EXPORT_BRAND.line } },
+  };
+}
+
+function styleHeaderRow(row) {
+  row.height = 22;
+  row.eachCell((cell) => {
+    cell.font = { name: "Aptos", size: 11, bold: true, color: { argb: EXCEL_EXPORT_BRAND.white } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: EXCEL_EXPORT_BRAND.navy } };
+    cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+    applyCellBorder(cell, {
+      top: EXCEL_EXPORT_BRAND.navy,
+      right: EXCEL_EXPORT_BRAND.navy,
+      bottom: EXCEL_EXPORT_BRAND.navy,
+      left: EXCEL_EXPORT_BRAND.navy,
+    });
+  });
+}
+
+function styleSectionRow(row) {
+  row.height = 22;
+  row.eachCell((cell) => {
+    cell.font = { name: "Aptos", size: 11, bold: true, color: { argb: EXCEL_EXPORT_BRAND.red } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: EXCEL_EXPORT_BRAND.redSoft } };
+    cell.alignment = { vertical: "middle", horizontal: "left" };
+    applyCellBorder(cell);
+  });
+}
+
+function styleTotalRow(row) {
+  row.height = 22;
+  row.eachCell((cell) => {
+    cell.font = { name: "Aptos", size: 11, bold: true, color: { argb: EXCEL_EXPORT_BRAND.ink } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: EXCEL_EXPORT_BRAND.navySoft } };
+    cell.alignment = { vertical: "middle", horizontal: "left" };
+    applyCellBorder(cell, { top: EXCEL_EXPORT_BRAND.navy, bottom: EXCEL_EXPORT_BRAND.navy });
+  });
+}
+
+function styleDataRow(row, { zebra = false } = {}) {
+  row.eachCell((cell) => {
+    cell.font = { name: "Aptos", size: 10, color: { argb: EXCEL_EXPORT_BRAND.ink } };
+    cell.alignment = { vertical: "top", horizontal: "left", wrapText: true };
+    if (zebra) {
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: EXCEL_EXPORT_BRAND.soft } };
+    }
+    applyCellBorder(cell);
+  });
+}
+
+function styleCurrencyCell(cell) {
+  cell.numFmt = EXCEL_CURRENCY_FORMAT;
+  cell.alignment = { vertical: "middle", horizontal: "right" };
+}
+
+function styleVarianceCell(cell, value, { positiveIsGood = false } = {}) {
+  styleCurrencyCell(cell);
+  if (typeof value !== "number" || Number.isNaN(value) || value === 0) return;
+  cell.font = {
+    name: "Aptos",
+    size: 10,
+    bold: true,
+    color: { argb: value > 0 ? (positiveIsGood ? EXCEL_EXPORT_BRAND.good : EXCEL_EXPORT_BRAND.bad) : (positiveIsGood ? EXCEL_EXPORT_BRAND.bad : EXCEL_EXPORT_BRAND.good) },
+  };
+}
+
+function addWorksheetBrandHeader({
+  worksheet,
+  title,
+  subtitle,
+  editionLabel,
+  imageId,
+  stripImageId,
+  totalColumns,
+}) {
+  const lastCol = Math.max(totalColumns, 8);
+  worksheet.getRow(1).height = 26;
+  worksheet.getRow(2).height = 28;
+  worksheet.getRow(3).height = 20;
+  worksheet.getRow(4).height = 18;
+  worksheet.getRow(5).height = 16;
+  worksheet.getRow(6).height = 8;
+
+  worksheet.mergeCells(1, 3, 2, Math.max(5, lastCol - 2));
+  worksheet.mergeCells(3, 3, 3, Math.max(5, lastCol - 2));
+  worksheet.mergeCells(4, 3, 4, Math.max(5, lastCol - 2));
+  worksheet.mergeCells(5, 3, 5, Math.max(5, lastCol - 2));
+
+  worksheet.getCell(1, 3).value = title;
+  worksheet.getCell(1, 3).font = { name: "Aptos Display", size: 18, bold: true, color: { argb: EXCEL_EXPORT_BRAND.navy } };
+  worksheet.getCell(1, 3).alignment = { vertical: "middle", horizontal: "left" };
+
+  worksheet.getCell(3, 3).value = subtitle;
+  worksheet.getCell(3, 3).font = { name: "Aptos", size: 11, color: { argb: EXCEL_EXPORT_BRAND.muted } };
+  worksheet.getCell(3, 3).alignment = { vertical: "middle", horizontal: "left" };
+
+  worksheet.getCell(4, 3).value = "Fédération Luxembourgeoise d'Athlétisme";
+  worksheet.getCell(4, 3).font = { name: "Aptos", size: 10, bold: true, color: { argb: EXCEL_EXPORT_BRAND.ink } };
+  worksheet.getCell(4, 3).alignment = { vertical: "middle", horizontal: "left" };
+
+  worksheet.getCell(5, 3).value = editionLabel;
+  worksheet.getCell(5, 3).font = { name: "Aptos", size: 10, bold: true, color: { argb: EXCEL_EXPORT_BRAND.red } };
+  worksheet.getCell(5, 3).alignment = { vertical: "middle", horizontal: "left" };
+
+  for (let col = 1; col <= lastCol; col += 1) {
+    const cell = worksheet.getCell(6, col);
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: EXCEL_EXPORT_BRAND.navy } };
+  }
+
+  if (imageId) {
+    worksheet.addImage(imageId, {
+      tl: { col: 0.18, row: 0.2 },
+      ext: { width: 146, height: 58 },
+    });
+  }
+
+  if (stripImageId) {
+    worksheet.addImage(stripImageId, {
+      tl: { col: Math.max(lastCol - 2.7, 5.2), row: 0.18 },
+      ext: { width: 208, height: 48 },
+    });
+  }
+}
+
+function addOverviewWorksheet({
+  workbook,
+  budget,
+  totals,
+  hasComparison,
+  imageId,
+  stripImageId,
+}) {
+  const worksheet = workbook.addWorksheet("Vue d'ensemble", {
+    properties: { defaultRowHeight: 20 },
+    pageSetup: { orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 1 },
+    views: [{ state: "frozen", ySplit: 8 }],
+  });
+
+  worksheet.columns = [
+    { width: 24 },
+    ...(hasComparison ? [{ width: 18 }] : []),
+    { width: 18 },
+    { width: 18 },
+    { width: 18 },
+    { width: 14 },
+    { width: 14 },
+    { width: 14 },
+  ];
+
+  addWorksheetBrandHeader({
+    worksheet,
+    title: `Budget ${budget.currentEditionId}`,
+    subtitle: "Vue d'ensemble budgétaire du meeting",
+    editionLabel: `Généré le ${formatDateForExport()}`,
+    imageId,
+    stripImageId,
+    totalColumns: worksheet.columnCount,
+  });
+
+  const tableRows = buildBudgetOverviewExportRows({ budget, totals, hasComparison }).slice(3);
+  const headerRowNumber = 8;
+  styleHeaderRow(worksheet.addRow(tableRows[0]));
+
+  tableRows.slice(1).forEach((rowValues, index) => {
+    const row = worksheet.addRow(rowValues);
+    styleDataRow(row, { zebra: index % 2 === 1 });
+    row.getCell(1).font = { name: "Aptos", size: 11, bold: true, color: { argb: EXCEL_EXPORT_BRAND.ink } };
+
+    const positiveIsGood = rowValues[0] === "Recettes" || rowValues[0] === "Équilibre";
+    row.eachCell((cell, colNumber) => {
+      if (colNumber === 1 || typeof cell.value !== "number") return;
+      if (colNumber === row.cellCount) {
+        styleVarianceCell(cell, cell.value, { positiveIsGood });
+        return;
+      }
+      styleCurrencyCell(cell);
+    });
+
+    if (rowValues[0] === "Équilibre") {
+      styleTotalRow(row);
+    }
+  });
+
+  worksheet.autoFilter = {
+    from: { row: headerRowNumber, column: 1 },
+    to: { row: headerRowNumber, column: tableRows[0].length },
+  };
+}
+
+function addBudgetDetailWorksheet({
+  workbook,
+  title,
+  sectionLabel,
+  sections,
+  totals,
+  currentEditionId,
+  referenceEditionId,
+  hasComparison,
+  imageId,
+  stripImageId,
+}) {
+  const worksheet = workbook.addWorksheet(title, {
+    properties: { defaultRowHeight: 19 },
+    pageSetup: { orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
+    views: [{ state: "frozen", ySplit: 8 }],
+  });
+
+  worksheet.columns = [
+    { width: 18 },
+    { width: 8 },
+    { width: 28 },
+    { width: 22 },
+    ...(hasComparison ? [{ width: 16 }] : []),
+    { width: 16 },
+    { width: 16 },
+    { width: 16 },
+    { width: 20 },
+    { width: 26 },
+    { width: 20 },
+    { width: 20 },
+  ];
+
+  addWorksheetBrandHeader({
+    worksheet,
+    title,
+    subtitle: `Suivi détaillé · ${sectionLabel}`,
+    editionLabel: hasComparison
+      ? `Référence ${referenceEditionId} · Édition courante ${currentEditionId}`
+      : `Édition courante ${currentEditionId}`,
+    imageId,
+    stripImageId,
+    totalColumns: worksheet.columnCount,
+  });
+
+  const rows = buildBudgetSheetExportRows({
+    title,
+    sectionLabel,
+    sections,
+    totals,
+    currentEditionId,
+    referenceEditionId,
+    hasComparison,
+  });
+
+  const headerValues = rows[3];
+  styleHeaderRow(worksheet.addRow(headerValues));
+
+  const moneyColumns = hasComparison ? [5, 6, 7, 8] : [5, 6, 7];
+  let zebraIndex = 0;
+  rows.slice(4).forEach((rowValues) => {
+    const isBlank = rowValues.every((value) => value === "" || value == null);
+    if (isBlank) {
+      worksheet.addRow([]);
+      return;
+    }
+
+    const filledValues = rowValues.filter((value) => value !== "" && value != null);
+    const isSection = filledValues.length === 1 && typeof rowValues[0] === "string" && rowValues[0].startsWith(`${sectionLabel} · `);
+    const isTotal = typeof rowValues[0] === "string" && rowValues[0].startsWith("Total ");
+
+    const row = worksheet.addRow(rowValues);
+
+    if (isSection) {
+      worksheet.mergeCells(row.number, 1, row.number, worksheet.columnCount);
+      styleSectionRow(row);
+      return;
+    }
+
+    if (isTotal) {
+      styleTotalRow(row);
+    } else {
+      styleDataRow(row, { zebra: zebraIndex % 2 === 1 });
+      zebraIndex += 1;
+    }
+
+    row.eachCell((cell, colNumber) => {
+      if (!moneyColumns.includes(colNumber) || typeof cell.value !== "number") return;
+      if (colNumber === moneyColumns[moneyColumns.length - 1]) {
+        styleVarianceCell(cell, cell.value, { positiveIsGood: title === "Recettes" });
+      } else {
+        styleCurrencyCell(cell);
+      }
+    });
+
+    if (!isSection && !isTotal) {
+      row.getCell(2).alignment = { vertical: "middle", horizontal: "center" };
+      row.getCell(3).font = { name: "Aptos", size: 10, bold: true, color: { argb: EXCEL_EXPORT_BRAND.ink } };
+    }
+  });
+
+  worksheet.autoFilter = {
+    from: { row: 8, column: 1 },
+    to: { row: 8, column: worksheet.columnCount },
+  };
+}
+
+function addBudgetHistoryWorksheet({
+  workbook,
+  historyEntries,
+  currentEditionId,
+  imageId,
+  stripImageId,
+}) {
+  if (!historyEntries.length) return;
+
+  const worksheet = workbook.addWorksheet("Historique", {
+    properties: { defaultRowHeight: 19 },
+    pageSetup: { orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
+    views: [{ state: "frozen", ySplit: 8 }],
+  });
+
+  worksheet.columns = [
+    { width: 20 },
+    { width: 22 },
+    { width: 58 },
+    { width: 16 },
+  ];
+
+  addWorksheetBrandHeader({
+    worksheet,
+    title: "Historique du budget",
+    subtitle: "Journal des modifications de l'édition",
+    editionLabel: `Édition ${currentEditionId} · Généré le ${formatDateForExport()}`,
+    imageId,
+    stripImageId,
+    totalColumns: worksheet.columnCount,
+  });
+
+  styleHeaderRow(worksheet.addRow(["Date", "Auteur", "Résumé", "Nb changements"]));
+  historyEntries.forEach((entry, index) => {
+    const row = worksheet.addRow([
+      formatDateTime(entry.createdAt),
+      entry.actorName || "Admin",
+      entry.summary || "",
+      entry.changeCount || 0,
+    ]);
+    styleDataRow(row, { zebra: index % 2 === 1 });
+    row.getCell(4).alignment = { vertical: "middle", horizontal: "center" };
+  });
+
+  worksheet.autoFilter = {
+    from: { row: 8, column: 1 },
+    to: { row: 8, column: worksheet.columnCount },
+  };
+}
+
 function buildBudgetPrintSectionMarkup({
   title,
   side,
   sections,
   currentEditionId,
-  referenceEditionId,
-  hasComparison,
 }) {
   return `
     <section class="budget-print-section">
@@ -282,23 +672,18 @@ function buildBudgetPrintSectionMarkup({
         </div>
       </header>
       ${sections.map(({ sectionName, rows }) => {
-        const sectionReferenceActual = sumBudgetRowsField(rows, "referenceActual");
         const sectionCurrentForecast = sumBudgetRowsField(rows, "currentForecast");
-        const sectionCurrentActual = sumBudgetRowsField(rows, "currentActual", { emptyAsNull: true });
-        const variance = computeVariance(sectionCurrentForecast, sectionCurrentActual);
 
         return `
-          <article class="budget-print-card">
-            <div class="budget-print-card__top">
+          <article class="budget-print-group">
+            <div class="budget-print-group__top">
               <div>
                 <h3>${escapeHtml(sectionName)}</h3>
                 <p>${rows.length} ligne(s)</p>
               </div>
-              <div class="budget-print-metrics">
-                ${hasComparison ? `<span><small>Réf. ${escapeHtml(referenceEditionId)}</small><strong>${escapeHtml(formatCurrency(sectionReferenceActual))}</strong></span>` : ""}
-                <span><small>Prévisionnel ${escapeHtml(currentEditionId)}</small><strong>${escapeHtml(formatCurrency(sectionCurrentForecast))}</strong></span>
-                <span><small>Réalisé ${escapeHtml(currentEditionId)}</small><strong>${escapeHtml(formatCurrency(sectionCurrentActual))}</strong></span>
-                <span><small>Écart</small><strong>${escapeHtml(formatVariance(variance))}</strong></span>
+              <div class="budget-print-group__metric">
+                <small>Prévisionnel ${escapeHtml(currentEditionId)}</small>
+                <strong>${escapeHtml(formatCurrency(sectionCurrentForecast))}</strong>
               </div>
             </div>
             <table class="budget-print-table">
@@ -307,12 +692,7 @@ function buildBudgetPrintSectionMarkup({
                   <th>#</th>
                   <th>Poste</th>
                   <th>Détail</th>
-                  ${hasComparison ? `<th>Réalisé ${escapeHtml(referenceEditionId)}</th>` : ""}
                   <th>Prév. ${escapeHtml(currentEditionId)}</th>
-                  <th>Réalisé ${escapeHtml(currentEditionId)}</th>
-                  <th>Écart</th>
-                  <th>Repère</th>
-                  <th>Commentaire</th>
                 </tr>
               </thead>
               <tbody>
@@ -324,12 +704,7 @@ function buildBudgetPrintSectionMarkup({
                       ${row.isCustom ? `<small class="budget-print-pill">Ajoutée</small>` : ""}
                     </td>
                     <td>${escapeHtml(row.details || "—")}</td>
-                    ${hasComparison ? `<td>${escapeHtml(formatCurrency(row.referenceActual))}</td>` : ""}
                     <td>${escapeHtml(formatCurrency(row.currentForecast))}</td>
-                    <td>${escapeHtml(formatCurrency(row.currentActual))}</td>
-                    <td>${escapeHtml(formatVariance(computeVariance(row.currentForecast, row.currentActual)))}</td>
-                    <td>${escapeHtml(row.actualReference || "—")}</td>
-                    <td>${escapeHtml(row.comment || "—")}</td>
                   </tr>
                 `).join("")}
               </tbody>
@@ -346,10 +721,8 @@ function buildBudgetPrintDocument({
   totals,
   expenseSections,
   revenueSections,
-  hasComparison,
 }) {
   const generatedAt = formatDateForExport();
-  const balanceVariance = computeVariance(totals.balance.currentForecast, totals.balance.currentActual);
 
   return `<!DOCTYPE html>
   <html lang="fr">
@@ -383,12 +756,12 @@ function buildBudgetPrintDocument({
         }
         .budget-print-cover {
           margin-bottom: 16mm;
-          padding: 16mm;
-          border-radius: 18px;
+          padding: 0 0 10mm;
+          border-radius: 0;
           background:
             linear-gradient(135deg, #143a66 0%, #204d86 55%, #2f6ba6 100%);
           color: #fff;
-          box-shadow: 0 18px 40px rgba(23, 32, 51, 0.18);
+          box-shadow: none;
         }
         .budget-print-cover__eyebrow {
           margin: 0 0 10px;
@@ -410,14 +783,10 @@ function buildBudgetPrintDocument({
         .budget-print-summary {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 10px;
-          margin-top: 14mm;
-        }
-        .budget-print-summary article {
-          padding: 12px 14px;
-          border-radius: 14px;
-          background: rgba(255, 255, 255, 0.14);
-          border: 1px solid rgba(255, 255, 255, 0.18);
+          gap: 14px;
+          margin-top: 10mm;
+          padding-top: 8mm;
+          border-top: 1px solid rgba(255, 255, 255, 0.28);
         }
         .budget-print-summary span {
           display: block;
@@ -430,7 +799,14 @@ function buildBudgetPrintDocument({
           font-size: 18pt;
         }
         .budget-print-section {
-          margin-top: 12mm;
+          margin-top: 0;
+        }
+        .budget-print-dual-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 9mm;
+          align-items: start;
+          margin-top: 10mm;
         }
         .budget-print-section__header {
           display: flex;
@@ -450,50 +826,43 @@ function buildBudgetPrintDocument({
           font-size: 19pt;
           color: var(--brand);
         }
-        .budget-print-card {
+        .budget-print-group {
           margin-bottom: 8mm;
-          padding: 11px 12px 12px;
-          border-radius: 16px;
-          border: 1px solid var(--line);
-          background: var(--paper);
-          box-shadow: 0 10px 26px rgba(15, 23, 42, 0.05);
+          padding-bottom: 5mm;
+          border-bottom: 1px solid var(--line);
           break-inside: avoid;
         }
-        .budget-print-card__top {
+        .budget-print-group__top {
           display: flex;
           justify-content: space-between;
           gap: 14px;
           margin-bottom: 10px;
+          align-items: end;
         }
-        .budget-print-card__top h3 {
+        .budget-print-group__top h3 {
           margin: 0;
           font-size: 14pt;
         }
-        .budget-print-card__top p {
+        .budget-print-group__top p {
           margin: 4px 0 0;
           color: var(--muted);
           font-size: 9pt;
         }
-        .budget-print-metrics {
+        .budget-print-group__metric {
           display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 8px;
-          min-width: 52%;
+          gap: 3px;
+          min-width: 180px;
+          text-align: right;
         }
-        .budget-print-metrics span {
-          display: grid;
-          gap: 4px;
-          padding: 8px 10px;
-          border-radius: 12px;
-          background: var(--soft);
-          border: 1px solid var(--line);
-        }
-        .budget-print-metrics small {
+        .budget-print-group__metric small {
           color: var(--muted);
           font-size: 8pt;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
         }
-        .budget-print-metrics strong {
-          font-size: 10pt;
+        .budget-print-group__metric strong {
+          font-size: 13pt;
+          color: var(--brand);
         }
         .budget-print-table {
           width: 100%;
@@ -509,7 +878,7 @@ function buildBudgetPrintDocument({
           line-height: 1.36;
         }
         .budget-print-table th {
-          background: var(--brand-soft);
+          background: #f1f5f9;
           color: var(--brand);
           font-size: 7.9pt;
           letter-spacing: 0.08em;
@@ -531,6 +900,21 @@ function buildBudgetPrintDocument({
           font-size: 8.5pt;
           text-align: center;
         }
+        @media (max-width: 1100px) {
+          .budget-print-dual-grid {
+            grid-template-columns: 1fr;
+          }
+          .budget-print-group__top {
+            flex-direction: column;
+            align-items: start;
+          }
+          .budget-print-group__metric {
+            text-align: left;
+          }
+          .budget-print-section {
+            margin-top: 8mm;
+          }
+        }
         @page {
           size: A4 landscape;
           margin: 10mm;
@@ -551,34 +935,32 @@ function buildBudgetPrintDocument({
           <div class="budget-print-summary">
             <article>
               <span>Dépenses</span>
-              <strong>${escapeHtml(formatCurrency(totals.expenses.currentActual))}</strong>
+              <strong>${escapeHtml(formatCurrency(totals.expenses.currentForecast))}</strong>
             </article>
             <article>
               <span>Recettes</span>
-              <strong>${escapeHtml(formatCurrency(totals.revenues.currentActual))}</strong>
+              <strong>${escapeHtml(formatCurrency(totals.revenues.currentForecast))}</strong>
             </article>
             <article>
               <span>Équilibre</span>
-              <strong>${escapeHtml(formatVariance(balanceVariance))}</strong>
+              <strong>${escapeHtml(formatCurrency(totals.balance.currentForecast))}</strong>
             </article>
           </div>
         </section>
-        ${buildBudgetPrintSectionMarkup({
-          title: "Dépenses détaillées",
-          side: "Budget détaillé",
-          sections: expenseSections,
-          currentEditionId: budget.currentEditionId,
-          referenceEditionId: budget.referenceEditionId,
-          hasComparison,
-        })}
-        ${buildBudgetPrintSectionMarkup({
-          title: "Recettes détaillées",
-          side: "Budget détaillé",
-          sections: revenueSections,
-          currentEditionId: budget.currentEditionId,
-          referenceEditionId: budget.referenceEditionId,
-          hasComparison,
-        })}
+        <section class="budget-print-dual-grid">
+          ${buildBudgetPrintSectionMarkup({
+            title: "Dépenses détaillées",
+            side: "Dépenses",
+            sections: expenseSections,
+            currentEditionId: budget.currentEditionId,
+          })}
+          ${buildBudgetPrintSectionMarkup({
+            title: "Recettes détaillées",
+            side: "Recettes",
+            sections: revenueSections,
+            currentEditionId: budget.currentEditionId,
+          })}
+        </section>
         <p class="budget-print-note">Utilisez la boîte de dialogue d'impression pour enregistrer le document en PDF.</p>
       </main>
       <script>
@@ -2010,15 +2392,41 @@ function BudgetTrackingPage({ Panel }) {
     setExportStatus("Préparation de l'export Excel…");
 
     try {
-      const { utils, writeFile } = await import("xlsx");
+      const ExcelJSModule = await import("exceljs");
+      const ExcelJS = ExcelJSModule.default ?? ExcelJSModule;
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = "MyCLIM";
+      workbook.company = "Fédération Luxembourgeoise d'Athlétisme";
+      workbook.created = new Date();
+      workbook.modified = new Date();
+      workbook.subject = `Budget CMCM Luxembourg Indoor Meeting ${draftBudget.currentEditionId}`;
+      workbook.title = `Budget ${draftBudget.currentEditionId}`;
 
-      const workbook = utils.book_new();
-      const overviewRows = buildBudgetOverviewExportRows({
+      const [meetingLogoBuffer, sponsorsStripBuffer] = await Promise.all([
+        loadWorkbookImage(meetingLogoUrl),
+        loadWorkbookImage(sponsorsStripUrl),
+      ]);
+
+      const meetingLogoId = workbook.addImage({
+        buffer: meetingLogoBuffer,
+        extension: "png",
+      });
+      const sponsorsStripId = workbook.addImage({
+        buffer: sponsorsStripBuffer,
+        extension: "png",
+      });
+
+      addOverviewWorksheet({
+        workbook,
         budget: draftBudget,
         totals,
         hasComparison,
+        imageId: meetingLogoId,
+        stripImageId: sponsorsStripId,
       });
-      const expenseRows = buildBudgetSheetExportRows({
+
+      addBudgetDetailWorksheet({
+        workbook,
         title: "Dépenses",
         sectionLabel: "Dépenses",
         sections: expenseSections,
@@ -2026,8 +2434,12 @@ function BudgetTrackingPage({ Panel }) {
         currentEditionId: draftBudget.currentEditionId,
         referenceEditionId: draftBudget.referenceEditionId,
         hasComparison,
+        imageId: meetingLogoId,
+        stripImageId: sponsorsStripId,
       });
-      const revenueRows = buildBudgetSheetExportRows({
+
+      addBudgetDetailWorksheet({
+        workbook,
         title: "Recettes",
         sectionLabel: "Recettes",
         sections: revenueSections,
@@ -2035,60 +2447,22 @@ function BudgetTrackingPage({ Panel }) {
         currentEditionId: draftBudget.currentEditionId,
         referenceEditionId: draftBudget.referenceEditionId,
         hasComparison,
+        imageId: meetingLogoId,
+        stripImageId: sponsorsStripId,
       });
 
-      const overviewSheet = utils.aoa_to_sheet(overviewRows);
-      overviewSheet["!cols"] = [
-        { wch: 24 },
-        ...(hasComparison ? [{ wch: 18 }] : []),
-        { wch: 18 },
-        { wch: 18 },
-        { wch: 18 },
-      ];
+      addBudgetHistoryWorksheet({
+        workbook,
+        historyEntries,
+        currentEditionId: draftBudget.currentEditionId,
+        imageId: meetingLogoId,
+        stripImageId: sponsorsStripId,
+      });
 
-      const expenseSheet = utils.aoa_to_sheet(expenseRows);
-      expenseSheet["!cols"] = [
-        { wch: 20 },
-        { wch: 8 },
-        { wch: 34 },
-        { wch: 24 },
-        ...(hasComparison ? [{ wch: 16 }] : []),
-        { wch: 16 },
-        { wch: 16 },
-        { wch: 16 },
-        { wch: 20 },
-        { wch: 24 },
-        { wch: 24 },
-        { wch: 24 },
-      ];
-
-      const revenueSheet = utils.aoa_to_sheet(revenueRows);
-      revenueSheet["!cols"] = expenseSheet["!cols"];
-
-      utils.book_append_sheet(workbook, overviewSheet, "Vue d'ensemble");
-      utils.book_append_sheet(workbook, expenseSheet, "Dépenses");
-      utils.book_append_sheet(workbook, revenueSheet, "Recettes");
-
-      if (historyEntries.length) {
-        const historyRows = [
-          ["Historique budget"],
-          [`Généré le ${formatDateForExport()}`],
-          [],
-          ["Date", "Auteur", "Résumé", "Nb changements"],
-          ...historyEntries.map((entry) => [
-            formatDateTime(entry.createdAt),
-            entry.actorName || "Admin",
-            entry.summary || "",
-            entry.changeCount || 0,
-          ]),
-        ];
-        const historySheet = utils.aoa_to_sheet(historyRows);
-        historySheet["!cols"] = [{ wch: 20 }, { wch: 20 }, { wch: 52 }, { wch: 14 }];
-        utils.book_append_sheet(workbook, historySheet, "Historique");
-      }
-
-      writeFile(workbook, `budget-${draftBudget.currentEditionId}.xlsx`);
-      setExportStatus(`Export Excel prêt : budget-${draftBudget.currentEditionId}.xlsx`);
+      const filename = `budget-${draftBudget.currentEditionId}.xlsx`;
+      const buffer = await workbook.xlsx.writeBuffer();
+      triggerExcelDownload(buffer, filename);
+      setExportStatus(`Export Excel prêt : ${filename}`);
     } catch (error) {
       console.error("Unable to export budget to Excel", error);
       setExportStatus("L'export Excel a échoué.");

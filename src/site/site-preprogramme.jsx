@@ -1,4 +1,6 @@
 import { NavLink } from "react-router-dom";
+import { useSiteEditionYear } from "../app/edition";
+import { useMeetingEditions } from "../app/meeting-history-hooks";
 import business1 from "../assets/site-gallery/preprog-business-1.jpg";
 import business2 from "../assets/site-gallery/preprog-business-2.jpg";
 import influencer from "../assets/site-gallery/preprog-influencer.jpg";
@@ -8,6 +10,9 @@ import specialOlympics2 from "../assets/site-gallery/preprog-specialolympics-2.j
 import kids1 from "../assets/site-gallery/preprog-kids-1.jpg";
 import kids2 from "../assets/site-gallery/preprog-kids-2.jpg";
 import kids3 from "../assets/site-gallery/preprog-kids-3.jpg";
+import national60m from "../assets/site-gallery/preprog-national-60m.jpg";
+import national800mMen from "../assets/site-gallery/preprog-national-800m-men.jpg";
+import national800mWomen from "../assets/site-gallery/preprog-national-800m-women.jpg";
 
 function SectionTitle({ eyebrow, title, lead, center }) {
   return (
@@ -55,6 +60,27 @@ function PhotoGrid({ photos }) {
 }
 
 export function SitePreProgramme() {
+  const { siteEditionYear } = useSiteEditionYear();
+  const { editions } = useMeetingEditions();
+  const latestEdition = editions[0] || null;
+  const configuredEdition = siteEditionYear
+    ? editions.find((edition) => Number(edition.year || edition.id) === Number(siteEditionYear)) || null
+    : null;
+  const currentEdition = configuredEdition || latestEdition || null;
+  const nationalRacesRegistrationUrl = String(currentEdition?.preprogrammeNationalRacesUrl || "").trim();
+  const nationalRaces = [
+    { event: "60m Women", icon: "⚡" },
+    { event: "60m Men", icon: "⚡" },
+    { event: "800m Women", icon: "🏃" },
+    { event: "800m Men", icon: "🏃" },
+  ];
+  const programmeHighlights = [
+    { id: "influencer-race", label: "Influencer Race", image: influencer },
+    { id: "business-race", label: "Business Race", image: business1 },
+    { id: "national-races", label: "National Races", image: national60m },
+    { id: "youth", label: "Youth Programme", image: kids1 },
+  ];
+
   return (
     <>
       {/* ── Hero ─────────────────────────────────────────── */}
@@ -84,22 +110,31 @@ export function SitePreProgramme() {
       </section>
 
       {/* ── Photo strip ─────────────────────────────────── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", height: 260, overflow: "hidden" }}>
-        {[business1, influencer, specialOlympics1].map((src, i) => (
-          <div key={i} style={{ overflow: "hidden" }}>
-            <img
-              src={src}
-              alt=""
-              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform 0.5s ease" }}
-              onMouseEnter={e => e.currentTarget.style.transform = "scale(1.04)"}
-              onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
-            />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 10, padding: "10px 10px 0", background: "#fff" }}>
+        {programmeHighlights.map(({ id, label, image }) => (
+          <div key={id} style={{ display: "grid", gap: 10 }}>
+            <div style={{ height: 250, overflow: "hidden", borderRadius: "var(--site-radius-sm)" }}>
+              <img
+                src={image}
+                alt={label}
+                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform 0.5s ease" }}
+                onMouseEnter={e => e.currentTarget.style.transform = "scale(1.04)"}
+                onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+              />
+            </div>
+            <a
+              href={`#${id}`}
+              className="site-btn site-btn--secondary site-btn--sm"
+              style={{ justifyContent: "center", width: "100%" }}
+            >
+              {label} ↓
+            </a>
           </div>
         ))}
       </div>
 
       {/* ── Influencer Race ────────────────────────────── */}
-      <section className="site-section">
+      <section className="site-section" id="influencer-race">
         <div className="site-container">
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "center" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -337,14 +372,118 @@ export function SitePreProgramme() {
                   Reserved for licensed athletes from Luxembourg clubs · One race per child · Limited places · First come, first served
                 </p>
               </div>
+              <div style={{
+                padding: "20px 24px",
+                background: "var(--site-card)",
+                border: "1px solid var(--site-border)",
+                borderRadius: "var(--site-radius-sm)",
+                marginBottom: 16,
+              }}>
+                <p style={{ fontSize: "0.875rem", color: "var(--site-text-muted)", margin: 0, lineHeight: 1.7 }}>
+                  <strong style={{ color: "var(--site-text)", display: "block", marginBottom: 4 }}>Also possible: basket carrier</strong>
+                  Young athletes can also apply to be a basket carrier during the meeting. This option is available in the same form as the youth races.
+                </p>
+              </div>
+              <div style={{
+                padding: "20px 24px",
+                background: "var(--site-card)",
+                border: "1px solid var(--site-border)",
+                borderRadius: "var(--site-radius-sm)",
+                marginBottom: 24,
+              }}>
+                <strong style={{ color: "var(--site-text)", display: "block", marginBottom: 10 }}>How the registration form works</strong>
+                <div style={{ display: "grid", gap: 10 }}>
+                  {[
+                    "A parent account is created during registration.",
+                    "For each child, you fill in birth date, club and licence number.",
+                    "You can choose Youth Pre-Programme, Basket Carrier, or accept either option depending on availability.",
+                    "Each child can only be confirmed for one activity on meeting day, and the final status is then tracked in the parent portal.",
+                  ].map((item) => (
+                    <div key={item} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                      <span style={{ color: "var(--site-red)", fontWeight: 700, marginTop: 1, flexShrink: 0 }}>•</span>
+                      <span style={{ fontSize: "0.86rem", color: "var(--site-text-muted)", lineHeight: 1.6 }}>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
               <a href="/pre-programme" className="site-btn site-btn--primary site-btn--sm">
                 Register (athlete access) →
               </a>
+
+              <div
+                id="national-races"
+                style={{
+                marginTop: 24,
+                padding: "20px 24px",
+                background: "var(--site-card)",
+                border: "1px solid var(--site-border)",
+                borderRadius: "var(--site-radius-sm)",
+              }}>
+                <div style={{ marginBottom: 16 }}>
+                  <span className="site-eyebrow" style={{ marginBottom: 8, display: "block" }}>National races</span>
+                  <h3 style={{ margin: 0, fontSize: "2rem", lineHeight: 1.05, color: "var(--site-text)", fontWeight: 800 }}>
+                    🏁 National Races
+                  </h3>
+                  <p style={{ margin: "8px 0 0", fontSize: "1rem", color: "var(--site-text-muted)" }}>
+                    60m & 800m registrations via SELTEC
+                  </p>
+                </div>
+                <p style={{ fontSize: "0.875rem", color: "var(--site-text-muted)", lineHeight: 1.7, marginTop: 0, marginBottom: 16 }}>
+                  National races will also be held before the main programme, with dedicated entries for women and men on 60m and 800m.
+                </p>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
+                  {nationalRaces.map(({ event, icon }) => (
+                    <div
+                      key={event}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
+                        padding: "12px 14px",
+                        borderRadius: "var(--site-radius-sm)",
+                        background: "#f8fafc",
+                        border: "1px solid #e2e8f0",
+                      }}
+                    >
+                      <span style={{ fontSize: "1.2rem" }}>{icon}</span>
+                      <strong style={{ color: "var(--site-text)", fontSize: "0.84rem" }}>{event}</strong>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
+                  {[national60m, national800mMen, national800mWomen].map((src, index) => (
+                    <div key={src} style={{ overflow: "hidden", borderRadius: "var(--site-radius-sm)", aspectRatio: index === 0 ? "16/10" : "4/5" }}>
+                      <img
+                        src={src}
+                        alt=""
+                        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform 0.4s ease" }}
+                        onMouseEnter={e => e.currentTarget.style.transform = "scale(1.05)"}
+                        onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+                      />
+                    </div>
+                  ))}
+                </div>
+                {nationalRacesRegistrationUrl ? (
+                  <a
+                    href={nationalRacesRegistrationUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="site-btn site-btn--secondary site-btn--sm"
+                  >
+                    Register on SELTEC →
+                  </a>
+                ) : (
+                  <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--site-text-dim)" }}>
+                    Registration link will be published here as soon as it is available.
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Special Olympics */}
             <div>
               <SectionTitle
+                center={false}
                 eyebrow="Inclusive sport"
                 title="❤️ Special Olympics Race"
               />
