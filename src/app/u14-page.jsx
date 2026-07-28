@@ -88,6 +88,7 @@ function U14Page(props) {
     DataTable,
     Panel,
     addDoc,
+    deleteDoc,
     doc,
     getDocs,
     loadMailQueueModule,
@@ -450,6 +451,27 @@ function U14Page(props) {
       setStatusMessage(`La place protégée ${entry.slotNumber} a été libérée.`);
     } catch {
       setErrorMessage("Impossible de libérer cette place protégée.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleDeleteProtectedEntry(entry) {
+    if (!window.confirm(`Supprimer définitivement la place protégée ${entry.slotNumber} pour ${entry.firstName || ""} ${entry.lastName || ""} ?`)) {
+      return;
+    }
+
+    setErrorMessage("");
+    setStatusMessage("");
+    setIsSaving(true);
+
+    try {
+      await deleteDoc(doc(db, U14_RESERVED_SLOTS_COLLECTION, entry.id));
+      const nextProtectedEntries = protectedEntries.filter((current) => current.id !== entry.id);
+      await syncU14RaceAllocations({ requests, children, protectedEntries: nextProtectedEntries });
+      setStatusMessage(`La place protégée ${entry.slotNumber} a été supprimée définitivement.`);
+    } catch {
+      setErrorMessage("Impossible de supprimer cette place protégée.");
     } finally {
       setIsSaving(false);
     }
@@ -976,6 +998,14 @@ function U14Page(props) {
                               Libérer
                             </button>
                           ) : null}
+                          <button
+                            className="button button--secondary"
+                            type="button"
+                            onClick={() => handleDeleteProtectedEntry(entry)}
+                            style={{ color: "#b91c1c", borderColor: "#fca5a5" }}
+                          >
+                            Supprimer
+                          </button>
                         </div>
                       ),
                     };

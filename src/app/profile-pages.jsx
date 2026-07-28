@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
 import { addDoc, collection, doc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { NavLink } from "react-router-dom";
-import { useActiveEdition } from "./edition";
+import { getEditionLabel, normalizeEditionId, useActiveEdition } from "./edition";
 import { AuthFormField, PhoneInput } from "./form-components";
 import {
   buildVolunteerApplicationPayload,
@@ -15,6 +15,53 @@ import { VOLUNTEER_LANGUAGE_OPTIONS, buildUserSearchTokens, getAgeFromBirthDate 
 import { getActiveRoles } from "./navigation";
 import { useAuth } from "../context/auth-context";
 import { auth, db } from "../services/firebase";
+
+function compareAssignmentEditionIds(leftEditionId, rightEditionId) {
+  const leftNormalized = normalizeEditionId(leftEditionId);
+  const rightNormalized = normalizeEditionId(rightEditionId);
+  const leftNumeric = Number(leftNormalized);
+  const rightNumeric = Number(rightNormalized);
+
+  if (Number.isFinite(leftNumeric) && Number.isFinite(rightNumeric) && leftNumeric !== rightNumeric) {
+    return rightNumeric - leftNumeric;
+  }
+
+  if (leftNormalized === "test" && rightNormalized !== "test") return 1;
+  if (rightNormalized === "test" && leftNormalized !== "test") return -1;
+  return rightNormalized.localeCompare(leftNormalized, "fr");
+}
+
+function normalizeAssignmentHistoryEntries(historyByEdition) {
+  if (!historyByEdition || typeof historyByEdition !== "object" || Array.isArray(historyByEdition)) return [];
+
+  return Object.entries(historyByEdition)
+    .map(([editionId, entry]) => {
+      const normalizedEntry = entry && typeof entry === "object" ? entry : {};
+      const assignedTeams = Array.isArray(normalizedEntry.assignedTeams)
+        ? normalizedEntry.assignedTeams.map((team) => String(team || "").trim()).filter(Boolean)
+        : [];
+      const teamRoleAssignments =
+        normalizedEntry.teamRoleAssignments && typeof normalizedEntry.teamRoleAssignments === "object"
+          ? normalizedEntry.teamRoleAssignments
+          : {};
+
+      return {
+        editionId: normalizeEditionId(normalizedEntry.editionId || editionId),
+        assignedRole: String(normalizedEntry.assignedRole || "").trim(),
+        assignedTeams,
+        assignmentStatus: String(normalizedEntry.assignmentStatus || "").trim(),
+        teamRole: String(normalizedEntry.teamRole || "").trim(),
+        teamRoleAssignments: Object.entries(teamRoleAssignments)
+          .map(([teamName, teamRole]) => ({
+            teamName: String(teamName || "").trim(),
+            teamRole: String(teamRole || "").trim(),
+          }))
+          .filter((row) => row.teamName && row.teamRole),
+      };
+    })
+    .filter((entry) => entry.assignedRole || entry.assignedTeams.length || entry.teamRoleAssignments.length)
+    .sort((left, right) => compareAssignmentEditionIds(left.editionId, right.editionId));
+}
 
 function VolunteerProfilePage(props) {
   const {
@@ -540,6 +587,10 @@ function VolunteerProfilePage(props) {
 function ProfilePage(props) {
   const { Panel } = props;
   const { currentUser, userProfile } = useAuth();
+  const assignmentHistoryEntries = useMemo(
+    () => normalizeAssignmentHistoryEntries(userProfile?.assignmentHistoryByEdition),
+    [userProfile?.assignmentHistoryByEdition],
+  );
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -694,6 +745,46 @@ function ProfilePage(props) {
           </form>
         </Panel>
       </section>
+
+      <Panel
+        title="Historique des affectations"
+        subtitle="Les éditions passées restent mémorisées sur ton compte, sans être réactivées dans l'édition en cours."
+      >
+        {assignmentHistoryEntries.length ? (
+          <div className="compact-list">
+            {assignmentHistoryEntries.map((entry) => (
+              <div key={entry.editionId} className="detail-list" style={{ marginBottom: "1rem" }}>
+                <div>
+                  <dt>Édition</dt>
+                  <dd>{getEditionLabel(entry.editionId)}</dd>
+                </div>
+                <div>
+                  <dt>Statut</dt>
+                  <dd>{entry.assignmentStatus || "En attente"}</dd>
+                </div>
+                <div>
+                  <dt>Poste principal</dt>
+                  <dd>{entry.assignedRole || "—"}</dd>
+                </div>
+                <div>
+                  <dt>Équipes</dt>
+                  <dd>{entry.assignedTeams.length ? entry.assignedTeams.join(", ") : "—"}</dd>
+                </div>
+                <div>
+                  <dt>Rôles d'équipe</dt>
+                  <dd>
+                    {entry.teamRoleAssignments.length
+                      ? entry.teamRoleAssignments.map((row) => `${row.teamName}: ${row.teamRole}`).join(" · ")
+                      : entry.teamRole || "—"}
+                  </dd>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="panel-note">Aucune affectation archivée sur ce compte pour le moment.</p>
+        )}
+      </Panel>
 
       <Panel
         title="Sécurité"

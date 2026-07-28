@@ -3,9 +3,11 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 import cmcmLogo from "../assets/cmcm-logo.png";
 import waLogo from "../assets/wa-indoor-tour-silver.png";
 import { useAuth } from "../context/auth-context";
+import { useSiteEditionYear } from "../app/edition";
+import { useMeetingEditions } from "../app/meeting-history-hooks";
 import "./site.css";
 
-const NAV_LINKS = [
+const BASE_NAV_LINKS = [
   { to: "/", label: "Home", end: true },
   { to: "/event", label: "Event" },
   { to: "/programme", label: "Pre-Programme" },
@@ -44,9 +46,22 @@ export function SiteLayout() {
   const location = useLocation();
   const mobileRef = useRef(null);
   const { currentUser } = useAuth();
+  const { siteEditionYear } = useSiteEditionYear();
+  const { editions } = useMeetingEditions();
+  const isEmagazinePage = location.pathname === "/e-magazine";
   const showFooterCta = location.pathname !== "/become-a-partner";
+  const latestEdition = editions[0] || null;
+  const configuredEdition = siteEditionYear
+    ? editions.find((edition) => Number(edition.year || edition.id) === Number(siteEditionYear)) || null
+    : null;
+  const currentEdition = configuredEdition || latestEdition || null;
+  const emagazinePublished = (currentEdition?.emagazineStatus || "published") === "published";
+  const navLinks = emagazinePublished
+    ? [...BASE_NAV_LINKS.slice(0, 4), { to: "/e-magazine", label: "E-Magazine" }, ...BASE_NAV_LINKS.slice(4)]
+    : BASE_NAV_LINKS;
   const pageClassName = [
     "site-page",
+    isEmagazinePage ? "site-page--emagazine" : "",
     location.pathname === "/partners" ? "site-page--partners" : "",
     location.pathname === "/become-a-partner" ? "site-page--sponsorship" : "",
   ]
@@ -82,7 +97,7 @@ export function SiteLayout() {
           </NavLink>
 
           <ul className="site-nav__links">
-            {NAV_LINKS.map((link) => (
+            {navLinks.map((link) => (
               <li key={link.to}>
                 <NavLink
                   to={link.to}
@@ -125,7 +140,7 @@ export function SiteLayout() {
 
       {/* ── Mobile nav ──────────────────────────────────── */}
       <div ref={mobileRef} className={`site-nav__mobile${mobileOpen ? " site-nav__mobile--open" : ""}`}>
-        {NAV_LINKS.map((link) => (
+        {navLinks.map((link) => (
           <NavLink
             key={link.to}
             to={link.to}
@@ -153,6 +168,7 @@ export function SiteLayout() {
       </main>
 
       {/* ── Footer ──────────────────────────────────────── */}
+      {!isEmagazinePage ? (
       <footer className="site-footer">
         <div className="site-container">
           {showFooterCta && (
@@ -219,7 +235,7 @@ export function SiteLayout() {
             <div>
               <p className="site-footer__col-title">Navigation</p>
               <ul className="site-footer__col-links">
-                {NAV_LINKS.map((link) => (
+                {navLinks.map((link) => (
                   <li key={link.to}>
                     <NavLink to={link.to} end={link.end}>{link.label}</NavLink>
                   </li>
@@ -233,6 +249,7 @@ export function SiteLayout() {
                 <li><NavLink to="/event">Venue & Access</NavLink></li>
                 <li><NavLink to="/event#tickets">Tickets</NavLink></li>
                 <li><NavLink to="/programme">Pre-Programme</NavLink></li>
+                {emagazinePublished ? <li><NavLink to="/e-magazine">E-Magazine</NavLink></li> : null}
                 <li><NavLink to="/programme#business-race">Business Race</NavLink></li>
                 <li><NavLink to="/event#volunteer">Become a Volunteer</NavLink></li>
                 <li><NavLink to="/press">Press Accreditation</NavLink></li>
@@ -267,6 +284,7 @@ export function SiteLayout() {
           </div>
         </div>
       </footer>
+      ) : null}
     </div>
   );
 }

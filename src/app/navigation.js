@@ -70,6 +70,7 @@ function buildNavigationFromRoles(roles) {
       makeSection("Site web", [
         makeLink("/app/website", "Vue d’ensemble", "grid"),
         makeLink("/app/website/edition", "Édition courante", "calendar"),
+        makeLink("/app/website/emagazine", "E-magazine", "folder"),
         makeLink("/app/website/news", "Actualités", "spark"),
         makeLink("/app/website/sponsors", "Partenaires", "badge"),
         makeLink("/app/website/press", "Communiqués presse", "folder"),
@@ -125,6 +126,7 @@ function buildNavigationFromRoles(roles) {
         makeSection("Site web", [
           makeLink("/app/website", "Site web — vue d'ensemble", "grid"),
           makeLink("/app/website/edition", "Édition courante", "calendar"),
+          makeLink("/app/website/emagazine", "E-magazine", "folder"),
           makeLink("/app/website/news", "Actualités", "spark"),
           makeLink("/app/website/sponsors", "Partenaires", "badge"),
           makeLink("/app/website/press", "Communiqués presse", "folder"),
@@ -166,6 +168,7 @@ function buildNavigationFromRoles(roles) {
     links.push(
       makeLink("/app/website", "Site web — vue d'ensemble", "grid"),
       makeLink("/app/website/edition", "Édition courante", "calendar"),
+      makeLink("/app/website/emagazine", "E-magazine", "folder"),
       makeLink("/app/website/news", "Actualités", "spark"),
       makeLink("/app/website/sponsors", "Partenaires", "badge"),
       makeLink("/app/website/press", "Communiqués presse", "folder"),
@@ -191,17 +194,7 @@ function buildNavigationFromRoles(roles) {
 
 function buildAthletePortalNavigation(roles, portalSettings, { canImport }) {
   const isAdmin = roles.includes("admin") || roles.includes("meeting_director");
-  const links = [
-    makeLink("/app/athlete-portal", "Vue d’ensemble", "dashboard"),
-    makeLink("/app/athlete-portal/athletes", "Athlètes", "users"),
-  ];
-
-  if (isAdmin) {
-    links.push(makeLink("/app/athlete-portal/registry", "Base athlètes", "users"));
-    links.push(makeLink("/app/athlete-portal/history", "Résultats meeting", "calendar"));
-    links.push(makeLink("/app/athlete-portal/records", "Records meeting", "star"));
-    links.push(makeLink("/app/athlete-portal/winners", "Hall of Winners", "trophy"));
-  }
+  const links = [makeLink("/app/athlete-portal/athletes", "Athlètes", "users")];
 
   if (roles.includes("chef_transport_athletes") || roles.includes("admin")) {
     links.push(makeLink("/app/athlete-portal/transport", "Transport athlètes", "users"));
@@ -218,10 +211,23 @@ function buildAthletePortalNavigation(roles, portalSettings, { canImport }) {
   return links;
 }
 
+function buildStatisticsNavigation(roles) {
+  const isAdmin = roles.includes("admin") || roles.includes("meeting_director");
+  if (!isAdmin) return [];
+
+  return [
+    makeLink("/app/statistics/registry", "Base athlètes", "users"),
+    makeLink("/app/statistics/results", "Résultats meeting", "calendar"),
+    makeLink("/app/statistics/records", "Records meeting", "star"),
+    makeLink("/app/statistics/winners", "Hall of Winners", "trophy"),
+  ];
+}
+
 export {
   buildNavigation,
   buildNavigationFromRoles,
   buildAthletePortalNavigation,
+  buildStatisticsNavigation,
   getActiveRoles,
   getDefaultRouteByRoles,
   getPrimaryRole,
