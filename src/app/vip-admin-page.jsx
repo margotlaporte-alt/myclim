@@ -27,6 +27,7 @@ import {
   getVipTourChoiceLabel,
   normalizeVipComparableValue,
 } from "./vip-helpers";
+import { buildAppUrl } from "../services/app-url";
 
 function mapVipInvitation(snapshot) {
   return {
@@ -176,8 +177,17 @@ function getImportedInvitationEditionValue(invitation, activeEditionId) {
 }
 
 function buildVipPartnerPortalUrl(portalId) {
-  const origin = typeof window !== "undefined" && window.location?.origin ? window.location.origin : "";
-  return `${origin}/vip/orga/${portalId}`;
+  return buildAppUrl(buildVipPartnerPortalPath(portalId));
+}
+
+function buildVipPartnerPortalPath(portalId) {
+  return `/vip/orga/${encodeURIComponent(String(portalId || "").trim())}`;
+}
+
+function canOpenVipPartnerPortalLocally() {
+  if (typeof window === "undefined") return false;
+  const hostname = String(window.location?.hostname || "").trim().toLowerCase();
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "0.0.0.0";
 }
 
 function VipAdminPage({ Panel, loadMailQueueModule }) {
@@ -543,16 +553,16 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
     try {
       const { buildVipInvitationMail, enqueueTransactionalMail } = await loadMailQueueModule();
       await enqueueTransactionalMail(
-        buildVipInvitationMail({
-          category: invitation.category,
-          email: invitation.email,
-          firstName: invitation.firstName,
-          greetingLabel: invitation.mailGreetingLabel,
-          invitationUrl: `${window.location.origin}/vip`,
-          language: invitation.invitationMailLanguage,
-          lastName: invitation.lastName,
-          organization: invitation.organization,
-        }),
+          buildVipInvitationMail({
+            category: invitation.category,
+            email: invitation.email,
+            firstName: invitation.firstName,
+            greetingLabel: invitation.mailGreetingLabel,
+            invitationUrl: buildAppUrl("/vip"),
+            language: invitation.invitationMailLanguage,
+            lastName: invitation.lastName,
+            organization: invitation.organization,
+          }),
       );
       await updateDoc(doc(db, "vipInvitations", invitation.id), {
         invitationMailStatus: "sent",
@@ -608,7 +618,7 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
             email: invitation.email,
             firstName: invitation.firstName,
             greetingLabel: invitation.mailGreetingLabel,
-            invitationUrl: `${window.location.origin}/vip`,
+            invitationUrl: buildAppUrl("/vip"),
             language: invitation.invitationMailLanguage,
             lastName: invitation.lastName,
             organization: invitation.organization,
@@ -805,6 +815,7 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
         .map((portal) => ({
           ...portal,
           portalUrl: buildVipPartnerPortalUrl(portal.id),
+          portalPreviewUrl: canOpenVipPartnerPortalLocally() ? buildVipPartnerPortalPath(portal.id) : "",
         })),
     [partnerPortals],
   );
@@ -1341,9 +1352,18 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
                         </div>
                       </td>
                       <td>
-                        <a href={portal.portalUrl} target="_blank" rel="noreferrer">
-                          {portal.portalUrl}
-                        </a>
+                        <div className="table-stack table-stack--tight">
+                          <span>{portal.portalUrl}</span>
+                          {portal.portalPreviewUrl ? (
+                            <a href={portal.portalPreviewUrl} target="_blank" rel="noreferrer">
+                              Ouvrir l'aperçu local
+                            </a>
+                          ) : (
+                            <a href={portal.portalUrl} target="_blank" rel="noreferrer">
+                              Ouvrir le lien public
+                            </a>
+                          )}
+                        </div>
                       </td>
                       <td>
                         <div className="vip-admin-actions vip-admin-actions--compact">

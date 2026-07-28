@@ -158,13 +158,16 @@ const SIMPLIFIED_GROUPS_BY_EDITION = {
 };
 
 const DIFF_FIELDS = [
+  "rowNumber",
   "section",
   "label",
   "details",
   "referenceForecast",
   "referenceActual",
   "currentForecast",
+  "currentForecastFormula",
   "currentActual",
+  "currentActualFormula",
   "actualReference",
   "comment",
 ];
@@ -175,6 +178,8 @@ const BUDGET_VALUE_FIELDS = [
   "currentForecast",
   "currentActual",
 ];
+
+const FORMULA_ENABLED_FIELDS = ["currentForecast", "currentActual"];
 
 function normalizeEditionId(value, fallback = rawBudget2026.editionId) {
   const normalizedValue = normalizeOptionalEditionId(value);
@@ -232,7 +237,11 @@ function normalizeBudgetRow(row = {}, side, index = 0) {
     referenceForecast: toBudgetNumber(row.referenceForecast),
     referenceActual: toBudgetNumber(row.referenceActual),
     currentForecast: toBudgetNumber(row.currentForecast),
+    currentForecastFormula: String(row.currentForecastFormula || "").trim(),
+    currentForecastFormulaError: "",
     currentActual: toBudgetNumber(row.currentActual),
+    currentActualFormula: String(row.currentActualFormula || "").trim(),
+    currentActualFormulaError: "",
     actualReference: String(row.actualReference || "").trim(),
     comment: String(row.comment || "").trim(),
     isCustom: Boolean(row.isCustom),
@@ -244,13 +253,197 @@ function normalizeBudgetRow(row = {}, side, index = 0) {
 function cloneBudgetRow(row, { includeValues = true } = {}) {
   return {
     ...row,
+    rowNumber: Number(row.rowNumber || 0),
     referenceForecast: includeValues ? toBudgetNumber(row.referenceForecast) : null,
     referenceActual: includeValues ? toBudgetNumber(row.referenceActual) : null,
     currentForecast: includeValues ? toBudgetNumber(row.currentForecast) : null,
+    currentForecastFormula: String(row.currentForecastFormula || "").trim(),
+    currentForecastFormulaError: String(row.currentForecastFormulaError || "").trim(),
     currentActual: includeValues ? toBudgetNumber(row.currentActual) : null,
+    currentActualFormula: String(row.currentActualFormula || "").trim(),
+    currentActualFormulaError: String(row.currentActualFormulaError || "").trim(),
     actualReference: String(row.actualReference || ""),
     comment: String(row.comment || ""),
     isCustom: Boolean(row.isCustom),
+  };
+}
+
+function normalizeFormulaName(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase();
+}
+
+function getFormulaFieldName(fieldName) {
+  return `${fieldName}Formula`;
+}
+
+function getFormulaErrorFieldName(fieldName) {
+  return `${fieldName}FormulaError`;
+}
+
+function evaluateFormulaToken(token, rowMap, resolver) {
+  const normalizedToken = String(token || "").trim().toUpperCase();
+  const match = normalizedToken.match(/^([PR])(\d+)$/);
+  if (!match) throw new Error(`Référence invalide : ${token}`);
+
+  const [, columnCode, rowNumberValue] = match;
+  const targetRow = rowMap.get(Number(rowNumberValue));
+  if (!targetRow) throw new Error(`Ligne introuvable : ${token}`);
+
+  const targetField = columnCode === "P" ? "currentForecast" : "currentActual";
+  return resolver(targetRow, targetField);
+}
+
+function evaluateFormulaRange(rangeValue, rowMap, resolver) {
+  const normalizedRange = String(rangeValue || "").trim().toUpperCase();
+  const match = normalizedRange.match(/^([PR])(\d+):([PR])(\d+)$/);
+  if (!match) throw new Error(`Plage invalide : ${rangeValue}`);
+
+  const [, startColumn, startRowValue, endColumn, endRowValue] = match;
+  if (startColumn !== endColumn) throw new Error(`Colonnes incompatibles : ${rangeValue}`);
+
+  const startRow = Number(startRowValue);
+  const endRow = Number(endRowValue);
+  const step = startRow <= endRow ? 1 : -1;
+  let total = 0;
+
+  for (let rowNumber = startRow; step > 0 ? rowNumber <= endRow : rowNumber >= endRow; rowNumber += step) {
+    total += evaluateFormulaToken(`${startColumn}${rowNumber}`, rowMap, resolver);
+  }
+
+  return total;
+}
+
+function evaluateBudgetFormulaExpression(expression, rowMap, resolver) {
+  let formulaBody = String(expression || "").trim();
+  if (!formulaBody.startsWith("=")) return { value: toBudgetNumber(formulaBody), error: "" };
+
+  formulaBody = formulaBody.slice(1).trim();
+  if (!formulaBody) return { value: null, error: "Formule vide." };
+
+  try {
+    let normalizedExpression = normalizeFormulaName(formulaBody);
+
+    const sumPattern = /\b(SOMME|SUM)\(([^()]*)\)/g;
+    normalizedExpression = normalizedExpression.replace(sumPattern, (_, _fn, rawArgs) => {
+      const args = String(rawArgs || "")
+        .split(/[;,]/)
+        .map((value) => value.trim())
+        .filter(Boolean);
+
+      const total = args.reduce((sum, arg) => {
+        if (/^[PR]\d+:[PR]\d+$/i.test(arg)) return sum + evaluateFormulaRange(arg, rowMap, resolver);
+        if (/^[PR]\d+$/i.test(arg)) return sum + evaluateFormulaToken(arg, rowMap, resolver);
+
+        const numericValue = Number(arg.replace(",", "."));
+        if (!Number.isFinite(numericValue)) {
+          throw new Error(`Argument SOMME invalide : ${arg}`);
+        }
+
+        return sum + numericValue;
+      }, 0);
+
+      return String(total);
+    });
+
+    if (/[PR]\d+:[PR]\d+/i.test(normalizedExpression)) {
+      throw new Error("Les plages doivent être utilisées dans SOMME().");
+    }
+
+    normalizedExpression = normalizedExpression.replace(/[PR]\d+/gi, (token) => {
+      return String(evaluateFormulaToken(token, rowMap, resolver));
+    });
+
+    normalizedExpression = normalizedExpression.replace(/,/g, ".");
+
+    if (!/^[\d+\-*/().\s]+$/.test(normalizedExpression)) {
+      throw new Error("Expression non autorisée.");
+    }
+
+    const evaluatedValue = Function(`"use strict"; return (${normalizedExpression});`)();
+    if (!Number.isFinite(evaluatedValue)) throw new Error("Résultat invalide.");
+
+    return {
+      value: Number(Number(evaluatedValue).toFixed(4)),
+      error: "",
+    };
+  } catch (error) {
+    return {
+      value: null,
+      error: error instanceof Error ? error.message : "Formule invalide.",
+    };
+  }
+}
+
+function recalculateBudgetCollectionFormulas(rows = []) {
+  const nextRows = rows.map((row) => cloneBudgetRow(row));
+  const rowMap = new Map(nextRows.map((row) => [Number(row.rowNumber || 0), row]));
+  const cache = new Map();
+
+  function resolveFieldValue(row, fieldName, evaluationPath = new Set()) {
+    const cacheKey = `${row.id}:${fieldName}`;
+    if (cache.has(cacheKey)) return cache.get(cacheKey);
+
+    const formulaField = getFormulaFieldName(fieldName);
+    const formulaErrorField = getFormulaErrorFieldName(fieldName);
+    const formulaValue = String(row[formulaField] || "").trim();
+
+    if (!formulaValue) {
+      const directValue = toBudgetNumber(row[fieldName]) ?? 0;
+      cache.set(cacheKey, directValue);
+      row[formulaErrorField] = "";
+      return directValue;
+    }
+
+    if (evaluationPath.has(cacheKey)) {
+      row[formulaErrorField] = "Référence circulaire détectée.";
+      cache.set(cacheKey, 0);
+      return 0;
+    }
+
+    const nextPath = new Set(evaluationPath);
+    nextPath.add(cacheKey);
+
+    const { value, error } = evaluateBudgetFormulaExpression(formulaValue, rowMap, (targetRow, targetField) =>
+      resolveFieldValue(targetRow, targetField, nextPath),
+    );
+
+    row[fieldName] = value;
+    row[formulaErrorField] = error;
+
+    const resolvedValue = value ?? 0;
+    cache.set(cacheKey, resolvedValue);
+    return resolvedValue;
+  }
+
+  nextRows.forEach((row) => {
+    FORMULA_ENABLED_FIELDS.forEach((fieldName) => {
+      const formulaErrorField = getFormulaErrorFieldName(fieldName);
+      row[formulaErrorField] = "";
+    });
+  });
+
+  nextRows.forEach((row) => {
+    FORMULA_ENABLED_FIELDS.forEach((fieldName) => {
+      const formulaField = getFormulaFieldName(fieldName);
+      const formulaValue = String(row[formulaField] || "").trim();
+      if (!formulaValue) return;
+      resolveFieldValue(row, fieldName);
+    });
+  });
+
+  return nextRows;
+}
+
+function recalculateBudgetFormulas(budget) {
+  if (!budget) return budget;
+
+  return {
+    ...structuredClone(budget),
+    expenses: recalculateBudgetCollectionFormulas(budget.expenses || []),
+    revenues: recalculateBudgetCollectionFormulas(budget.revenues || []),
   };
 }
 
@@ -345,6 +538,10 @@ function mergeHistoricalBudgetRows(baseRows = [], linkedRows = []) {
       referenceActual: null,
       currentForecast: linkedRow.referenceForecast,
       currentActual: linkedRow.referenceActual,
+      currentForecastFormula: "",
+      currentForecastFormulaError: "",
+      currentActualFormula: "",
+      currentActualFormulaError: "",
       actualReference: "",
       comment: "",
       isLinkedOnly: true,
@@ -417,7 +614,9 @@ function createBudgetRow({
       referenceForecast: null,
       referenceActual: null,
       currentForecast: null,
+      currentForecastFormula: "",
       currentActual: null,
+      currentActualFormula: "",
       actualReference: "",
       comment: "",
       isCustom: true,
@@ -454,6 +653,8 @@ function buildStandaloneHistoricalBudget({
       referenceActual: null,
       currentForecast: includeSeedValues ? toBudgetNumber(normalizedRow.referenceForecast) : null,
       currentActual: includeSeedValues ? toBudgetNumber(normalizedRow.referenceActual) : null,
+      currentForecastFormula: "",
+      currentActualFormula: "",
       actualReference: "",
       comment: "",
     };
@@ -559,7 +760,9 @@ function serializeBudgetDocument(budget, { actorName = "", actorUid = "" } = {})
       referenceForecast: toBudgetNumber(row.referenceForecast),
       referenceActual: toBudgetNumber(row.referenceActual),
       currentForecast: toBudgetNumber(row.currentForecast),
+      currentForecastFormula: String(row.currentForecastFormula || "").trim(),
       currentActual: toBudgetNumber(row.currentActual),
+      currentActualFormula: String(row.currentActualFormula || "").trim(),
       actualReference: String(row.actualReference || "").trim(),
       comment: String(row.comment || "").trim(),
       isCustom: Boolean(row.isCustom),
@@ -573,7 +776,9 @@ function serializeBudgetDocument(budget, { actorName = "", actorUid = "" } = {})
       referenceForecast: toBudgetNumber(row.referenceForecast),
       referenceActual: toBudgetNumber(row.referenceActual),
       currentForecast: toBudgetNumber(row.currentForecast),
+      currentForecastFormula: String(row.currentForecastFormula || "").trim(),
       currentActual: toBudgetNumber(row.currentActual),
+      currentActualFormula: String(row.currentActualFormula || "").trim(),
       actualReference: String(row.actualReference || "").trim(),
       comment: String(row.comment || "").trim(),
       isCustom: Boolean(row.isCustom),
@@ -682,7 +887,13 @@ function getVisibleBudgetRows(rows = []) {
 }
 
 function groupRowsBySection(rows = [], order = []) {
-  const visibleRows = getVisibleBudgetRows(rows);
+  const visibleRows = [...getVisibleBudgetRows(rows)].sort((left, right) => {
+    const leftRowNumber = Number(left.rowNumber || 0);
+    const rightRowNumber = Number(right.rowNumber || 0);
+
+    if (leftRowNumber !== rightRowNumber) return leftRowNumber - rightRowNumber;
+    return String(left.id || "").localeCompare(String(right.id || ""));
+  });
   const rowsBySection = visibleRows.reduce((accumulator, row) => {
     if (!accumulator[row.section]) accumulator[row.section] = [];
     accumulator[row.section].push(row);
@@ -698,13 +909,13 @@ function groupRowsBySection(rows = [], order = []) {
   }));
 }
 
-function sumBudgetField(rows = [], fieldName) {
+function sumBudgetField(rows = [], fieldName, { emptyAsNull = false } = {}) {
   const visibleRows = getVisibleBudgetRows(rows);
   const numericValues = visibleRows
     .map((row) => toBudgetNumber(row[fieldName]))
     .filter((value) => value != null);
 
-  if (!numericValues.length) return 0;
+  if (!numericValues.length) return emptyAsNull ? null : 0;
   return Number(numericValues.reduce((accumulator, value) => accumulator + value, 0).toFixed(2));
 }
 
@@ -716,13 +927,13 @@ function getBudgetTotals(budget) {
       referenceForecast: sumBudgetField(expenseFields, "referenceForecast"),
       referenceActual: sumBudgetField(expenseFields, "referenceActual"),
       currentForecast: sumBudgetField(expenseFields, "currentForecast"),
-      currentActual: sumBudgetField(expenseFields, "currentActual"),
+      currentActual: sumBudgetField(expenseFields, "currentActual", { emptyAsNull: true }),
     },
     revenues: {
       referenceForecast: sumBudgetField(revenueFields, "referenceForecast"),
       referenceActual: sumBudgetField(revenueFields, "referenceActual"),
       currentForecast: sumBudgetField(revenueFields, "currentForecast"),
-      currentActual: sumBudgetField(revenueFields, "currentActual"),
+      currentActual: sumBudgetField(revenueFields, "currentActual", { emptyAsNull: true }),
     },
   };
 
@@ -730,7 +941,10 @@ function getBudgetTotals(budget) {
     referenceForecast: Number((totals.revenues.referenceForecast - totals.expenses.referenceForecast).toFixed(2)),
     referenceActual: Number((totals.revenues.referenceActual - totals.expenses.referenceActual).toFixed(2)),
     currentForecast: Number((totals.revenues.currentForecast - totals.expenses.currentForecast).toFixed(2)),
-    currentActual: Number((totals.revenues.currentActual - totals.expenses.currentActual).toFixed(2)),
+    currentActual:
+      totals.revenues.currentActual == null && totals.expenses.currentActual == null
+        ? null
+        : Number((((totals.revenues.currentActual ?? 0) - (totals.expenses.currentActual ?? 0))).toFixed(2)),
   };
 
   return totals;
@@ -833,10 +1047,13 @@ function buildBudgetDiff(originalBudget, nextBudget) {
     }
 
     DIFF_FIELDS.forEach((fieldName) => {
-      const beforeValue = fieldName.includes("Forecast") || fieldName.includes("Actual")
+      const isNumericField =
+        fieldName === "rowNumber"
+        || BUDGET_VALUE_FIELDS.includes(fieldName);
+      const beforeValue = isNumericField
         ? toBudgetNumber(originalRow[fieldName])
         : String(originalRow[fieldName] || "").trim();
-      const afterValue = fieldName.includes("Forecast") || fieldName.includes("Actual")
+      const afterValue = isNumericField
         ? toBudgetNumber(row[fieldName])
         : String(row[fieldName] || "").trim();
 
@@ -921,6 +1138,7 @@ export {
   mergeFallbackBudgetValues,
   normalizeBudgetDocument,
   normalizeEditionId,
+  recalculateBudgetFormulas,
   serializeBudgetDocument,
   sortBudgetDocuments,
   toBudgetNumber,

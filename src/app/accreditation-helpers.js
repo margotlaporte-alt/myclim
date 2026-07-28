@@ -260,10 +260,8 @@ function getBadgeResourceCards(item) {
     subtitle: "Suivi des performances",
   };
 
-  if (Array.isArray(item?.resourceCards) && item.resourceCards.length) {
-    const filteredCards = item.resourceCards.filter((card) => card?.src && card?.title);
-    const hasResultsCard = filteredCards.some((card) => card.src === sharedResultsCard.src);
-    return hasResultsCard ? filteredCards : [sharedResultsCard, ...filteredCards];
+  if (Array.isArray(item?.resourceCards)) {
+    return item.resourceCards.filter((card) => card?.src && card?.title);
   }
 
   if (item?.includeVolunteerResources) {

@@ -1,10 +1,13 @@
 import { useCallback, useMemo } from "react";
 import { buildUserIdentitySet, getAssignedTeamNames } from "./common-helpers";
-import { useTeamConfiguration } from "./config-hooks";
+import { useBudgetInvoiceConfiguration, useTeamConfiguration } from "./config-hooks";
 import { useDocumentsCollection } from "./documents-hooks";
+import { useActiveEdition } from "./edition";
+import { canUserUploadBudgetInvoice } from "./budget-invoice-config";
+import { formatInvoiceStatusLabel, getInvoiceDocumentUrl, InvoiceUploadForm } from "./invoice-management";
 import { buildParticipationCertificateMarkup, getRoundedParticipationHours, normalizePresenceRecord } from "./presence-helpers";
 import { assignmentRows } from "./seed-data";
-import { normalizeRole } from "./utils";
+import { extractRolesFromProfile, normalizeRole } from "./utils";
 import { useAuth } from "../context/auth-context";
 
 function MyAssignmentsPage(props) {
@@ -204,8 +207,20 @@ function MyAssignmentsPage(props) {
 
 function MyDocumentsPage(props) {
   const { DataTable, Panel, getDocumentConsultationUrl, getTimestampMs, signatory } = props;
-  const { userProfile } = useAuth();
+  const { currentUser, userProfile } = useAuth();
   const { documents, loading: documentsLoading, error: documentsError } = useDocumentsCollection(true);
+  const { activeEditionId } = useActiveEdition(Boolean(currentUser?.uid));
+  const invoiceConfiguration = useBudgetInvoiceConfiguration();
+  const activeRoles = useMemo(() => extractRolesFromProfile(userProfile), [userProfile]);
+  const canUploadInvoices = useMemo(
+    () =>
+      canUserUploadBudgetInvoice({
+        activeRoles,
+        userId: currentUser?.uid,
+        configuration: invoiceConfiguration,
+      }),
+    [activeRoles, currentUser?.uid, invoiceConfiguration],
+  );
 
   const assignedTeams = useMemo(() => {
     const values = [
@@ -219,11 +234,23 @@ function MyDocumentsPage(props) {
 
   const availableDocuments = useMemo(() => {
     return documents.filter((document) => {
+      if (document.documentType === "invoice") return false;
       if (document.scope === "global" || document.teams.length === 0) return true;
       if (assignedTeams.length === 0) return false;
       return document.teams.some((team) => assignedTeams.includes(team));
     });
   }, [assignedTeams, documents]);
+  const ownInvoices = useMemo(
+    () =>
+      documents
+        .filter(
+          (document) =>
+            document.documentType === "invoice" &&
+            String(document.uploadedByUid || document.ownerUid || "").trim() === String(currentUser?.uid || "").trim(),
+        )
+        .sort((left, right) => right.createdAtMs - left.createdAtMs),
+    [currentUser?.uid, documents],
+  );
   const participationHours = useMemo(
     () => getRoundedParticipationHours(userProfile?.presence, getTimestampMs),
     [getTimestampMs, userProfile?.presence],
@@ -255,12 +282,14 @@ function MyDocumentsPage(props) {
         team: document.scope === "global" ? "Global" : document.teams.join(", "),
         open: (
           <button
-            className="button button--secondary"
+            className="document-icon-button"
             type="button"
             disabled={!getDocumentConsultationUrl(document)}
+            aria-label={`Ouvrir ${document.title}`}
+            title={`Ouvrir ${document.title}`}
             onClick={() => window.open(getDocumentConsultationUrl(document), "_blank", "noopener,noreferrer")}
           >
-            {document.fileName || document.reference || "Ouvrir"}
+            <span aria-hidden="true">↗</span>
           </button>
         ),
       }));
@@ -301,6 +330,19 @@ function MyDocumentsPage(props) {
         </div>
       </section>
       {documentsError ? <p className="panel-note">{documentsError}</p> : null}
+      {canUploadInvoices ? (
+        <Panel
+          title="Déposer une facture"
+          subtitle="Dépose ici une facture liée à l'édition en cours. Elle remontera automatiquement dans le budget pour classement."
+        >
+          <InvoiceUploadForm
+            editionId={activeEditionId}
+            currentUser={currentUser}
+            userProfile={userProfile}
+            assignedTeams={assignedTeams}
+          />
+        </Panel>
+      ) : null}
       <Panel title="Documents disponibles">
         {documentsLoading ? <p className="panel-note">Chargement des documents...</p> : null}
         <DataTable
@@ -327,6 +369,48 @@ function MyDocumentsPage(props) {
             : "Your participation certificate will become available after your departure has been recorded by your team lead or by the welcome desk."}
         </p>
       </Panel>
+
+      {canUploadInvoices || ownInvoices.length ? (
+        <Panel
+          title="Mes factures"
+          subtitle="Retrouve ici les factures que tu as déposées et leur état de classement dans le budget."
+        >
+          <DataTable
+            columns={[
+              { key: "title", label: "Facture" },
+              { key: "edition", label: "Édition" },
+              { key: "status", label: "Classement" },
+              { key: "open", label: "Consultation" },
+            ]}
+            rows={
+              ownInvoices.length
+                ? ownInvoices.map((invoice) => ({
+                    title: invoice.title || invoice.fileName || "Facture",
+                    edition: invoice.editionId || "—",
+                    status: formatInvoiceStatusLabel(invoice),
+                    open: (
+                      <button
+                        className="button button--secondary"
+                        type="button"
+                        disabled={!getInvoiceDocumentUrl(invoice)}
+                        onClick={() => window.open(getInvoiceDocumentUrl(invoice), "_blank", "noopener,noreferrer")}
+                      >
+                        {invoice.fileName || "Ouvrir"}
+                      </button>
+                    ),
+                  }))
+                : [
+                    {
+                      title: "Aucune facture déposée",
+                      edition: activeEditionId || "—",
+                      status: "—",
+                      open: "—",
+                    },
+                  ]
+            }
+          />
+        </Panel>
+      ) : null}
     </div>
   );
 }

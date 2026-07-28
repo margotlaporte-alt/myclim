@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { collection, doc, onSnapshot, serverTimestamp, setDoc } from "firebase/firestore";
-import accreditationQrEmagazineAthleteUrl from "../assets/accreditation-qr-emagazine-athlete.png";
-import accreditationQrPhotosLiveAthleteUrl from "../assets/accreditation-qr-photos-live-athlete.png";
-import accreditationQrResultsLiveAthleteUrl from "../assets/accreditation-qr-results-live-athlete.png";
-import accreditationQrRoadbookAthleteUrl from "../assets/accreditation-qr-roadbook-athlete.png";
+import { addDoc, collection, doc, onSnapshot, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
+import { useLocation, useNavigate } from "react-router-dom";
+import QRCode from "qrcode";
 import {
   buildAccreditationPrintHistoryMarkup,
   buildAccreditationRoleLabel,
@@ -18,10 +16,14 @@ import {
   toggleIdInList,
 } from "./accreditation-helpers";
 import {
+  ACCREDITATION_BADGE_VISUALS,
   ACCREDITATION_PRINT_STATUS_OPTIONS,
   BADGE_STORAGE_LOCATIONS,
   NON_NOMINATIVE_BADGE_TEMPLATES,
 } from "./accreditation-config";
+import { getDocumentUploadErrorMessage } from "./common-helpers";
+import { getDocumentReferenceUrl, useDocumentsCollection } from "./documents-hooks";
+import { FileUpload } from "./file-upload";
 import { JUDGE_ROSTER_DOC_PATH } from "./seed-data";
 import { getActiveRoles } from "./navigation";
 import { useAccreditationConfiguration, useJudgeRoster, useTeamConfiguration } from "./config-hooks";
@@ -30,29 +32,44 @@ import { useAuth } from "../context/auth-context";
 import { db } from "../services/firebase";
 
 const DEFAULT_LIST_PAGE_SIZE = 10;
+const ACCREDITATION_TAB_PATHS = {
+  roles: "/app/accreditations",
+  resources: "/app/accreditations/ressources-qr",
+  people: "/app/accreditations/benevoles",
+  print: "/app/accreditations/impressions",
+  tracking: "/app/accreditations/suivi",
+  history: "/app/accreditations/historique",
+  judges: "/app/accreditations/juges",
+  press: "/app/accreditations/presse",
+};
 
-const NON_NOMINATIVE_RESOURCE_CARDS = [
-  {
-    src: accreditationQrRoadbookAthleteUrl,
-    title: "Roadbook athlete",
-    subtitle: "Informations utiles meeting",
-  },
-  {
-    src: accreditationQrResultsLiveAthleteUrl,
-    title: "Resultats live",
-    subtitle: "Suivi des performances",
-  },
-  {
-    src: accreditationQrPhotosLiveAthleteUrl,
-    title: "Photos live",
-    subtitle: "Galerie evenement",
-  },
-  {
-    src: accreditationQrEmagazineAthleteUrl,
-    title: "E-magazine",
-    subtitle: "Contenus meeting",
-  },
-];
+function getAccreditationTabFromPath(pathname, availableTabs) {
+  const normalizedPath = String(pathname || "").replace(/\/+$/, "") || "/app/accreditations";
+
+  if (normalizedPath.endsWith("/ressources-qr") && availableTabs.includes("resources")) return "resources";
+  if (normalizedPath.endsWith("/benevoles") && availableTabs.includes("people")) return "people";
+  if (normalizedPath.endsWith("/impressions") && availableTabs.includes("print")) return "print";
+  if (normalizedPath.endsWith("/suivi") && availableTabs.includes("tracking")) return "tracking";
+  if (normalizedPath.endsWith("/historique") && availableTabs.includes("history")) return "history";
+  if (normalizedPath.endsWith("/juges") && availableTabs.includes("judges")) return "judges";
+  if (normalizedPath.endsWith("/presse") && availableTabs.includes("press")) return "press";
+  if (normalizedPath.endsWith("/roles") && availableTabs.includes("roles")) return "roles";
+  if (normalizedPath === "/app/accreditations" && availableTabs.includes("roles")) return "roles";
+  if (normalizedPath === "/app/accreditations" && availableTabs.includes("people")) return "people";
+
+  return availableTabs[0] || "print";
+}
+
+const EMPTY_QR_RESOURCE_FORM = {
+  label: "",
+  subtitle: "",
+  targetMode: "document_existing",
+  documentId: "",
+  url: "",
+  uploadedFileUrl: "",
+  uploadedFileName: "",
+  uploadedFilePath: "",
+};
 
 function AccreditationsPage(props) {
   const {
@@ -63,6 +80,8 @@ function AccreditationsPage(props) {
     normalizeSubRoles,
   } = props;
   const { userProfile } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const activeRoles = getActiveRoles(userProfile);
   const canManageAccreditationConfiguration = activeRoles.includes("admin");
   const canOperatePrinting = activeRoles.includes("admin") || activeRoles.includes("gestionnaire");
@@ -76,12 +95,16 @@ function AccreditationsPage(props) {
     printHistory: storedPrintHistory,
     badgeStorageLocations: storedBadgeStorageLocations,
     customStorageLocations: storedCustomStorageLocations,
+    qrResources: storedQrResources,
+    qrVisualAssignments: storedQrVisualAssignments,
     loading: accreditationLoading,
     error: accreditationError,
   } = useAccreditationConfiguration(roles);
-  const [activeAccreditationTab, setActiveAccreditationTab] = useState(
-    activeRoles.includes("admin") ? "roles" : "print",
-  );
+  const {
+    documents,
+    loading: documentsLoading,
+    error: documentsError,
+  } = useDocumentsCollection(canManageAccreditationConfiguration);
   const [isZoneLibraryExpanded, setIsZoneLibraryExpanded] = useState(false);
   const [users, setUsers] = useState([]);
   const [usersLoading, setUsersLoading] = useState(true);
@@ -107,7 +130,11 @@ function AccreditationsPage(props) {
   const [printHistoryBatchOpenById, setPrintHistoryBatchOpenById] = useState({});
   const [selectedPrintHistoryBatchId, setSelectedPrintHistoryBatchId] = useState("");
   const [judgeSearch, setJudgeSearch] = useState("");
+  const [roleSearch, setRoleSearch] = useState("");
   const [visibleListCountByKey, setVisibleListCountByKey] = useState({});
+  const [selectedQrVisualId, setSelectedQrVisualId] = useState(ACCREDITATION_BADGE_VISUALS[0]?.id ?? "volunteer");
+  const [editingQrResourceId, setEditingQrResourceId] = useState("");
+  const [qrResourceForm, setQrResourceForm] = useState(EMPTY_QR_RESOURCE_FORM);
   const zones = Array.isArray(storedZones) ? storedZones : [];
   const roleZoneAssignments = storedRoleZoneAssignments && typeof storedRoleZoneAssignments === "object"
     ? storedRoleZoneAssignments
@@ -134,6 +161,15 @@ function AccreditationsPage(props) {
     ? storedBadgeStorageLocations
     : {};
   const customStorageLocations = Array.isArray(storedCustomStorageLocations) ? storedCustomStorageLocations : [];
+  const qrResources = Array.isArray(storedQrResources) ? storedQrResources : [];
+  const qrVisualAssignments =
+    storedQrVisualAssignments && typeof storedQrVisualAssignments === "object"
+      ? storedQrVisualAssignments
+      : {};
+  const documentsById = useMemo(
+    () => new Map(documents.map((documentItem) => [documentItem.id, documentItem])),
+    [documents],
+  );
   const sortedZones = useMemo(() => sortAccreditationZones(zones), [sortAccreditationZones, zones]);
   const effectiveSelectedRoleId =
     roles.some((role) => role.id === selectedRoleId) ? selectedRoleId : roles[0]?.id ?? "";
@@ -322,17 +358,238 @@ function AccreditationsPage(props) {
       printHistory,
       badgeStorageLocations,
       customStorageLocations,
+      qrResources,
+      qrVisualAssignments,
       ...nextPartial,
     }),
     [
       badgeStorageLocations,
       customStorageLocations,
       printHistory,
+      qrResources,
+      qrVisualAssignments,
       roleZoneAssignments,
       volunteerOverrides,
       zones,
     ],
   );
+
+  const qrResourceUsageById = useMemo(
+    () =>
+      qrResources.reduce((accumulator, resource) => {
+        accumulator[resource.id] = ACCREDITATION_BADGE_VISUALS
+          .filter((visual) => (qrVisualAssignments[visual.id] ?? []).includes(resource.id))
+          .map((visual) => visual.id);
+        return accumulator;
+      }, {}),
+    [qrResources, qrVisualAssignments],
+  );
+  const effectiveSelectedQrVisualId = ACCREDITATION_BADGE_VISUALS.some((visual) => visual.id === selectedQrVisualId)
+    ? selectedQrVisualId
+    : ACCREDITATION_BADGE_VISUALS[0]?.id ?? "volunteer";
+  const selectedQrVisual =
+    ACCREDITATION_BADGE_VISUALS.find((visual) => visual.id === effectiveSelectedQrVisualId) ??
+    ACCREDITATION_BADGE_VISUALS[0] ??
+    null;
+  const selectedQrVisualResourceIds = qrVisualAssignments[effectiveSelectedQrVisualId] ?? [];
+
+  function resetQrResourceForm() {
+    setEditingQrResourceId("");
+    setQrResourceForm(EMPTY_QR_RESOURCE_FORM);
+  }
+
+  function handleQrResourceFormChange(event) {
+    const { name, value } = event.target;
+    setQrResourceForm((current) => ({ ...current, [name]: value }));
+  }
+
+  function editQrResource(resource) {
+    const resolvedTargetMode = resource.targetType === "document" ? "document_existing" : "url";
+
+    setEditingQrResourceId(resource.id);
+    setQrResourceForm({
+      label: resource.label || "",
+      subtitle: resource.subtitle || "",
+      targetMode: resolvedTargetMode,
+      documentId: resource.documentId || "",
+      url: resource.url || "",
+      uploadedFileUrl: "",
+      uploadedFileName: "",
+      uploadedFilePath: "",
+    });
+  }
+
+  function getAccreditationResourceTargetUrl(resource) {
+    if (!resource) return "";
+
+    if (resource.targetType === "document") {
+      return getDocumentReferenceUrl(documentsById.get(resource.documentId) || null);
+    }
+
+    return String(resource.url || "").trim();
+  }
+
+  function getQrResourceTargetSummary(resource) {
+    if (!resource) return "Cible indisponible";
+
+    if (resource.targetType === "document") {
+      const linkedDocument = documentsById.get(resource.documentId) || null;
+      if (!linkedDocument) return "Document introuvable";
+      return linkedDocument.title || linkedDocument.fileName || "Document lié";
+    }
+
+    return resource.url ? resource.url : "Lien à configurer";
+  }
+
+  async function buildResourceCardsForVisual(visualId) {
+    const resourceIds = qrVisualAssignments[visualId] ?? [];
+    const cards = await Promise.all(
+      resourceIds.map(async (resourceId) => {
+        const resource = qrResources.find((entry) => entry.id === resourceId);
+        if (!resource) return null;
+
+        const targetUrl = getAccreditationResourceTargetUrl(resource);
+        let src = "";
+
+        if (targetUrl) {
+          try {
+            src = await QRCode.toDataURL(targetUrl, {
+              errorCorrectionLevel: "M",
+              margin: 1,
+              width: 160,
+            });
+          } catch (error) {
+            console.error("Impossible de générer le QR code.", error);
+          }
+        }
+
+        if (!src) {
+          src = resource.legacyImageUrl || "";
+        }
+
+        if (!src) return null;
+
+        return {
+          id: resource.id,
+          src,
+          title: resource.label,
+          subtitle: resource.subtitle,
+          alt: resource.label,
+        };
+      }),
+    );
+
+    return cards.filter(Boolean);
+  }
+
+  async function saveQrResource() {
+    const trimmedLabel = qrResourceForm.label.trim();
+    const trimmedSubtitle = qrResourceForm.subtitle.trim();
+    const targetMode = qrResourceForm.targetMode;
+
+    if (!trimmedLabel) {
+      setAccreditationStatus("Ajoutez un libellé pour la ressource QR.");
+      return;
+    }
+
+    let documentId = "";
+    let externalUrl = "";
+
+    if (targetMode === "document_existing") {
+      documentId = String(qrResourceForm.documentId || "").trim();
+      if (!documentId) {
+        setAccreditationStatus("Sélectionnez un document existant pour cette ressource QR.");
+        return;
+      }
+    } else if (targetMode === "document_upload") {
+      if (!qrResourceForm.uploadedFileUrl) {
+        setAccreditationStatus("Téléversez un document avant d'enregistrer la ressource QR.");
+        return;
+      }
+
+      try {
+        const documentRef = await addDoc(collection(db, "documents"), {
+          title: trimmedLabel,
+          reference: "",
+          fileName: qrResourceForm.uploadedFileName || "",
+          filePath: qrResourceForm.uploadedFilePath || "",
+          fileUrl: qrResourceForm.uploadedFileUrl,
+          scope: "global",
+          teams: [],
+          visibility: "Tous les utilisateurs concernés",
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+        documentId = documentRef.id;
+      } catch (error) {
+        setAccreditationStatus(getDocumentUploadErrorMessage(error));
+        return;
+      }
+    } else {
+      externalUrl = String(qrResourceForm.url || "").trim();
+      if (!externalUrl) {
+        setAccreditationStatus("Ajoutez une URL pour cette ressource QR.");
+        return;
+      }
+    }
+
+    const existingResource = qrResources.find((resource) => resource.id === editingQrResourceId) || null;
+    const nextResource = {
+      id: existingResource?.id || `qr-resource-${Date.now()}`,
+      label: trimmedLabel,
+      subtitle: trimmedSubtitle,
+      targetType: documentId ? "document" : "url",
+      documentId,
+      url: documentId ? "" : externalUrl,
+      legacyImageUrl: existingResource?.legacyImageUrl || "",
+    };
+    const nextQrResources = existingResource
+      ? qrResources.map((resource) => (resource.id === existingResource.id ? nextResource : resource))
+      : [...qrResources, nextResource];
+
+    await persistAccreditationConfiguration(
+      buildCurrentConfiguration({
+        qrResources: nextQrResources,
+      }),
+      existingResource ? "Ressource QR mise à jour." : "Ressource QR ajoutée.",
+    );
+
+    resetQrResourceForm();
+  }
+
+  function removeQrResource(resourceId) {
+    const nextQrResources = qrResources.filter((resource) => resource.id !== resourceId);
+    const nextQrVisualAssignments = Object.fromEntries(
+      Object.entries(qrVisualAssignments).map(([visualId, resourceIds]) => [
+        visualId,
+        Array.isArray(resourceIds) ? resourceIds.filter((currentResourceId) => currentResourceId !== resourceId) : [],
+      ]),
+    );
+
+    persistAccreditationConfiguration(
+      buildCurrentConfiguration({
+        qrResources: nextQrResources,
+        qrVisualAssignments: nextQrVisualAssignments,
+      }),
+      "Ressource QR supprimée.",
+    );
+
+    if (editingQrResourceId === resourceId) {
+      resetQrResourceForm();
+    }
+  }
+
+  function toggleQrResourceAssignment(visualId, resourceId) {
+    persistAccreditationConfiguration(
+      buildCurrentConfiguration({
+        qrVisualAssignments: {
+          ...qrVisualAssignments,
+          [visualId]: toggleIdInList(qrVisualAssignments[visualId] ?? [], resourceId),
+        },
+      }),
+      "Affectation QR mise à jour.",
+    );
+  }
 
   const allStorageLocations = [
     ...BADGE_STORAGE_LOCATIONS,
@@ -695,6 +952,21 @@ function AccreditationsPage(props) {
     );
   }
 
+  function setRoleZoneSelection(roleId, nextZoneIds, successMessage = "Accès par rôle mis à jour.") {
+    persistAccreditationConfiguration(
+      {
+        zones,
+        roleZoneAssignments: {
+          ...roleZoneAssignments,
+          [roleId]: nextZoneIds,
+        },
+        volunteerOverrides,
+        printHistory,
+      },
+      successMessage,
+    );
+  }
+
   function updateVolunteerOverride(volunteer, field, zoneId) {
     const nextOverride = buildUpdatedVolunteerOverride(
       volunteer,
@@ -775,7 +1047,7 @@ function AccreditationsPage(props) {
     printWindow.document.close();
   }
 
-  function openSampleAccreditation() {
+  async function openSampleAccreditation() {
     const legendZoneLabels = sortedZones.length
       ? sortedZones.map((zone) => formatZoneLabel(zone))
       : ["1. Tribune", "2. Warm-up", "3. Mixed zone", "4. Call room", "5. Media", "6. Infield"];
@@ -792,6 +1064,9 @@ function AccreditationsPage(props) {
     const infieldOnlyLabels = [infieldLabel];
     const partialWithoutInfieldLabels = nonInfieldLabels.slice(0, Math.max(1, Math.min(3, nonInfieldLabels.length)));
     const noZoneLabels = [];
+    const volunteerResourceCards = await buildResourceCardsForVisual("volunteer");
+    const athleteResourceCards = await buildResourceCardsForVisual("athlete");
+    const judgeResourceCards = await buildResourceCardsForVisual("judge");
 
     openPrintWindow(
       buildBadgePrintMarkup([
@@ -802,7 +1077,7 @@ function AccreditationsPage(props) {
           roleNames: ["Comite directeur FLA"],
           zoneIds: allZonesLabels.map((_, index) => `sample-zone-all-${index + 1}`),
           zoneLabels: allZonesLabels,
-          includeVolunteerResources: false,
+          resourceCards: judgeResourceCards,
         },
         {
           volunteerId: "sample-accreditation-2",
@@ -811,7 +1086,7 @@ function AccreditationsPage(props) {
           roleNames: ["Officiel terrain"],
           zoneIds: infieldOnlyLabels.map((_, index) => `sample-zone-infield-${index + 1}`),
           zoneLabels: infieldOnlyLabels,
-          includeVolunteerResources: false,
+          resourceCards: judgeResourceCards,
         },
         {
           volunteerId: "sample-accreditation-3",
@@ -820,7 +1095,7 @@ function AccreditationsPage(props) {
           roleNames: ["Media"],
           zoneIds: partialWithoutInfieldLabels.map((_, index) => `sample-zone-no-infield-${index + 1}`),
           zoneLabels: partialWithoutInfieldLabels,
-          includeVolunteerResources: false,
+          resourceCards: athleteResourceCards,
         },
         {
           volunteerId: "sample-accreditation-4",
@@ -829,7 +1104,7 @@ function AccreditationsPage(props) {
           roleNames: ["Benevole"],
           zoneIds: [],
           zoneLabels: noZoneLabels,
-          includeVolunteerResources: true,
+          resourceCards: volunteerResourceCards,
         },
       ], { legendZoneLabels }),
     );
@@ -843,15 +1118,10 @@ function AccreditationsPage(props) {
 
     const printedAt = new Date().toISOString();
     const legendZoneLabels = sortedZones.map((zone) => formatZoneLabel(zone));
+    const volunteerResourceCards = await buildResourceCardsForVisual("volunteer");
     const badgeItems = queuedVolunteers.map((volunteer) => {
       const override = getVolunteerOverride(volunteer.id);
       const zoneIds = getFinalZoneIds(volunteer);
-      const normalizedTeamRole = normalizeComparableValue(volunteer.teamRole || "");
-      const normalizedAssignedRoles = normalizeSubRoles(volunteer.assignedRoles || [volunteer.assignedRole].filter(Boolean))
-        .map((roleName) => normalizeComparableValue(roleName));
-      const includeVolunteerResources =
-        normalizedTeamRole === "benevole" ||
-        normalizedAssignedRoles.includes("benevole");
       return {
         volunteerId: volunteer.id,
         name: `${volunteer.firstName} ${volunteer.lastName}`.trim(),
@@ -859,7 +1129,7 @@ function AccreditationsPage(props) {
         roleNames: normalizeSubRoles(volunteer.assignedRoles || [volunteer.assignedRole].filter(Boolean)),
         zoneIds,
         zoneLabels: getFinalZoneLabels(volunteer),
-        includeVolunteerResources,
+        resourceCards: volunteerResourceCards,
       };
     });
 
@@ -918,6 +1188,7 @@ function AccreditationsPage(props) {
     const quantity = Math.max(1, Number.parseInt(nonNominativeQuantity, 10) || 1);
     const printedAt = new Date().toISOString();
     const legendZoneLabels = sortedZones.map((zone) => formatZoneLabel(zone));
+    const resourceCards = await buildResourceCardsForVisual(selectedNonNominativeTemplate.id);
     const zoneIds = selectedNonNominativeTemplate.defaultZoneIds.filter((zoneId) =>
       sortedZones.some((zone) => zone.id === zoneId),
     );
@@ -931,8 +1202,7 @@ function AccreditationsPage(props) {
       roleNames: [selectedNonNominativeTemplate.badgeLabel],
       zoneIds,
       zoneLabels,
-      includeVolunteerResources: false,
-      resourceCards: NON_NOMINATIVE_RESOURCE_CARDS,
+      resourceCards,
     }));
     const historyEntries = badgeItems.map((item, index) => ({
       id: `non-nominative-history-${selectedNonNominativeTemplate.id}-${Date.now()}-${index + 1}`,
@@ -969,6 +1239,7 @@ function AccreditationsPage(props) {
 
     const printedAt = new Date().toISOString();
     const legendZoneLabels = sortedZones.map((zone) => formatZoneLabel(zone));
+    const judgeResourceCards = await buildResourceCardsForVisual("judge");
     const badgeItems = queuedJudges.map((judge) => ({
       volunteerId: judge.id,
       name: `${judge.firstName} ${judge.lastName}`.trim() || "Judge",
@@ -978,7 +1249,7 @@ function AccreditationsPage(props) {
       zoneLabels: sortedZones
         .filter((zone) => judge.assignedZones.includes(zone.id))
         .map((zone) => formatZoneLabel(zone)),
-      includeVolunteerResources: false,
+      resourceCards: judgeResourceCards,
     }));
     const historyEntries = badgeItems.map((item, index) => ({
       id: `${item.volunteerId}-judge-${Date.now()}-${index}`,
@@ -1025,6 +1296,14 @@ function AccreditationsPage(props) {
   }
 
   const selectedRoleZoneIds = selectedRole ? getRoleZoneIds(selectedRole.id) : [];
+  const normalizedRoleSearch = roleSearch.trim().toLowerCase();
+  const filteredRoles = useMemo(
+    () => roles.filter((role) => role.roleName.toLowerCase().includes(normalizedRoleSearch)),
+    [normalizedRoleSearch, roles],
+  );
+  const selectedRoleZoneLabels = sortedZones
+    .filter((zone) => selectedRoleZoneIds.includes(zone.id))
+    .map((zone) => formatZoneLabel(zone));
   const selectedVolunteerOverride = selectedVolunteer
     ? getVolunteerOverride(selectedVolunteer.id)
     : {
@@ -1111,14 +1390,27 @@ function AccreditationsPage(props) {
   const visibleActiveJudges = getVisibleListItems("active-judges", activeJudges);
 
   const availableAccreditationTabs = [
-    ...(canManageAccreditationConfiguration ? ["roles"] : []),
+    ...(canManageAccreditationConfiguration ? ["roles", "resources"] : []),
     ...(canOperatePrinting ? ["people", "print", "tracking", "history", "judges"] : []),
   ];
+  const [activeAccreditationTab, setActiveAccreditationTab] = useState(() =>
+    getAccreditationTabFromPath(location.pathname, availableAccreditationTabs),
+  );
 
   useEffect(() => {
-    if (availableAccreditationTabs.includes(activeAccreditationTab)) return;
-    setActiveAccreditationTab(availableAccreditationTabs[0] || "print");
-  }, [activeAccreditationTab, availableAccreditationTabs]);
+    const nextTab = getAccreditationTabFromPath(location.pathname, availableAccreditationTabs);
+    if (nextTab === activeAccreditationTab) return;
+    setActiveAccreditationTab(nextTab);
+  }, [activeAccreditationTab, availableAccreditationTabs, location.pathname]);
+
+  function openAccreditationTab(tabId) {
+    if (!availableAccreditationTabs.includes(tabId)) return;
+    const nextPath = ACCREDITATION_TAB_PATHS[tabId] || ACCREDITATION_TAB_PATHS.roles;
+    setActiveAccreditationTab(tabId);
+    if (location.pathname !== nextPath) {
+      navigate(nextPath);
+    }
+  }
 
   useEffect(() => {
     const invalidVolunteerUpdates = volunteers
@@ -1235,7 +1527,7 @@ function AccreditationsPage(props) {
   ]);
 
   return (
-    <div className="page">
+    <div className="page accreditation-page">
       <section className="page-header">
         <div>
           <p className="eyebrow">Accreditations</p>
@@ -1252,9 +1544,18 @@ function AccreditationsPage(props) {
           <button
             className={`admin-subtab ${activeAccreditationTab === "roles" ? "admin-subtab--active" : ""}`}
             type="button"
-            onClick={() => setActiveAccreditationTab("roles")}
+            onClick={() => openAccreditationTab("roles")}
           >
             Zones par role
+          </button>
+        ) : null}
+        {canManageAccreditationConfiguration ? (
+          <button
+            className={`admin-subtab ${activeAccreditationTab === "resources" ? "admin-subtab--active" : ""}`}
+            type="button"
+            onClick={() => openAccreditationTab("resources")}
+          >
+            Ressources QR
           </button>
         ) : null}
         {canOperatePrinting ? (
@@ -1262,37 +1563,44 @@ function AccreditationsPage(props) {
             <button
               className={`admin-subtab ${activeAccreditationTab === "people" ? "admin-subtab--active" : ""}`}
               type="button"
-              onClick={() => setActiveAccreditationTab("people")}
+              onClick={() => openAccreditationTab("people")}
             >
               Préparation badges
             </button>
             <button
               className={`admin-subtab ${activeAccreditationTab === "print" ? "admin-subtab--active" : ""}`}
               type="button"
-              onClick={() => setActiveAccreditationTab("print")}
+              onClick={() => openAccreditationTab("print")}
             >
               Impressions
             </button>
             <button
               className={`admin-subtab ${activeAccreditationTab === "tracking" ? "admin-subtab--active" : ""}`}
               type="button"
-              onClick={() => setActiveAccreditationTab("tracking")}
+              onClick={() => openAccreditationTab("tracking")}
             >
               Suivi accréditation
             </button>
             <button
               className={`admin-subtab ${activeAccreditationTab === "history" ? "admin-subtab--active" : ""}`}
               type="button"
-              onClick={() => setActiveAccreditationTab("history")}
+              onClick={() => openAccreditationTab("history")}
             >
               Historique
             </button>
             <button
               className={`admin-subtab ${activeAccreditationTab === "judges" ? "admin-subtab--active" : ""}`}
               type="button"
-              onClick={() => setActiveAccreditationTab("judges")}
+              onClick={() => openAccreditationTab("judges")}
             >
               Juges
+            </button>
+            <button
+              className={`admin-subtab ${activeAccreditationTab === "press" ? "admin-subtab--active" : ""}`}
+              type="button"
+              onClick={() => openAccreditationTab("press")}
+            >
+              Presse
             </button>
           </>
         ) : null}
@@ -1362,70 +1670,443 @@ function AccreditationsPage(props) {
               </>
             ) : (
               <div className="accreditation-zone-collapsed">
-                <p className="panel-note">
-                  {sortedZones.length} zone(s) disponibles. Dépliez la bibliothèque pour les modifier.
-                </p>
+                <div className="accreditation-zone-library-preview">
+                  <div className="team-summary-pill">
+                    <strong>{sortedZones.length}</strong>
+                    <span>Zone(s) disponibles</span>
+                  </div>
+                  <div className="accreditation-tag-list">
+                    {sortedZones.slice(0, 4).map((zone) => (
+                      <span key={zone.id} className="accreditation-tag">
+                        {formatZoneLabel(zone)}
+                      </span>
+                    ))}
+                    {sortedZones.length > 4 ? (
+                      <span className="accreditation-tag">+ {sortedZones.length - 4} autres</span>
+                    ) : null}
+                  </div>
+                </div>
               </div>
             )}
           </Panel>
 
-          <section className="admin-split">
-            <div className="admin-split__nav">
-              {roles.map((role) => (
-                <button
-                  key={role.id}
-                  className={`role-chip ${effectiveSelectedRoleId === role.id ? "role-chip--active" : ""}`}
-                  type="button"
-                  onClick={() => setSelectedRoleId(role.id)}
-                >
-                  <strong>{role.roleName}</strong>
-                  <span>{getRoleZoneIds(role.id).length} zone(s) par défaut</span>
-                </button>
-              ))}
-            </div>
+          <section className="admin-split accreditation-role-layout">
+            <Panel title="Rôles" subtitle="Choisissez un rôle pour régler ses accès par défaut.">
+              <div className="admin-split__nav accreditation-role-nav">
+                <label className="field accreditation-role-search">
+                  <span>Rechercher un rôle</span>
+                  <input
+                    placeholder="Ex: VIP, presse, tribune..."
+                    value={roleSearch}
+                    onChange={(event) => setRoleSearch(event.target.value)}
+                  />
+                </label>
+                <div className="accreditation-role-nav__meta">
+                  <span>{filteredRoles.length} rôle(s) visible(s)</span>
+                  <span>{roles.length} au total</span>
+                </div>
+                <div className="accreditation-role-list">
+                  {filteredRoles.map((role) => {
+                    const roleZoneCount = getRoleZoneIds(role.id).length;
+
+                    return (
+                      <button
+                        key={role.id}
+                        className={`role-chip ${effectiveSelectedRoleId === role.id ? "role-chip--active" : ""}`}
+                        type="button"
+                        onClick={() => setSelectedRoleId(role.id)}
+                      >
+                        <span className="accreditation-role-list__label">{role.roleName}</span>
+                        <span className="accreditation-role-list__count">
+                          {roleZoneCount} zone{roleZoneCount > 1 ? "s" : ""}
+                        </span>
+                      </button>
+                    );
+                  })}
+                  {!filteredRoles.length ? (
+                    <p className="panel-note">Aucun rôle ne correspond à la recherche.</p>
+                  ) : null}
+                </div>
+              </div>
+            </Panel>
 
             {selectedRole ? (
               <div className="admin-stack">
                 <Panel
                   title={`Zones par défaut - ${selectedRole.roleName}`}
                   subtitle="Cochez les accès qui doivent être donnés automatiquement à toute personne affectée à ce rôle."
+                  actions={
+                    <div className="panel-actions accreditation-role-actions">
+                      <button
+                        className="button button--secondary button--small"
+                        type="button"
+                        onClick={() => setRoleZoneSelection(selectedRole.id, sortedZones.map((zone) => zone.id), "Toutes les zones ont été attribuées au rôle.")}
+                      >
+                        Tout cocher
+                      </button>
+                      <button
+                        className="button button--secondary button--small"
+                        type="button"
+                        onClick={() => setRoleZoneSelection(selectedRole.id, [], "Toutes les zones par défaut ont été retirées du rôle.")}
+                      >
+                        Vider
+                      </button>
+                    </div>
+                  }
                 >
+                  <div className="accreditation-person-summary">
+                    <div className="team-summary-pill">
+                      <strong>{selectedRoleZoneIds.length}</strong>
+                      <span>Zone(s) attribuée(s)</span>
+                    </div>
+                    <div className="team-summary-pill">
+                      <strong>{sortedZones.length - selectedRoleZoneIds.length}</strong>
+                      <span>Zone(s) non attribuée(s)</span>
+                    </div>
+                    <div className="team-summary-pill">
+                      <strong>{roles.findIndex((role) => role.id === selectedRole.id) + 1}</strong>
+                      <span>Position dans la liste des rôles</span>
+                    </div>
+                  </div>
                   <div className="choice-grid choice-grid--2">
                     {sortedZones.map((zone) => (
-                      <label key={zone.id} className="selection-card selection-card--compact">
+                      <label key={zone.id} className="selection-card selection-card--compact accreditation-zone-option">
                         <input
                           type="checkbox"
                           checked={selectedRoleZoneIds.includes(zone.id)}
                           onChange={() => toggleRoleZone(selectedRole.id, zone.id)}
                         />
                         <div>
-                          <strong>{formatZoneLabel(zone)}</strong>
-                          <p>Accès hérité automatiquement pour ce rôle</p>
+                          <div className="accreditation-zone-option__top">
+                            <strong>{formatZoneLabel(zone)}</strong>
+                            <span className={`accreditation-tag ${selectedRoleZoneIds.includes(zone.id) ? "accreditation-tag--active" : ""}`}>
+                              {selectedRoleZoneIds.includes(zone.id) ? "Attribuée" : "Inactive"}
+                            </span>
+                          </div>
+                          <p>Accès hérité automatiquement pour toute personne affectée à ce rôle.</p>
                         </div>
                       </label>
                     ))}
                   </div>
                 </Panel>
 
-                <Panel title="Résumé du rôle">
-                  <div className="accreditation-tag-list">
-                    {selectedRoleZoneIds.length ? (
-                      sortedZones
-                        .filter((zone) => selectedRoleZoneIds.includes(zone.id))
-                        .map((zone) => (
-                          <span key={zone.id} className="accreditation-tag accreditation-tag--active">
-                            {formatZoneLabel(zone)}
-                          </span>
-                        ))
-                    ) : (
-                      <p className="panel-note">Aucune zone par défaut définie pour ce rôle.</p>
-                    )}
+                <Panel title="Résumé du rôle" subtitle="Vue rapide de la configuration actuellement enregistrée.">
+                  <div className="accreditation-role-summary">
+                    <div className="accreditation-inline-panel">
+                      <strong>Rôle sélectionné</strong>
+                      <div className="accreditation-role-summary__stats">
+                        <div>
+                          <span>Nom</span>
+                          <strong>{selectedRole.roleName}</strong>
+                        </div>
+                        <div>
+                          <span>Zones actives</span>
+                          <strong>{selectedRoleZoneIds.length}</strong>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="accreditation-inline-panel">
+                      <strong>Zones attribuées</strong>
+                      {selectedRoleZoneLabels.length ? (
+                        <div className="accreditation-tag-list">
+                          {selectedRoleZoneLabels.map((label) => (
+                            <span key={label} className="accreditation-tag accreditation-tag--active">
+                              {label}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="panel-note accreditation-role-summary__empty">Aucune zone par défaut définie pour ce rôle.</p>
+                      )}
+                    </div>
                   </div>
                 </Panel>
               </div>
             ) : null}
           </section>
         </>
+      ) : canManageAccreditationConfiguration && activeAccreditationTab === "resources" ? (
+        <section className="admin-stack">
+          <Panel
+            title="Affectation des QR par visuel"
+            subtitle="Choisissez quelles ressources QR doivent apparaître sur chaque type d'accréditation."
+          >
+            <div className="admin-split accreditation-role-layout">
+              <div className="admin-split__nav accreditation-role-nav">
+                <div className="accreditation-role-nav__meta">
+                  <span>{ACCREDITATION_BADGE_VISUALS.length} visuel(x)</span>
+                  <span>{qrResources.length} ressource(s) réutilisable(s)</span>
+                </div>
+                <div className="accreditation-role-list">
+                  {ACCREDITATION_BADGE_VISUALS.map((visual) => (
+                    <button
+                      key={visual.id}
+                      className={`role-chip ${effectiveSelectedQrVisualId === visual.id ? "role-chip--active" : ""}`}
+                      type="button"
+                      onClick={() => setSelectedQrVisualId(visual.id)}
+                    >
+                      <span className="accreditation-role-list__label">{visual.label}</span>
+                      <span className="accreditation-role-list__count">
+                        {(qrVisualAssignments[visual.id] ?? []).length} QR
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {selectedQrVisual ? (
+                <div className="admin-stack">
+                  <Panel
+                    title={selectedQrVisual.label}
+                    subtitle={selectedQrVisual.description}
+                    actions={
+                      <button
+                        className="button button--secondary button--small"
+                        type="button"
+                        onClick={() =>
+                          persistAccreditationConfiguration(
+                            buildCurrentConfiguration({
+                              qrVisualAssignments: {
+                                ...qrVisualAssignments,
+                                [selectedQrVisual.id]: [],
+                              },
+                            }),
+                            "Toutes les ressources QR ont été retirées de ce visuel.",
+                          )
+                        }
+                      >
+                        Vider ce visuel
+                      </button>
+                    }
+                  >
+                    <div className="choice-grid choice-grid--2">
+                      {qrResources.map((resource) => {
+                        const isAssigned = selectedQrVisualResourceIds.includes(resource.id);
+                        const usageVisualLabels = (qrResourceUsageById[resource.id] ?? [])
+                          .map(
+                            (visualId) =>
+                              ACCREDITATION_BADGE_VISUALS.find((visual) => visual.id === visualId)?.label || visualId,
+                          );
+
+                        return (
+                          <label
+                            key={`visual-${selectedQrVisual.id}-${resource.id}`}
+                            className="selection-card selection-card--compact accreditation-zone-option"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isAssigned}
+                              onChange={() => toggleQrResourceAssignment(selectedQrVisual.id, resource.id)}
+                            />
+                            <div>
+                              <div className="accreditation-zone-option__top">
+                                <strong>{resource.label}</strong>
+                                <span className={`accreditation-tag ${isAssigned ? "accreditation-tag--active" : ""}`}>
+                                  {isAssigned ? "Affiché" : "Masqué"}
+                                </span>
+                              </div>
+                              <p>{resource.subtitle || "Aucun sous-titre renseigné."}</p>
+                              <p className="panel-note">{getQrResourceTargetSummary(resource)}</p>
+                              {usageVisualLabels.length ? (
+                                <div className="accreditation-tag-list">
+                                  {usageVisualLabels.map((label) => (
+                                    <span key={`${resource.id}-${label}`} className="accreditation-tag">
+                                      {label}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : null}
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </Panel>
+                </div>
+              ) : null}
+            </div>
+          </Panel>
+
+          <Panel
+            title="Bibliothèque des ressources QR"
+            subtitle="Créez ici les ressources QR réutilisables : document existant, nouveau document uploadé ou lien externe."
+          >
+            {documentsLoading ? <p className="panel-note">Chargement des documents...</p> : null}
+            {documentsError ? <p className="panel-note">{documentsError}</p> : null}
+
+            <div className="table-wrap">
+              <table className="data-table data-table--admin">
+                <thead>
+                  <tr>
+                    <th>Ressource</th>
+                    <th>Type</th>
+                    <th>Cible</th>
+                    <th>Utilisée sur</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {qrResources.map((resource) => {
+                    const usageVisualLabels = (qrResourceUsageById[resource.id] ?? [])
+                      .map(
+                        (visualId) =>
+                          ACCREDITATION_BADGE_VISUALS.find((visual) => visual.id === visualId)?.label || visualId,
+                      )
+                      .join(", ");
+
+                    return (
+                      <tr key={resource.id}>
+                        <td>
+                          <strong>{resource.label}</strong>
+                          {resource.subtitle ? <p className="panel-note">{resource.subtitle}</p> : null}
+                        </td>
+                        <td>{resource.targetType === "document" ? "Document" : "Lien externe"}</td>
+                        <td>{getQrResourceTargetSummary(resource)}</td>
+                        <td>{usageVisualLabels || "Non utilisée"}</td>
+                        <td>
+                          <div className="panel-actions">
+                            <button
+                              className="button button--secondary button--small"
+                              type="button"
+                              onClick={() => editQrResource(resource)}
+                            >
+                              Modifier
+                            </button>
+                            <button
+                              className="button button--ghost-danger button--small"
+                              type="button"
+                              onClick={() => removeQrResource(resource.id)}
+                            >
+                              Supprimer
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {!qrResources.length ? (
+                    <tr>
+                      <td colSpan="5">Aucune ressource QR configurée pour le moment.</td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="admin-stack" style={{ marginTop: "1rem" }}>
+              <div className="form-section-head">
+                <p className="eyebrow">Ressource QR</p>
+                <h3>{editingQrResourceId ? "Modifier une ressource" : "Ajouter une ressource"}</h3>
+              </div>
+              <div className="field-grid">
+                <AuthFormField label="Libellé">
+                  <input
+                    name="label"
+                    placeholder="Ex: Roadbook athlètes"
+                    value={qrResourceForm.label}
+                    onChange={handleQrResourceFormChange}
+                  />
+                </AuthFormField>
+                <AuthFormField label="Sous-titre">
+                  <input
+                    name="subtitle"
+                    placeholder="Ex: Informations utiles meeting"
+                    value={qrResourceForm.subtitle}
+                    onChange={handleQrResourceFormChange}
+                  />
+                </AuthFormField>
+              </div>
+              <AuthFormField label="Type de cible">
+                <select
+                  name="targetMode"
+                  value={qrResourceForm.targetMode}
+                  onChange={handleQrResourceFormChange}
+                >
+                  <option value="document_existing">Document existant</option>
+                  <option value="document_upload">Téléverser un document ici</option>
+                  <option value="url">Lien externe</option>
+                </select>
+              </AuthFormField>
+
+              {qrResourceForm.targetMode === "document_existing" ? (
+                <AuthFormField label="Document à utiliser">
+                  <select
+                    name="documentId"
+                    value={qrResourceForm.documentId}
+                    onChange={handleQrResourceFormChange}
+                  >
+                    <option value="">Sélectionner un document</option>
+                    {documents.map((documentItem) => (
+                      <option key={documentItem.id} value={documentItem.id}>
+                        {documentItem.title}
+                      </option>
+                    ))}
+                  </select>
+                </AuthFormField>
+              ) : null}
+
+              {qrResourceForm.targetMode === "document_upload" ? (
+                <div className="admin-stack">
+                  <FileUpload
+                    value={qrResourceForm.uploadedFileUrl}
+                    onChange={(url) =>
+                      setQrResourceForm((current) => ({
+                        ...current,
+                        uploadedFileUrl: url,
+                      }))
+                    }
+                    onUploadComplete={(uploadMeta) =>
+                      setQrResourceForm((current) => ({
+                        ...current,
+                        uploadedFileUrl: uploadMeta.url,
+                        uploadedFileName: uploadMeta.fileName || "",
+                        uploadedFilePath: uploadMeta.filePath || "",
+                      }))
+                    }
+                    accept=".pdf,image/*"
+                    storagePath="accreditations/documents"
+                    label="Document à téléverser"
+                    helperText="PDF ou image · sera aussi enregistré dans la bibliothèque Documents"
+                  />
+                  {qrResourceForm.uploadedFileName ? (
+                    <p className="panel-note">Fichier prêt: {qrResourceForm.uploadedFileName}</p>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {qrResourceForm.targetMode === "url" ? (
+                <AuthFormField label="URL">
+                  <input
+                    name="url"
+                    type="url"
+                    placeholder="https://..."
+                    value={qrResourceForm.url}
+                    onChange={handleQrResourceFormChange}
+                  />
+                </AuthFormField>
+              ) : null}
+
+              <div className="panel-actions">
+                <button
+                  className="button button--primary"
+                  type="button"
+                  onClick={saveQrResource}
+                >
+                  {editingQrResourceId ? "Enregistrer la ressource" : "Ajouter la ressource"}
+                </button>
+                {editingQrResourceId ? (
+                  <button
+                    className="button button--secondary"
+                    type="button"
+                    onClick={resetQrResourceForm}
+                  >
+                    Annuler
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </Panel>
+        </section>
       ) : canOperatePrinting && activeAccreditationTab === "people" ? (
         <section className="admin-stack">
           <Panel

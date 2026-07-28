@@ -417,7 +417,7 @@ function VolunteerProfilePage(props) {
           <AuthFormField label="Profession / occupation">
             <input name="occupation" onChange={handleChange} value={formData.occupation} />
           </AuthFormField>
-          <AuthFormField label="Expérience précédente au CMCM">
+          <AuthFormField label="Expérience au CMCM Luxembourg Indoor Meeting">
             <textarea name="cmcmExperience" onChange={handleChange} rows="3" value={formData.cmcmExperience} />
           </AuthFormField>
           <AuthFormField label="Autre expérience bénévole">

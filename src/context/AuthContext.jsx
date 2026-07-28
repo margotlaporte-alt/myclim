@@ -3,6 +3,7 @@ import {
   browserLocalPersistence,
   browserSessionPersistence,
   createUserWithEmailAndPassword,
+  deleteUser,
   onAuthStateChanged,
   sendPasswordResetEmail,
   setPersistence,
@@ -149,7 +150,40 @@ function createRegistrationStepError(code, message, cause) {
   const error = new Error(message);
   error.code = code;
   error.cause = cause;
+  if (cause?.code) {
+    error.firebaseCode = cause.code;
+  }
   return error;
+}
+
+function buildFirestoreWriteFailureMessage(stepLabel, cause, cleanupSucceeded) {
+  const causeCode = String(cause?.code || "").trim();
+  const retryMessage = cleanupSucceeded
+    ? " Le compte incomplet a ete supprime automatiquement, vous pouvez reessayer avec la meme adresse email."
+    : " Le compte partiellement cree existe peut-etre encore, et une suppression manuelle peut etre necessaire avant une nouvelle tentative.";
+
+  switch (causeCode) {
+    case "permission-denied":
+    case "firestore/permission-denied":
+      return `L'enregistrement du ${stepLabel} a ete refuse par les regles d'acces Firestore.${retryMessage}`;
+    case "unavailable":
+    case "firestore/unavailable":
+      return `L'enregistrement du ${stepLabel} a echoue car Firestore est momentanement indisponible.${retryMessage}`;
+    default:
+      return `L'enregistrement du ${stepLabel} dans Firestore a echoue.${retryMessage}`;
+  }
+}
+
+async function rollbackIncompleteRegistration(user, contextLabel) {
+  if (!user) return false;
+
+  try {
+    await deleteUser(user);
+    return true;
+  } catch (cleanupError) {
+    console.error(`${contextLabel} cleanup failed`, cleanupError);
+    return false;
+  }
 }
 
 async function resolveActiveEditionId() {
@@ -354,9 +388,13 @@ export function AuthProvider({ children }) {
     try {
       await setDoc(doc(db, "users", credential.user.uid), userProfileData, { merge: true });
     } catch (error) {
+      const cleanupSucceeded = await rollbackIncompleteRegistration(
+        credential.user,
+        "Volunteer profile registration",
+      );
       throw createRegistrationStepError(
         "volunteer/users-write-failed",
-        "Le compte a été créé, mais l'enregistrement du profil bénévole dans Firestore a échoué.",
+        buildFirestoreWriteFailureMessage("profil benevole", error, cleanupSucceeded),
         error,
       );
     }
@@ -389,7 +427,7 @@ export function AuthProvider({ children }) {
         cmcmExperience: formData.cmcmExperience,
         volunteerExperience: formData.volunteerExperience,
         healthSafetyInfo: formData.healthSafetyInfo,
-        certificateNeeded: formData.certificateNeeded,
+        certificateNeeded: Boolean(formData.certificateNeeded),
         retainForNextYear: formData.retainForNextYear,
         imageConsent: formData.imageConsent,
         availability: [
@@ -421,9 +459,13 @@ export function AuthProvider({ children }) {
         submittedAt: serverTimestamp(),
       });
     } catch (error) {
+      const cleanupSucceeded = await rollbackIncompleteRegistration(
+        credential.user,
+        "Volunteer application registration",
+      );
       throw createRegistrationStepError(
         "volunteer/application-write-failed",
-        "Le compte a été créé, mais l'enregistrement de la candidature bénévole dans Firestore a échoué.",
+        buildFirestoreWriteFailureMessage("candidature benevole", error, cleanupSucceeded),
         error,
       );
     }
@@ -458,9 +500,13 @@ export function AuthProvider({ children }) {
     try {
       await setDoc(doc(db, "users", credential.user.uid), parentProfile, { merge: true });
     } catch (error) {
+      const cleanupSucceeded = await rollbackIncompleteRegistration(
+        credential.user,
+        "Pre-program parent registration",
+      );
       throw createRegistrationStepError(
         "preprogram/users-write-failed",
-        "Le compte a été créé, mais l'enregistrement du profil parent dans Firestore a échoué.",
+        buildFirestoreWriteFailureMessage("profil parent", error, cleanupSucceeded),
         error,
       );
     }
@@ -493,9 +539,17 @@ export function AuthProvider({ children }) {
           createdAt: serverTimestamp(),
         });
       } catch (error) {
+        const cleanupSucceeded = await rollbackIncompleteRegistration(
+          credential.user,
+          "Pre-program child registration",
+        );
         throw createRegistrationStepError(
           "preprogram/child-write-failed",
-          `Le compte a été créé, mais l'enregistrement de la fiche enfant "${child.firstName} ${child.lastName}" a échoué.`,
+          buildFirestoreWriteFailureMessage(
+            `fiche enfant "${child.firstName} ${child.lastName}"`,
+            error,
+            cleanupSucceeded,
+          ),
           error,
         );
       }
@@ -527,9 +581,17 @@ export function AuthProvider({ children }) {
           submittedAt: serverTimestamp(),
         });
       } catch (error) {
+        const cleanupSucceeded = await rollbackIncompleteRegistration(
+          credential.user,
+          "Pre-program request registration",
+        );
         throw createRegistrationStepError(
           "preprogram/request-write-failed",
-          `Le compte a été créé, mais l'enregistrement de la demande pour "${child.firstName} ${child.lastName}" a échoué.`,
+          buildFirestoreWriteFailureMessage(
+            `demande pour "${child.firstName} ${child.lastName}"`,
+            error,
+            cleanupSucceeded,
+          ),
           error,
         );
       }

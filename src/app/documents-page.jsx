@@ -18,7 +18,10 @@ import {
   JUDGE_ROSTER_DOC_PATH,
 } from "./seed-data";
 import { useDocumentsCollection } from "./documents-hooks";
-import { getActiveEditionId, recordMatchesEdition } from "./edition";
+import { getActiveEditionId, recordMatchesEdition, useActiveEdition } from "./edition";
+import { useBudgetInvoiceConfiguration, useTeamConfiguration } from "./config-hooks";
+import { canUserUploadBudgetInvoice } from "./budget-invoice-config";
+import { InvoiceUploadForm } from "./invoice-management";
 import {
   formatDateTimeForDisplay,
   getU14RaceLabel,
@@ -28,7 +31,8 @@ import { normalizePresenceRecord } from "./presence-helpers";
 import { normalizeTeamConfigurationPayload } from "./team-config";
 import { isTeamLeadAssignment } from "./common-helpers";
 import { mapVolunteerApplicationToAdminVolunteer } from "./volunteer-helpers";
-import { useTeamConfiguration } from "./config-hooks";
+import { extractRolesFromProfile } from "./utils";
+import { useAuth } from "../context/auth-context";
 import { db } from "../services/firebase";
 
 const EMERGENCY_EXTRACTION_DEFINITIONS = [
@@ -521,6 +525,9 @@ function openPrintMarkup(markup) {
 
 function DocumentsPage(props) {
   const { AuthFormField, Panel, getDocumentConsultationUrl } = props;
+  const { currentUser, userProfile } = useAuth();
+  const { activeEditionId } = useActiveEdition(Boolean(currentUser?.uid));
+  const invoiceConfiguration = useBudgetInvoiceConfiguration();
   const emptyDocumentForm = {
     title: "",
     reference: "",
@@ -539,9 +546,22 @@ function DocumentsPage(props) {
   const [documentStatus, setDocumentStatus] = useState("");
   const [isSubmittingDocument, setIsSubmittingDocument] = useState(false);
   const [isGeneratingExtractionId, setIsGeneratingExtractionId] = useState("");
+  const activeRoles = useMemo(() => extractRolesFromProfile(userProfile), [userProfile]);
+  const canUploadInvoices = useMemo(
+    () =>
+      canUserUploadBudgetInvoice({
+        activeRoles,
+        userId: currentUser?.uid,
+        configuration: invoiceConfiguration,
+      }),
+    [activeRoles, currentUser?.uid, invoiceConfiguration],
+  );
 
   const documents = useMemo(
-    () => [...storedDocuments].sort((left, right) => right.createdAtMs - left.createdAtMs),
+    () =>
+      storedDocuments
+        .filter((documentItem) => documentItem.documentType !== "invoice")
+        .sort((left, right) => right.createdAtMs - left.createdAtMs),
     [storedDocuments],
   );
   const teamOptions = useMemo(() => {
@@ -878,7 +898,7 @@ function DocumentsPage(props) {
   }
 
   return (
-    <div className="page">
+    <div className="page documents-page documents-page--admin">
       <section className="page-header">
         <div>
           <p className="eyebrow">Documents</p>
@@ -886,14 +906,34 @@ function DocumentsPage(props) {
           <p>Depots admin, visibilite par equipe et diffusion automatique aux affectes.</p>
         </div>
       </section>
-      {documentsError ? <p className="panel-note">{documentsError}</p> : null}
-      {documentStatus ? <p className="panel-note">{documentStatus}</p> : null}
-      <section className="panel-grid panel-grid--2">
-        <Panel
-          title={editingDocumentId ? "Modifier un document" : "Ajouter un document"}
-          subtitle="Choisissez si le document doit être visible par tout le monde ou seulement par une ou plusieurs équipes."
-        >
-          <form className="section-stack" onSubmit={handleDocumentSubmit}>
+      {documentsError || documentStatus ? (
+        <div className="documents-page__status">
+          {documentsError ? <p className="panel-note">{documentsError}</p> : null}
+          {documentStatus ? <p className="panel-note">{documentStatus}</p> : null}
+        </div>
+      ) : null}
+
+      <section className={`documents-admin-grid ${canUploadInvoices ? "" : "documents-admin-grid--no-invoice"}`}>
+        <div className="documents-admin-grid__stack">
+          {canUploadInvoices ? (
+            <Panel
+              title="Déposer une facture"
+              subtitle="Dépose une facture pour l'édition active. Elle remontera automatiquement dans le budget pour être classée."
+            >
+              <InvoiceUploadForm
+                editionId={activeEditionId}
+                currentUser={currentUser}
+                userProfile={userProfile}
+                assignedTeams={Array.isArray(userProfile?.assignedTeams) ? userProfile.assignedTeams : []}
+              />
+            </Panel>
+          ) : null}
+
+          <Panel
+            title={editingDocumentId ? "Modifier un document" : "Ajouter un document"}
+            subtitle="Choisissez si le document doit être visible par tout le monde ou seulement par une ou plusieurs équipes."
+          >
+            <form className="section-stack documents-form" onSubmit={handleDocumentSubmit}>
             <AuthFormField label="Titre du document">
               <input
                 name="title"
@@ -1004,9 +1044,9 @@ function DocumentsPage(props) {
                     ? "Enregistrer les modifications"
                     : "Ajouter le document"}
               </button>
-              {editingDocumentId ? (
-                <button
-                  className="button button--secondary"
+            {editingDocumentId ? (
+              <button
+                className="button button--secondary"
                   type="button"
                   onClick={cancelDocumentEdition}
                 >
@@ -1014,91 +1054,97 @@ function DocumentsPage(props) {
                 </button>
               ) : null}
             </div>
-          </form>
-        </Panel>
+            </form>
+          </Panel>
+        </div>
 
-        <Panel
-          title="Documents publiés"
-          subtitle="Consultez les documents existants et leur périmètre de diffusion."
-        >
-          {documentsLoading ? <p className="panel-note">Chargement des documents...</p> : null}
-          <div className="table-wrap">
-            <table className="data-table data-table--admin">
-              <thead>
-                <tr>
-                  <th>Titre</th>
-                  <th>Périmètre</th>
-                  <th>Équipes</th>
-                  <th>Consultation</th>
-                  <th>Actions admin</th>
-                </tr>
-              </thead>
-              <tbody>
-                {documents.map((documentItem) => (
-                  <tr key={documentItem.id}>
-                    <td>{documentItem.title}</td>
-                    <td>{documentItem.scope === "global" ? "Tout le monde" : "Équipes ciblées"}</td>
-                    <td>
-                      {documentItem.scope === "global" ? (
-                        "Toutes les équipes"
-                      ) : (
-                        <div className="document-tag-list">
-                          {documentItem.teams.map((team) => (
-                            <span key={`${documentItem.id}-${team}`} className="document-tag">
-                              {team}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </td>
-                    <td>
-                      <button
-                        className="button button--secondary"
-                        type="button"
-                        disabled={!getDocumentConsultationUrl(documentItem)}
-                        onClick={() => {
-                          const consultationUrl = getDocumentConsultationUrl(documentItem);
-                          if (!consultationUrl) {
-                            setDocumentStatus("Ce document n'a pas encore de lien de consultation valide.");
-                            return;
-                          }
-                          window.open(consultationUrl, "_blank", "noopener,noreferrer");
-                        }}
-                      >
-                        {documentItem.fileName || documentItem.reference || "Ouvrir"}
-                      </button>
-                    </td>
-                    <td>
-                      <div className="table-actions table-actions--inline">
-                        <button
-                          className="button button--secondary"
-                          type="button"
-                          onClick={() => editDocument(documentItem)}
-                        >
-                          Modifier
-                        </button>
-                        <button
-                          className="button button--ghost-danger"
-                          type="button"
-                          onClick={() => deleteDocumentEntry(documentItem.id)}
-                        >
-                          Supprimer
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {!documentsLoading && documents.length === 0 ? (
+        <div className="documents-admin-grid__main">
+          <Panel
+            title="Documents publiés"
+            subtitle="Consultez les documents existants et leur périmètre de diffusion."
+          >
+            {documentsLoading ? <p className="panel-note">Chargement des documents...</p> : null}
+            <div className="table-wrap">
+              <table className="data-table data-table--admin">
+                <thead>
                   <tr>
-                    <td colSpan="5">Aucun document publié pour le moment.</td>
+                    <th>Titre</th>
+                    <th>Périmètre</th>
+                    <th>Équipes</th>
+                    <th>Consultation</th>
+                    <th>Actions admin</th>
                   </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
-        </Panel>
+                </thead>
+                <tbody>
+                  {documents.map((documentItem) => (
+                    <tr key={documentItem.id}>
+                      <td>{documentItem.title}</td>
+                      <td>{documentItem.scope === "global" ? "Tout le monde" : "Équipes ciblées"}</td>
+                      <td>
+                        {documentItem.scope === "global" ? (
+                          <span className="documents-table__muted">Toutes les équipes</span>
+                        ) : (
+                          <div className="document-tag-list">
+                            {documentItem.teams.map((team) => (
+                              <span key={`${documentItem.id}-${team}`} className="document-tag">
+                                {team}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        <button
+                          className="document-icon-button"
+                          type="button"
+                          disabled={!getDocumentConsultationUrl(documentItem)}
+                          aria-label={`Ouvrir ${documentItem.title}`}
+                          title={`Ouvrir ${documentItem.title}`}
+                          onClick={() => {
+                            const consultationUrl = getDocumentConsultationUrl(documentItem);
+                            if (!consultationUrl) {
+                              setDocumentStatus("Ce document n'a pas encore de lien de consultation valide.");
+                              return;
+                            }
+                            window.open(consultationUrl, "_blank", "noopener,noreferrer");
+                          }}
+                        >
+                          <span aria-hidden="true">↗</span>
+                        </button>
+                      </td>
+                      <td>
+                        <div className="table-actions table-actions--inline">
+                          <button
+                            className="button button--secondary"
+                            type="button"
+                            onClick={() => editDocument(documentItem)}
+                          >
+                            Modifier
+                          </button>
+                          <button
+                            className="button button--ghost-danger"
+                            type="button"
+                            onClick={() => deleteDocumentEntry(documentItem.id)}
+                          >
+                            Supprimer
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {!documentsLoading && documents.length === 0 ? (
+                    <tr>
+                      <td colSpan="5">Aucun document publié pour le moment.</td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+          </Panel>
+        </div>
       </section>
-      <section className="panel-grid panel-grid--2">
+
+      <section className="panel-grid panel-grid--2 documents-secondary-grid">
         <Panel
           title="Extractions d'urgence"
           subtitle="Listes PDF générées à la demande pour le meeting, réservées au pilotage opérationnel."

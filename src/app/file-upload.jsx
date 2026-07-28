@@ -1,6 +1,5 @@
-import { useState, useRef } from "react";
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { storage } from "../services/firebase";
+import { useRef, useState } from "react";
+import { auth, STORAGE_UPLOAD_ENDPOINT } from "../services/firebase";
 
 /**
  * FileUpload — drag-and-drop or click-to-select file uploader backed by Firebase Storage.
@@ -12,11 +11,21 @@ import { storage } from "../services/firebase";
  *   storagePath  string   Firebase Storage folder, e.g. "press-releases"
  *   label        string   field label
  */
-export function FileUpload({ value, onChange, accept = "application/pdf", storagePath = "uploads", label = "File" }) {
-  const [progress, setProgress] = useState(null);
+export function FileUpload({
+  value,
+  onChange,
+  onUploadComplete,
+  accept = "application/pdf",
+  storagePath = "uploads",
+  label = "File",
+  helperText = "PDF files only · Max 20 MB",
+}) {
+  const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef(null);
+  const activeAttemptIdRef = useRef(0);
 
   const labelStyle = {
     fontSize: "0.78rem",
@@ -28,107 +37,188 @@ export function FileUpload({ value, onChange, accept = "application/pdf", storag
     marginBottom: 6,
   };
 
-  async function uploadFile(file) {
-    if (!file) return;
-    setError("");
-    setProgress(0);
-
-    const ext = file.name.split(".").pop();
-    const safeName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-    const storageRef = ref(storage, `${storagePath}/${safeName}`);
-    const task = uploadBytesResumable(storageRef, file);
-
-    task.on(
-      "state_changed",
-      (snap) => setProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100)),
-      (err) => { setError(err.message); setProgress(null); },
-      async () => {
-        const url = await getDownloadURL(task.snapshot.ref);
-        onChange(url);
-        setProgress(null);
-      },
-    );
+  function isAttemptActive(attemptId) {
+    return activeAttemptIdRef.current === attemptId;
   }
 
-  function handleDrop(e) {
-    e.preventDefault();
+  function finishAttempt(attemptId) {
+    if (activeAttemptIdRef.current === attemptId) {
+      activeAttemptIdRef.current += 1;
+    }
+  }
+
+  function formatUploadError(err) {
+    const code = err?.code || "";
+
+    if (code === "storage/unauthorized" || code === "storage/unauthenticated") {
+      return "Votre session n'est plus valide pour le dépôt de fichiers. Reconnectez-vous puis réessayez.";
+    }
+
+    if (code === "storage/retry-limit-exceeded") {
+      return "Firebase Storage ne répond pas assez vite. Réessayez dans quelques instants.";
+    }
+
+    if (code === "storage/direct-upload-timeout") {
+      return "Le dépôt du fichier a expiré avant réponse de Firebase Storage.";
+    }
+
+    if (code === "storage/bucket-not-found" || code === "storage/project-not-found") {
+      return "Le bucket Firebase Storage configuré pour ce projet est introuvable.";
+    }
+
+    return err?.message || "Upload impossible pour le moment.";
+  }
+
+  async function completeUpload(file, payload, attemptId) {
+    if (!isAttemptActive(attemptId)) return;
+    onChange(payload.url);
+    onUploadComplete?.({
+      url: payload.url,
+      fileName: payload.fileName || file.name,
+      filePath: payload.filePath || "",
+      mimeType: payload.mimeType || file.type || "",
+    });
+    finishAttempt(attemptId);
+    setStatusMessage("");
+    setIsUploading(false);
+  }
+
+  async function uploadFile(file) {
+    if (!file) return;
+
+    const attemptId = activeAttemptIdRef.current + 1;
+    activeAttemptIdRef.current = attemptId;
+    setError("");
+    setIsUploading(true);
+    setStatusMessage("Vérification de la session…");
+
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        throw Object.assign(new Error("User is not authenticated."), { code: "storage/unauthenticated" });
+      }
+
+      const idToken = await user.getIdToken();
+      if (!isAttemptActive(attemptId)) return;
+
+      setStatusMessage("Envoi du fichier…");
+
+      const response = await Promise.race([
+        fetch(STORAGE_UPLOAD_ENDPOINT, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+            "Content-Type": file.type || "application/octet-stream",
+            "X-Upload-Path": storagePath,
+            "X-File-Name": encodeURIComponent(file.name),
+          },
+          body: file,
+        }),
+        new Promise((_, reject) => {
+          window.setTimeout(() => {
+            reject(
+              Object.assign(new Error("Direct upload timed out."), {
+                code: "storage/direct-upload-timeout",
+              }),
+            );
+          }, 20000);
+        }),
+      ]);
+
+      if (!isAttemptActive(attemptId)) return;
+
+      if (!response?.ok) {
+        let payload = null;
+        try {
+          payload = await response.json();
+        } catch {
+          payload = null;
+        }
+
+        throw Object.assign(
+          new Error(payload?.message || `Upload HTTP ${response.status}`),
+          { code: payload?.error || "storage/upload-via-function-failed" },
+        );
+      }
+
+      const payload = await response.json();
+      if (!payload?.url || !payload?.filePath) {
+        throw Object.assign(new Error("Réponse d'upload incomplète."), {
+          code: "storage/upload-via-function-invalid-response",
+        });
+      }
+
+      setStatusMessage("Finalisation…");
+      await completeUpload(file, payload, attemptId);
+    } catch (err) {
+      if (!isAttemptActive(attemptId)) return;
+      finishAttempt(attemptId);
+      setError(formatUploadError(err));
+      setStatusMessage("");
+      setIsUploading(false);
+    }
+  }
+
+  function handleDrop(event) {
+    event.preventDefault();
     setDragging(false);
-    const file = e.dataTransfer.files?.[0];
+    const file = event.dataTransfer.files?.[0];
     if (file) uploadFile(file);
   }
 
-  const uploading = progress !== null;
-
   return (
-    <div>
-      <label style={labelStyle}>{label}</label>
+    <div className="file-upload">
+      <label className="file-upload__label" style={labelStyle}>{label}</label>
 
-      {/* Drop zone */}
       <div
-        onClick={() => !uploading && inputRef.current?.click()}
-        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        className={`file-upload__dropzone ${dragging ? "file-upload__dropzone--dragging" : ""} ${isUploading ? "file-upload__dropzone--uploading" : ""} ${value ? "file-upload__dropzone--filled" : ""}`}
+        onClick={() => !isUploading && inputRef.current?.click()}
+        onDragOver={(event) => { event.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
-        style={{
-          border: `2px dashed ${dragging ? "#1066cc" : "rgba(0,0,0,0.2)"}`,
-          borderRadius: 10,
-          padding: "20px 16px",
-          textAlign: "center",
-          cursor: uploading ? "default" : "pointer",
-          background: dragging ? "rgba(16,102,204,0.05)" : "rgba(0,0,0,0.02)",
-          transition: "border-color 0.15s, background 0.15s",
-          userSelect: "none",
-        }}
       >
         <input
           ref={inputRef}
           type="file"
           accept={accept}
-          style={{ display: "none" }}
-          onChange={(e) => uploadFile(e.target.files?.[0])}
+          className="file-upload__input"
+          onChange={(event) => uploadFile(event.target.files?.[0])}
         />
 
-        {uploading ? (
-          <div>
-            <div style={{ fontSize: "0.875rem", color: "#1066cc", marginBottom: 8 }}>
-              Uploading… {progress}%
-            </div>
-            <div style={{ height: 6, borderRadius: 3, background: "rgba(0,0,0,0.1)", overflow: "hidden" }}>
-              <div style={{ height: "100%", width: `${progress}%`, background: "#1066cc", borderRadius: 3, transition: "width 0.2s" }} />
+        {isUploading ? (
+          <div className="file-upload__progress">
+            <div className="file-upload__progress-label">{statusMessage || "Envoi du fichier…"}</div>
+            <div className="file-upload__progress-bar">
+              <div className="file-upload__progress-fill file-upload__progress-fill--indeterminate" />
             </div>
           </div>
         ) : value ? (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, flexWrap: "wrap" }}>
-            <span style={{ fontSize: "0.85rem", color: "#1066cc", fontWeight: 600 }}>
-              📄 File uploaded
-            </span>
-            <a
-              href={value}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              style={{ fontSize: "0.8rem", color: "#546770", textDecoration: "underline" }}
+          <div className="file-upload__ready">
+            <span className="file-upload__ready-badge">Fichier prêt</span>
+            <button
+              className="file-upload__icon-link"
+              type="button"
+              title="Ouvrir le fichier actuel"
+              aria-label="Ouvrir le fichier actuel"
+              onClick={(event) => {
+                event.stopPropagation();
+                window.open(value, "_blank", "noopener,noreferrer");
+              }}
             >
-              View current file
-            </a>
-            <span style={{ fontSize: "0.8rem", color: "#999" }}>· Click or drop to replace</span>
+              <span aria-hidden="true">↗</span>
+            </button>
+            <span className="file-upload__ready-hint">Cliquer ou déposer pour remplacer</span>
           </div>
         ) : (
-          <div>
-            <div style={{ fontSize: "1.4rem", marginBottom: 6 }}>📎</div>
-            <div style={{ fontSize: "0.875rem", color: "#546770" }}>
-              Click to select or drag &amp; drop
-            </div>
-            <div style={{ fontSize: "0.78rem", color: "#999", marginTop: 4 }}>
-              PDF files only · Max 20 MB
-            </div>
+          <div className="file-upload__empty">
+            <div className="file-upload__empty-icon" aria-hidden="true">⌁</div>
+            <div className="file-upload__empty-title">Déposer ou sélectionner un fichier</div>
+            <div className="file-upload__empty-hint">{helperText}</div>
           </div>
         )}
       </div>
 
-      {error && (
-        <p style={{ fontSize: "0.8rem", color: "#e8001c", marginTop: 6 }}>{error}</p>
-      )}
+      {error ? <p className="file-upload__error">{error}</p> : null}
     </div>
   );
 }

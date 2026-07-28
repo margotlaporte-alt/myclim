@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { doc, onSnapshot } from "firebase/firestore";
-import { ACCREDITATION_CONFIGURATION_DOC_PATH, JUDGE_ROSTER_DOC_PATH, TEAM_CONFIGURATION_DOC_PATH } from "./seed-data";
+import {
+  ACCREDITATION_CONFIGURATION_DOC_PATH,
+  BUDGET_INVOICE_CONFIGURATION_DOC_PATH,
+  JUDGE_ROSTER_DOC_PATH,
+  TEAM_CONFIGURATION_DOC_PATH,
+} from "./seed-data";
 import { normalizeAccreditationConfigurationPayload } from "./accreditation-config";
+import { normalizeBudgetInvoiceConfigurationPayload } from "./budget-invoice-config";
 import { defaultTeamRoles, normalizeTeamConfigurationPayload } from "./team-config";
 import { db } from "../services/firebase";
 
@@ -134,4 +140,38 @@ function useJudgeRoster() {
   };
 }
 
-export { useAccreditationConfiguration, useJudgeRoster, useTeamConfiguration };
+function useBudgetInvoiceConfiguration() {
+  const [configuration, setConfiguration] = useState(() => normalizeBudgetInvoiceConfigurationPayload({}));
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const configurationRef = doc(db, ...BUDGET_INVOICE_CONFIGURATION_DOC_PATH);
+
+    const unsubscribe = onSnapshot(
+      configurationRef,
+      (snapshot) => {
+        setConfiguration(
+          normalizeBudgetInvoiceConfigurationPayload(snapshot.exists() ? snapshot.data() : {}),
+        );
+        setLoading(false);
+        setError("");
+      },
+      () => {
+        setConfiguration(normalizeBudgetInvoiceConfigurationPayload({}));
+        setLoading(false);
+        setError("Impossible de synchroniser la configuration des factures pour le moment.");
+      },
+    );
+
+    return unsubscribe;
+  }, []);
+
+  return {
+    ...configuration,
+    loading,
+    error,
+  };
+}
+
+export { useAccreditationConfiguration, useBudgetInvoiceConfiguration, useJudgeRoster, useTeamConfiguration };

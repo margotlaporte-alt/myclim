@@ -79,7 +79,6 @@ const PressRegistrationPage = lazyNamed(() => import("./app/press-registration-p
 const PressAdminPageScreen = lazyNamed(() => import("./app/press-admin-page"), "PressAdminPage");
 const AthletePortalOverviewPage = lazyNamed(() => import("./app/athlete-portal-pages"), "AthletePortalOverview");
 const AthletesListPageScreen = lazyNamed(() => import("./app/athlete-portal-pages"), "AthletesListPage");
-const AthleteImportPageScreen = lazyNamed(() => import("./app/athlete-portal-pages"), "AthleteImportPage");
 const AthletePortalSettingsPageScreen = lazyNamed(() => import("./app/athlete-portal-pages"), "AthletePortalSettingsPage");
 const AthleteRegistryPageScreen = lazyNamed(() => import("./app/athlete-portal-pages"), "AthleteRegistryPage");
 const AthleteTransportChiefPageScreen = lazyNamed(() => import("./app/athlete-transport-pages"), "AthleteTransportChiefPage");
@@ -292,10 +291,6 @@ function AthletesListPage() {
   return <AthletesListPageScreen Panel={Panel} />;
 }
 
-function AthleteImportPage() {
-  return <AthleteImportPageScreen Panel={Panel} />;
-}
-
 function AthletePortalSettingsPage() {
   return <AthletePortalSettingsPageScreen Panel={Panel} />;
 }
@@ -480,10 +475,10 @@ export default function App() {
               </Route>
               <Route element={<RequireRouteAccess allowedRoles={["admin", "gestionnaire"]} />}>
                 <Route path="benevoles" element={<VolunteersPage />} />
-                <Route path="u14" element={<U14Page />} />
+                <Route path="u14/*" element={<U14Page />} />
               </Route>
               <Route element={<RequireRouteAccess allowedRoles={["admin", "gestionnaire"]} />}>
-                <Route path="accreditations" element={<AccreditationsPage />} />
+                <Route path="accreditations/*" element={<AccreditationsPage />} />
               </Route>
               <Route element={<RequireRouteAccess allowedRoles={["admin", "gestionnaire"]} />}>
                 <Route path="documents" element={<DocumentsPage />} />
@@ -506,7 +501,6 @@ export default function App() {
               <Route path="athlete-portal">
                 <Route index element={<AthletePortalOverview />} />
                 <Route path="athletes" element={<AthletesListPage />} />
-                <Route path="import" element={<AthleteImportPage />} />
                 <Route element={<RequireRouteAccess allowedRoles={["admin", "meeting_director"]} />}>
                   <Route path="registry" element={<AthleteRegistryPage />} />
                   <Route path="history" element={<MeetingHistoryPage />} />

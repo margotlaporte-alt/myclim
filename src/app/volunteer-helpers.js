@@ -141,7 +141,7 @@ function buildVolunteerApplicationPayload({ currentUser, formData, status }) {
       cmcmExperience: formData.cmcmExperience.trim(),
       volunteerExperience: formData.volunteerExperience.trim(),
       healthSafetyInfo: formData.healthSafetyInfo.trim(),
-      certificateNeeded: formData.certificateNeeded,
+      certificateNeeded: Boolean(formData.certificateNeeded),
       retainForNextYear: formData.retainForNextYear,
       imageConsent: formData.imageConsent,
       availability: [

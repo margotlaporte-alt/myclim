@@ -22,6 +22,173 @@ export const MEETING_RESULTS_COL   = "meetingResults";
 export const MEETING_RECORDS_COL   = "meetingRecords";
 export const MEETING_WINNERS_COL   = "meetingWinners";
 
+const FIELD_DISCIPLINES = new Set([
+  "High Jump",
+  "Long Jump",
+  "Pole Vault",
+  "Shot Put",
+  "Triple Jump",
+]);
+
+const normalizeDisciplineKey = (discipline) =>
+  String(discipline || "")
+    .replace(/(\d)\s+(m\b)/gi, "$1$2")
+    .replace(/Hurdles/g, "hurdles")
+    .trim();
+
+function roundSortValue(round) {
+  const value = String(round || "").toLowerCase();
+  if (value === "heat") return 0;
+  if (value === "final") return 1;
+  return 2;
+}
+
+function sectionSortValue(result) {
+  const token = String(result?.finalGroup || result?.heat || "").toUpperCase();
+  if (!token) return 0;
+  if (token === "1" || token === "A") return 1;
+  if (token === "2" || token === "B") return 2;
+  if (token === "3" || token === "C") return 3;
+  const numeric = Number(token);
+  if (Number.isFinite(numeric)) return numeric;
+  return 99;
+}
+
+function compareResultRows(a, b) {
+  const dc = String(a.discipline || "").localeCompare(String(b.discipline || ""));
+  if (dc !== 0) return dc;
+  const gc = String(a.gender || "").localeCompare(String(b.gender || ""));
+  if (gc !== 0) return gc;
+  const rc = roundSortValue(a.round) - roundSortValue(b.round);
+  if (rc !== 0) return rc;
+  const sc = sectionSortValue(a) - sectionSortValue(b);
+  if (sc !== 0) return sc;
+  return (a.sectionRank || a.rank || 99) - (b.sectionRank || b.rank || 99);
+}
+
+function normalizeHeatSectionRanks(results) {
+  const rows = results.map((row) => ({ ...row }));
+  const hasFinalByEvent = new Set(
+    rows
+      .filter((row) => String(row?.round || "").toLowerCase() === "final")
+      .map((row) => `${row.discipline || ""}||${row.gender || ""}`),
+  );
+  const groups = new Map();
+
+  for (const row of rows) {
+    if (String(row?.round || "").toLowerCase() !== "heat") continue;
+    const linkedRound = String(row?.linkedRound || "").toLowerCase();
+    const eventKey = `${row.discipline || ""}||${row.gender || ""}`;
+    const qualifiesToFinal = linkedRound === "final" || hasFinalByEvent.has(eventKey);
+    if (!qualifiesToFinal) continue;
+    const groupKey = `${eventKey}||${row.heat || ""}`;
+    if (!groups.has(groupKey)) groups.set(groupKey, []);
+    groups.get(groupKey).push(row);
+  }
+
+  for (const groupRows of groups.values()) {
+    groupRows.sort((a, b) => {
+      const rankDiff = (Number(a.rank) || 999) - (Number(b.rank) || 999);
+      if (rankDiff !== 0) return rankDiff;
+      const markDiff = compareRecordCandidates(
+        { discipline: a.discipline, result: a.result },
+        { discipline: b.discipline, result: b.result },
+      );
+      if (markDiff !== 0) return markDiff;
+      return `${a.lastName || ""} ${a.firstName || ""}`.localeCompare(`${b.lastName || ""} ${b.firstName || ""}`);
+    });
+
+    groupRows.forEach((row, index) => {
+      row.sectionRank = index + 1;
+    });
+  }
+
+  return rows;
+}
+
+function isOfficialResult(result) {
+  return String(result?.round || "").toLowerCase() !== "heat";
+}
+
+function isValidForRecords(result) {
+  if (!isOfficialResult(result)) return false;
+  const status = String(result?.status || "").toUpperCase();
+  return !status || status === "OK";
+}
+
+function toComparableMark(result, discipline) {
+  const raw = String(result || "").trim();
+  if (!raw) return null;
+
+  if (FIELD_DISCIPLINES.has(discipline)) {
+    const numeric = Number(raw.replace(/\s*m$/i, "").replace(",", "."));
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
+  if (raw.includes(":")) {
+    const [minutes, seconds] = raw.split(":");
+    const total = Number(minutes) * 60 + Number(seconds);
+    return Number.isFinite(total) ? total : null;
+  }
+
+  const compact = raw.replace(/\s+/g, "");
+  const numeric = Number(compact.replace(",", "."));
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function compareRecordCandidates(a, b) {
+  const aValue = toComparableMark(a.result || a.mark, a.discipline);
+  const bValue = toComparableMark(b.result || b.mark, b.discipline);
+
+  if (aValue == null && bValue == null) return 0;
+  if (aValue == null) return 1;
+  if (bValue == null) return -1;
+
+  if (FIELD_DISCIPLINES.has(a.discipline)) {
+    return bValue - aValue;
+  }
+
+  return aValue - bValue;
+}
+
+function formatRecordMark(result, discipline) {
+  const raw = String(result || "").trim();
+  if (!raw) return "";
+  if (FIELD_DISCIPLINES.has(discipline)) {
+    return raw.endsWith(" m") ? raw : `${raw} m`;
+  }
+  return raw.replace(":", ".");
+}
+
+function buildMeetingResultId(year, result, index) {
+  const parts = [
+    year,
+    normalizeDisciplineKey(result.discipline).replace(/[^\w-]+/g, "_"),
+    result.gender || "X",
+    (result.round || "final").toLowerCase(),
+    String(result.finalGroup || result.heat || "main").replace(/[^\w-]+/g, "_"),
+    result.sectionRank || result.rank || index + 1,
+    (result.lastName || "athlete").replace(/[^\w-]+/g, "_"),
+    (result.firstName || "").replace(/[^\w-]+/g, "_"),
+  ];
+  return parts.join("_");
+}
+
+export function getOfficialWinnersFromResults(results) {
+  const winnersByKey = new Map();
+
+  for (const row of results) {
+    if (!isOfficialResult(row) || Number(row.rank) !== 1) continue;
+    const key = `${normalizeDisciplineKey(row.discipline)}_${row.gender || "X"}`;
+    const current = winnersByKey.get(key);
+    if (!current || compareResultRows(row, current) < 0) {
+      winnersByKey.set(key, row);
+    }
+  }
+
+  return [...winnersByKey.values()].sort(compareResultRows);
+}
+
 // ─── Hooks ─────────────────────────────────────────────────────────────────
 
 export function useMeetingEditions() {
@@ -47,15 +214,10 @@ export function useMeetingResultsForYear(year) {
     if (!year) { setLoading(false); return; }
     const q = query(collection(db, MEETING_RESULTS_COL), where("year", "==", Number(year)));
     const unsub = onSnapshot(q, (snap) => {
-      const items = snap.docs
-        .map((d) => ({ id: d.id, ...d.data() }))
-        .sort((a, b) => {
-          const dc = String(a.discipline || "").localeCompare(String(b.discipline || ""));
-          if (dc !== 0) return dc;
-          const gc = String(a.gender || "").localeCompare(String(b.gender || ""));
-          if (gc !== 0) return gc;
-          return (a.rank || 99) - (b.rank || 99);
-        });
+      const items = normalizeHeatSectionRanks(
+        snap.docs.map((d) => ({ id: d.id, ...d.data() })),
+      )
+        .sort(compareResultRows);
       setResults(items);
       setLoading(false);
     }, () => setLoading(false));
@@ -208,8 +370,8 @@ export async function seedMeetingDatabase(onProgress) {
   onProgress?.("Importing historical results…");
   batch = writeBatch(db); count = 0;
   for (const [year, results] of Object.entries(resultsJson)) {
-    for (const r of results) {
-      const id = `${year}_${(r.discipline || "").replace(/\s+/g, "_")}_${r.gender || "X"}_${r.rank}_${r.lastName}`;
+    for (const [index, r] of results.entries()) {
+      const id = buildMeetingResultId(year, r, index);
       batch.set(doc(db, MEETING_RESULTS_COL, id), {
         ...r, year: Number(year), seededAt: serverTimestamp(),
       }, { merge: true });
@@ -222,6 +384,38 @@ export async function seedMeetingDatabase(onProgress) {
   onProgress?.(`Results: ${count} done`);
 
   return `Done — ${total} documents written to Firestore.`;
+}
+
+export async function importResultsForYearFromJson(year, onProgress) {
+  const resultsJson = await import("../data/meetingResults.json").then((m) => m.default);
+  const yearResults = Array.isArray(resultsJson?.[String(year)]) ? resultsJson[String(year)] : [];
+
+  onProgress?.(`Suppression des résultats ${year} existants…`);
+  const deleted = await clearResultsForYear(year);
+  onProgress?.(`${deleted} résultats supprimés.`);
+
+  onProgress?.(`Import des résultats ${year}…`);
+  let batch = writeBatch(db);
+  let count = 0;
+  for (const [index, row] of yearResults.entries()) {
+    const id = buildMeetingResultId(year, row, index);
+    batch.set(doc(db, MEETING_RESULTS_COL, id), {
+      ...row,
+      year: Number(year),
+      seededAt: serverTimestamp(),
+    }, { merge: true });
+    count++;
+    if (count % 400 === 0) {
+      await batch.commit();
+      batch = writeBatch(db);
+    }
+  }
+  if (count % 400 !== 0 || count === 0) {
+    await batch.commit();
+  }
+
+  onProgress?.(`${count} résultats importés.`);
+  return yearResults;
 }
 
 // ─── Sync winners for one year from rank=1 results ───────────────────────────
@@ -267,6 +461,80 @@ export async function syncWinnersForYear(year, rank1Results) {
   }
   await batch.commit();
   return count;
+}
+
+export async function rebuildMeetingRecords(onProgress) {
+  onProgress?.("Lecture des résultats pour recalculer les records…");
+  const resultsSnap = await getDocs(collection(db, MEETING_RESULTS_COL));
+  const results = resultsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+  const bestByKey = new Map();
+  for (const row of results) {
+    if (!isValidForRecords(row)) continue;
+    const key = `${normalizeDisciplineKey(row.discipline)}_${row.gender || "X"}`;
+    const current = bestByKey.get(key);
+    if (!current || compareRecordCandidates(row, current) < 0) {
+      bestByKey.set(key, row);
+    }
+  }
+
+  onProgress?.("Suppression des anciens records…");
+  const recordsSnap = await getDocs(collection(db, MEETING_RECORDS_COL));
+  let batch = writeBatch(db);
+  let deleted = 0;
+  for (const docSnap of recordsSnap.docs) {
+    batch.delete(docSnap.ref);
+    deleted++;
+    if (deleted % 400 === 0) {
+      await batch.commit();
+      batch = writeBatch(db);
+    }
+  }
+  if (deleted % 400 !== 0 || deleted === 0) {
+    await batch.commit();
+  }
+
+  onProgress?.("Écriture des nouveaux records…");
+  batch = writeBatch(db);
+  let written = 0;
+  for (const row of [...bestByKey.values()].sort(compareResultRows)) {
+    const id = `${row.gender || "X"}_${normalizeDisciplineKey(row.discipline).replace(/\s+/g, "_")}`;
+    batch.set(doc(db, MEETING_RECORDS_COL, id), {
+      gender: row.gender || "",
+      discipline: normalizeDisciplineKey(row.discipline),
+      mark: formatRecordMark(row.result || row.mark || "", row.discipline),
+      fullName: `${row.lastName || ""} ${row.firstName || ""}`.trim(),
+      noc: row.noc || "",
+      date: row.date || "",
+      year: Number(row.year),
+      syncedFromResults: true,
+      syncedAt: serverTimestamp(),
+    });
+    written++;
+    if (written % 400 === 0) {
+      await batch.commit();
+      batch = writeBatch(db);
+    }
+  }
+  if (written % 400 !== 0 || written === 0) {
+    await batch.commit();
+  }
+
+  onProgress?.(`${written} records recalculés.`);
+  return written;
+}
+
+export async function reseedMeetingYearFromJson(year, onProgress) {
+  const importedResults = await importResultsForYearFromJson(year, onProgress);
+  const winners = getOfficialWinnersFromResults(importedResults);
+  const winnerCount = await syncWinnersForYear(year, winners);
+  onProgress?.(`${winnerCount} winners synchronisés.`);
+  const recordCount = await rebuildMeetingRecords(onProgress);
+  return {
+    results: importedResults.length,
+    winners: winnerCount,
+    records: recordCount,
+  };
 }
 
 // ─── Reset winners collection (delete all + re-seed from JSON) ───────────────

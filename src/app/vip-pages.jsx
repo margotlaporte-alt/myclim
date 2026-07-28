@@ -20,6 +20,18 @@ import {
   getVipTourChoiceLabel,
 } from "./vip-helpers";
 
+function getVipRgpdDisclaimer(language) {
+  if (language === "de") {
+    return "Mit dem Absenden dieses Formulars stimmen Sie zu, dass Ihre personenbezogenen Daten vom luxemburgischen Leichtathletikverband ausschließlich zur Verwaltung Ihrer Anmeldung, Ihrer Teilnahme am CMCM Luxembourg Indoor Meeting und der damit verbundenen Kommunikation verarbeitet werden.";
+  }
+
+  if (language === "en") {
+    return "By submitting this form, you agree that your personal data may be processed by the Luxembourg Athletics Federation solely for managing your registration, your participation in the CMCM Luxembourg Indoor Meeting and related communications.";
+  }
+
+  return "En envoyant ce formulaire, vous acceptez que vos données personnelles soient traitées par la Fédération Luxembourgeoise d'Athlétisme uniquement dans le cadre de votre inscription, de votre participation au CMCM Luxembourg Indoor Meeting et des communications associées.";
+}
+
 const VIP_COPY = {
   fr: {
     publicTitle: "Invitation VIP",
@@ -438,6 +450,7 @@ function VipAccessPage({ loadMailQueueModule }) {
         <VipFormFields formData={formData} onChange={handleChange} />
         {error ? <p className="form-error">{error}</p> : null}
         {successMessage ? <p className="panel-note panel-note--success">{successMessage}</p> : null}
+        <p className="panel-note">{getVipRgpdDisclaimer(language)}</p>
         <button className="button button--primary" disabled={isSubmitting} type="submit">
           {isSubmitting ? copy.adding : copy.addButton}
         </button>
@@ -646,6 +659,7 @@ function VipPartnerPortalPage() {
             <VipFormFields formData={formData} onChange={handleChange} organizationLocked />
             {error ? <p className="form-error">{error}</p> : null}
             {successMessage ? <p className="panel-note panel-note--success">{successMessage}</p> : null}
+            <p className="panel-note">{getVipRgpdDisclaimer(language)}</p>
             <button className="button button--primary" disabled={isSubmitting} type="submit">
               {isSubmitting ? copy.addingPartner : copy.addPartnerButton}
             </button>
