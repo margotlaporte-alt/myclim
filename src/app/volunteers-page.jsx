@@ -25,6 +25,7 @@ function VolunteersPage(props) {
   const { t } = useLanguage();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("Tous");
+  const [volunteerSortMode, setVolunteerSortMode] = useState("alphabetical");
   const [activeVolunteerView, setActiveVolunteerView] = useState("meeting");
   const [assignedRoleFilter, setAssignedRoleFilter] = useState("Tous");
   const [teamRoleFilter, setTeamRoleFilter] = useState("Tous");
@@ -392,14 +393,37 @@ function VolunteersPage(props) {
     teamRoleFilter,
   ]);
 
-  const unassignedApplications = filteredVolunteers.filter(
-    (volunteer) => volunteer.workflowStatus === "Candidature reçue" && getVolunteerAssignedRoles(volunteer).length === 0,
-  );
+  const meetingVolunteers = useMemo(() => {
+    function compareByName(leftVolunteer, rightVolunteer) {
+      const lastNameComparison = String(leftVolunteer.lastName || "").localeCompare(
+        String(rightVolunteer.lastName || ""),
+        "fr",
+        { sensitivity: "base" },
+      );
+      if (lastNameComparison !== 0) return lastNameComparison;
 
-  const assignedVolunteers = filteredVolunteers.filter(
-    (volunteer) => volunteer.workflowStatus !== "Candidature reçue" || getVolunteerAssignedRoles(volunteer).length > 0,
-  );
-  const hideUnassignedBlock = search.trim() !== "" || statusFilter !== "Tous";
+      const firstNameComparison = String(leftVolunteer.firstName || "").localeCompare(
+        String(rightVolunteer.firstName || ""),
+        "fr",
+        { sensitivity: "base" },
+      );
+      if (firstNameComparison !== 0) return firstNameComparison;
+
+      return String(leftVolunteer.id || "").localeCompare(String(rightVolunteer.id || ""));
+    }
+
+    if (volunteerSortMode === "team") {
+      return [...filteredVolunteers].sort((leftVolunteer, rightVolunteer) => {
+        const leftRole = getVolunteerAssignedRoles(leftVolunteer)[0] || "";
+        const rightRole = getVolunteerAssignedRoles(rightVolunteer)[0] || "";
+        const roleComparison = leftRole.localeCompare(rightRole, "fr", { sensitivity: "base" });
+        if (roleComparison !== 0) return roleComparison;
+        return compareByName(leftVolunteer, rightVolunteer);
+      });
+    }
+
+    return [...filteredVolunteers].sort(compareByName);
+  }, [filteredVolunteers, getVolunteerAssignedRoles, volunteerSortMode]);
 
   const supportVolunteers = filteredVolunteers.filter(
     (volunteer) =>
@@ -429,8 +453,7 @@ function VolunteersPage(props) {
       : null;
   const selectedVolunteer =
     volunteers.find((volunteer) => volunteer.id === effectiveSelectedVolunteerId) ?? null;
-  const visibleUnassignedApplications = getVisibleListItems("unassigned-applications", unassignedApplications);
-  const visibleAssignedVolunteers = getVisibleListItems("assigned-volunteers", assignedVolunteers);
+  const visibleMeetingVolunteers = getVisibleListItems("meeting-volunteers", meetingVolunteers);
   const visibleCompactAssignmentGroups = getVisibleListItems("compact-assignment-groups", compactAssignmentGroups);
   const visibleVolunteerAlertEntries = getVisibleListItems("volunteer-alerts", filteredVolunteerAlertEntries);
   const visibleSupportVolunteers = getVisibleListItems("support-volunteers", supportVolunteers);
@@ -757,7 +780,7 @@ function VolunteersPage(props) {
   }
 
   async function sendBulkInformMails() {
-    const toSend = assignedVolunteers.filter((v) => selectedVolunteerIds.has(v.id));
+    const toSend = meetingVolunteers.filter((v) => selectedVolunteerIds.has(v.id));
     if (!toSend.length) return;
 
     setIsSendingBulk(true);
@@ -1040,167 +1063,107 @@ function VolunteersPage(props) {
         ) : null}
 
         {activeVolunteerView === "meeting" ? (
-          <>
-            {!hideUnassignedBlock ? (
-              <div className="section-stack">
-                <div className="section-intro">
-                  <h3>{t("unassignedSectionTitle")}</h3>
-                  <p>{t("unassignedSectionDesc")}</p>
-                </div>
+          <div className="section-stack">
+            <div className="section-intro">
+              <h3>{t("meetingSectionTitle")}</h3>
+              <p>{t("meetingSectionDesc")}</p>
+            </div>
 
-                <div className="table-wrap">
-                  <table className="data-table data-table--admin">
-                    <thead>
-                      <tr>
-                        <th>{t("colVolunteer")}</th>
-                        <th>{t("colContact")}</th>
-                        <th>{t("colLanguages")}</th>
-                        <th>{t("colStatus")}</th>
-                        <th>{t("colRoleToAssign")}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {visibleUnassignedApplications.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="table-empty-state">
-                            {t("emptyUnassigned")}
+            <div className="admin-toolbar">
+              <label className="field">
+                <span>{t("sortModeLabel")}</span>
+                <select value={volunteerSortMode} onChange={(event) => setVolunteerSortMode(event.target.value)}>
+                  <option value="alphabetical">{t("sortAlphabetical")}</option>
+                  <option value="team">{t("sortByTeam")}</option>
+                </select>
+              </label>
+            </div>
+
+            <div className="bulk-mail-bar">
+              <div className="bulk-mail-bar__selectors">
+                <button
+                  className="button button--secondary"
+                  type="button"
+                  onClick={() =>
+                    setSelectedVolunteerIds(
+                      new Set(meetingVolunteers.filter((v) => getVolunteerAssignedRoles(v).length > 0).map((v) => v.id)),
+                    )
+                  }
+                >
+                  {t("selectAll")}
+                </button>
+                <button
+                  className="button button--secondary"
+                  type="button"
+                  onClick={() => setSelectedVolunteerIds(new Set(meetingVolunteers.filter(volunteerNeedsInforming).map((v) => v.id)))}
+                >
+                  {t("selectNeedsInfo")}
+                </button>
+                <button
+                  className="button button--secondary"
+                  type="button"
+                  onClick={() => setSelectedVolunteerIds(new Set())}
+                >
+                  {t("deselectAll")}
+                </button>
+              </div>
+              {selectedVolunteerIds.size > 0 ? (
+                <button
+                  className="button button--primary"
+                  type="button"
+                  disabled={isSendingBulk}
+                  onClick={sendBulkInformMails}
+                >
+                  {isSendingBulk
+                    ? t("sendingInProgress")
+                    : t("sendToSelected").replace("{count}", selectedVolunteerIds.size)}
+                </button>
+              ) : null}
+            </div>
+
+            <div className="table-wrap">
+              <table className="data-table data-table--admin">
+                <thead>
+                  <tr>
+                    <th style={{ width: "32px" }} />
+                    <th>{t("colVolunteer")}</th>
+                    <th>{t("colContact")}</th>
+                    <th>{t("colLanguages")}</th>
+                    <th>{t("colStatus")}</th>
+                    <th>{t("colMission")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleMeetingVolunteers.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="table-empty-state">
+                        {t("emptyMeetingVolunteers")}
+                      </td>
+                    </tr>
+                  ) : null}
+                  {visibleMeetingVolunteers.map((volunteer, index) => {
+                    const hasRole = getVolunteerAssignedRoles(volunteer).length > 0;
+                    const needsInfo = hasRole && !volunteer.teamEmailSent;
+                    const primaryRole = getVolunteerAssignedRoles(volunteer)[0] || "";
+                    const previousVolunteer = visibleMeetingVolunteers[index - 1];
+                    const previousRole = previousVolunteer ? getVolunteerAssignedRoles(previousVolunteer)[0] || "" : null;
+                    const showGroupDivider = volunteerSortMode === "team" && primaryRole !== previousRole;
+                    return (
+                    <Fragment key={volunteer.id}>
+                      {showGroupDivider ? (
+                        <tr className="table-group-row">
+                          <td colSpan={6}>
+                            <strong>{primaryRole || t("unassignedGroupLabel")}</strong>
                           </td>
                         </tr>
                       ) : null}
-                      {visibleUnassignedApplications.map((volunteer) => (
-                        <tr key={volunteer.id}>
-                          <td>
-                            <div className="table-stack">
-                              <button
-                                className="name-link-button"
-                                type="button"
-                                onClick={() => setSelectedVolunteerId(volunteer.id)}
-                              >
-                                {volunteer.firstName} {volunteer.lastName} ({volunteer.age} {t("ageUnit")})
-                              </button>
-                              <span className={getWorkflowStatusClass(volunteer.workflowStatus)}>
-                                {getStatusLabel(volunteer.workflowStatus)}
-                              </span>
-                            </div>
-                          </td>
-                          <td>
-                            <div className="table-stack">
-                              <span>{volunteer.email}</span>
-                              <span>{volunteer.phone}</span>
-                            </div>
-                          </td>
-                          <td>{volunteer.languages.join(", ")}</td>
-                          <td>{volunteer.accountEmailSent ? t("accountMailSent") : t("accountMailPending")}</td>
-                          <td>
-                            <select
-                              value={getPrimaryAssignedRole(volunteer)}
-                              onChange={(event) => assignVolunteer(volunteer.id, event.target.value)}
-                            >
-                              <option value="">{t("chooseRoleOption")}</option>
-                              {roleOptions.map((option) => (
-                                <option key={option}>{option}</option>
-                              ))}
-                            </select>
-                            <p className="mission-preferences-hint">
-                              {t("statedPreferences")}
-                              {": "}
-                              {volunteer.missionPreferences.length
-                                ? volunteer.missionPreferences.join(", ")
-                                : t("noPreferenceStated")}
-                            </p>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                {canShowMoreListItems("unassigned-applications", unassignedApplications) ? (
-                  <div className="list-progressive-actions">
-                    <button
-                      className="button button--secondary button--small"
-                      type="button"
-                      onClick={() => showMoreListItems("unassigned-applications")}
-                    >
-                      {t("showMoreButton")}
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-
-            <div className="section-stack">
-              <div className="section-intro">
-                <h3>{t("assignedSectionTitle")}</h3>
-                <p>{t("assignedSectionDesc")}</p>
-              </div>
-
-              <div className="bulk-mail-bar">
-                <div className="bulk-mail-bar__selectors">
-                  <button
-                    className="button button--secondary"
-                    type="button"
-                    onClick={() => setSelectedVolunteerIds(new Set(assignedVolunteers.map((v) => v.id)))}
-                  >
-                    {t("selectAll")}
-                  </button>
-                  <button
-                    className="button button--secondary"
-                    type="button"
-                    onClick={() => setSelectedVolunteerIds(new Set(assignedVolunteers.filter(volunteerNeedsInforming).map((v) => v.id)))}
-                  >
-                    {t("selectNeedsInfo")}
-                  </button>
-                  <button
-                    className="button button--secondary"
-                    type="button"
-                    onClick={() => setSelectedVolunteerIds(new Set())}
-                  >
-                    {t("deselectAll")}
-                  </button>
-                </div>
-                {selectedVolunteerIds.size > 0 ? (
-                  <button
-                    className="button button--primary"
-                    type="button"
-                    disabled={isSendingBulk}
-                    onClick={sendBulkInformMails}
-                  >
-                    {isSendingBulk
-                      ? t("sendingInProgress")
-                      : t("sendToSelected").replace("{count}", selectedVolunteerIds.size)}
-                  </button>
-                ) : null}
-              </div>
-
-              <div className="table-wrap">
-                <table className="data-table data-table--admin">
-                  <thead>
-                    <tr>
-                      <th style={{ width: "32px" }} />
-                      <th>{t("colVolunteer")}</th>
-                      <th>{t("colContact")}</th>
-                      <th>{t("colLanguages")}</th>
-                      <th>{t("colStatus")}</th>
-                      <th>{t("colMission")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {visibleAssignedVolunteers.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="table-empty-state">
-                          {t("emptyAssigned")}
-                        </td>
-                      </tr>
-                    ) : null}
-                    {visibleAssignedVolunteers.map((volunteer) => {
-                      const hasRole = getVolunteerAssignedRoles(volunteer).length > 0;
-                      const needsInfo = hasRole && !volunteer.teamEmailSent;
-                      return (
-                      <tr key={volunteer.id} className={selectedVolunteerIds.has(volunteer.id) ? "row--selected" : ""}>
+                      <tr className={selectedVolunteerIds.has(volunteer.id) ? "row--selected" : ""}>
                         <td>
                           <input
                             type="checkbox"
                             checked={selectedVolunteerIds.has(volunteer.id)}
+                            disabled={!hasRole}
+                            title={hasRole ? undefined : t("selectionNeedsRole")}
                             onChange={(event) => {
                               setSelectedVolunteerIds((current) => {
                                 const next = new Set(current);
@@ -1310,7 +1273,7 @@ function VolunteersPage(props) {
                                 ))}
                               </select>
                             ) : (
-                              getVolunteerAssignedRoles(volunteer).map((assignedRole, index) => {
+                              getVolunteerAssignedRoles(volunteer).map((assignedRole, roleIndex) => {
                                 const teamRoleKey = `${volunteer.id}-${assignedRole}`;
                                 const isTeamRoleEditorOpen = teamRoleEditorOpenByKey[teamRoleKey];
                                 return (
@@ -1318,7 +1281,7 @@ function VolunteersPage(props) {
                                   <span
                                     className="role-assignment-row__name"
                                     title={
-                                      index === 0
+                                      roleIndex === 0
                                         ? t("primaryRoleTitle").replace("{role}", assignedRole)
                                         : assignedRole
                                     }
@@ -1423,24 +1386,24 @@ function VolunteersPage(props) {
                           </div>
                         </td>
                       </tr>
+                    </Fragment>
                     );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              {canShowMoreListItems("assigned-volunteers", assignedVolunteers) ? (
-                <div className="list-progressive-actions">
-                  <button
-                    className="button button--secondary button--small"
-                    type="button"
-                    onClick={() => showMoreListItems("assigned-volunteers")}
-                  >
-                    {t("showMoreButton")}
-                  </button>
-                </div>
-              ) : null}
+                  })}
+                </tbody>
+              </table>
             </div>
-          </>
+            {canShowMoreListItems("meeting-volunteers", meetingVolunteers) ? (
+              <div className="list-progressive-actions">
+                <button
+                  className="button button--secondary button--small"
+                  type="button"
+                  onClick={() => showMoreListItems("meeting-volunteers")}
+                >
+                  {t("showMoreButton")}
+                </button>
+              </div>
+            ) : null}
+          </div>
         ) : activeVolunteerView === "assigned-posts" ? (
           <div className="section-stack">
             <div className="section-intro">

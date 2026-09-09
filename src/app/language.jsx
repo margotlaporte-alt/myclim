@@ -199,6 +199,15 @@ const messages = {
     assignedSectionTitle: "Assigned or being informed",
     assignedSectionDesc:
       "The internal assignment is saved right away. The email is a separate notification step: until it's sent, the person simply still needs to be informed.",
+    meetingSectionTitle: "Meeting volunteers",
+    meetingSectionDesc:
+      "Everyone who applied for this edition, from a fresh application to an already-assigned volunteer. Assigning a role is saved right away; the email is a separate step.",
+    sortModeLabel: "Sort by",
+    sortAlphabetical: "Alphabetical order",
+    sortByTeam: "By team",
+    unassignedGroupLabel: "Not assigned yet",
+    selectionNeedsRole: "Assign a role before you can select this person to be informed.",
+    emptyMeetingVolunteers: "No volunteer to show at the moment.",
     selectAll: "Select all",
     selectNeedsInfo: "Select those to inform",
     deselectAll: "Deselect all",
@@ -688,6 +697,15 @@ const messages = {
     assignedSectionTitle: "Bénévoles affectés ou en cours d'information",
     assignedSectionDesc:
       "L'affectation interne est enregistrée tout de suite. Le mail reste une étape de notification séparée : tant qu'il n'est pas parti, la personne reste simplement à informer.",
+    meetingSectionTitle: "Bénévoles du meeting",
+    meetingSectionDesc:
+      "Toutes les personnes ayant candidaté pour cette édition, de la candidature reçue au bénévole déjà affecté. Attribuer un rôle est enregistré tout de suite ; le mail reste une étape séparée.",
+    sortModeLabel: "Trier par",
+    sortAlphabetical: "Ordre alphabétique",
+    sortByTeam: "Par équipe",
+    unassignedGroupLabel: "Non affecté(e)s",
+    selectionNeedsRole: "Attribue un rôle avant de pouvoir sélectionner cette personne pour l'informer.",
+    emptyMeetingVolunteers: "Aucun bénévole à afficher pour le moment.",
     selectAll: "Tout sélectionner",
     selectNeedsInfo: "Sélectionner à informer",
     deselectAll: "Désélectionner tout",

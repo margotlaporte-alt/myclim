@@ -3756,6 +3756,14 @@ tr.row--warning > td {
   border-top: 2px solid #cfe0ee;
 }
 
+.table-group-row td {
+  background: #edf4fa;
+  font-weight: 700;
+  border-top: 2px solid #cfe0ee;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
 .support-slot-tag {
   display: inline-flex;
   align-items: center;
