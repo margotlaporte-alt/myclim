@@ -2,13 +2,14 @@ import { getApp, getApps, initializeApp } from "firebase/app";
 import {
   browserLocalPersistence,
   browserSessionPersistence,
+  connectAuthEmulator,
   getAuth,
   indexedDBLocalPersistence,
   initializeAuth,
 } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
-import { getFunctions } from "firebase/functions";
-import { getStorage } from "firebase/storage";
+import { connectFirestoreEmulator, getFirestore } from "firebase/firestore";
+import { connectFunctionsEmulator, getFunctions } from "firebase/functions";
+import { connectStorageEmulator, getStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: "AIzaSyC9KKU9yB_otypQq7B6WdvS9TPNxrMd_1E",
@@ -49,3 +50,18 @@ export const functions = getFunctions(app, "europe-west1");
 export const storage = getStorage(app);
 storage.maxUploadRetryTime = 15000;
 storage.maxOperationRetryTime = 10000;
+
+const useEmulators =
+  typeof import.meta !== "undefined" &&
+  import.meta.env &&
+  String(import.meta.env.VITE_USE_FIREBASE_EMULATORS || "").trim() === "true";
+
+if (useEmulators && !globalThis.__myclimEmulatorsConnected) {
+  globalThis.__myclimEmulatorsConnected = true;
+  connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+  connectFirestoreEmulator(db, "127.0.0.1", 8080);
+  connectFunctionsEmulator(functions, "127.0.0.1", 5001);
+  connectStorageEmulator(storage, "127.0.0.1", 9199);
+  // eslint-disable-next-line no-console
+  console.info("[MyCLIM] Connected to local Firebase emulators.");
+}

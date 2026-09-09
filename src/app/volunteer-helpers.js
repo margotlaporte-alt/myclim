@@ -5,7 +5,6 @@ import {
   VOLUNTEER_MEETING_DAY_LABEL,
   getAgeBracketFromAge,
   getAgeFromBirthDate,
-  listToCommaSeparatedText,
   normalizeRole,
 } from "./utils";
 
@@ -52,12 +51,12 @@ function createEmptyVolunteerProfileFormData() {
     volunteerExperience: "",
     availability: [],
     meetingDayConfirmed: false,
-    missionPreferences: "",
+    missionPreferences: [],
     healthSafetyInfo: "",
     lunexStudent: "non",
     lunexProgram: "",
     certificateNeeded: false,
-    retainForNextYear: true,
+    retainForNextYear: false,
     imageConsent: false,
     guardianFirstName: "",
     guardianLastName: "",
@@ -89,13 +88,13 @@ function createVolunteerProfileFormData(application, userProfile) {
     volunteerExperience: application?.volunteerExperience || "",
     availability: savedAvailability.filter((option) => option !== VOLUNTEER_MEETING_DAY_LABEL),
     meetingDayConfirmed: savedAvailability.includes(VOLUNTEER_MEETING_DAY_LABEL),
-    missionPreferences: listToCommaSeparatedText(application?.missionPreferences),
+    missionPreferences: Array.isArray(application?.missionPreferences) ? application.missionPreferences : [],
     healthSafetyInfo: application?.healthSafetyInfo || "",
     lunexStudent: normalizeVolunteerYesNoValue(application?.lunexStudent),
     lunexProgram: application?.lunexProgram || "",
     certificateNeeded: Boolean(application?.certificateNeeded),
     retainForNextYear:
-      application?.retainForNextYear === undefined ? true : Boolean(application?.retainForNextYear),
+      application?.retainForNextYear === undefined ? false : Boolean(application?.retainForNextYear),
     imageConsent: Boolean(application?.imageConsent),
     guardianFirstName: application?.legalGuardian?.firstName || "",
     guardianLastName: application?.legalGuardian?.lastName || "",
@@ -148,10 +147,12 @@ function buildVolunteerApplicationPayload({ currentUser, formData, status }) {
         ...(formData.meetingDayConfirmed ? [VOLUNTEER_MEETING_DAY_LABEL] : []),
         ...formData.availability,
       ],
-      missionPreferences: formData.missionPreferences
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean),
+      missionPreferences: Array.isArray(formData.missionPreferences)
+        ? formData.missionPreferences
+        : String(formData.missionPreferences || "")
+            .split(",")
+            .map((item) => item.trim())
+            .filter(Boolean),
       legalGuardianRequired,
       legalGuardian: legalGuardianRequired
         ? {
@@ -255,8 +256,14 @@ function mapVolunteerApplicationToAdminVolunteer(application = {}) {
     supportTasks:
       application?.supportTasks && typeof application.supportTasks === "object" ? application.supportTasks : {},
     notes: buildVolunteerAdminNotes(application),
+    missionPreferences: Array.isArray(application?.missionPreferences) ? application.missionPreferences : [],
     accountEmailSent: application?.accountEmailSent === undefined ? Boolean(application?.uid) : Boolean(application?.accountEmailSent),
     teamEmailSent: Boolean(application?.teamEmailSent),
+    firstAssignedRole: String(application?.firstAssignedRole || ""),
+    firstAssignedAt: application?.firstAssignedAt || null,
+    lastMailSentRole: String(application?.lastMailSentRole || ""),
+    lastMailSentTeamRole: String(application?.lastMailSentTeamRole || ""),
+    lastMailSentAt: application?.lastMailSentAt || null,
   };
 }
 

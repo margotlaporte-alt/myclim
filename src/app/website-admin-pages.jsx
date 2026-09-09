@@ -1141,6 +1141,8 @@ export function WebsiteEditionPage({ Panel }) {
   // Infos de base
   const [dateInput, setDateInput] = useState("");
   const [venueInput, setVenueInput] = useState("");
+  const [spectatorCountInput, setSpectatorCountInput] = useState("");
+  const [worldLeadCountInput, setWorldLeadCountInput] = useState("");
   const [infoSaving, setInfoSaving] = useState(false);
 
   // Liens live
@@ -1221,7 +1223,13 @@ export function WebsiteEditionPage({ Panel }) {
   useEffect(() => {
     setDateInput(formatDateInputValue(selectedEdition?.date));
     setVenueInput(selectedEdition?.venue || "");
-  }, [selectedEdition?.date, selectedEdition?.venue, effectiveYear]);
+    setSpectatorCountInput(
+      Number.isFinite(selectedEdition?.spectatorCount) ? String(selectedEdition.spectatorCount) : "",
+    );
+    setWorldLeadCountInput(
+      Number.isFinite(selectedEdition?.worldLeadCount) ? String(selectedEdition.worldLeadCount) : "",
+    );
+  }, [selectedEdition?.date, selectedEdition?.venue, selectedEdition?.spectatorCount, selectedEdition?.worldLeadCount, effectiveYear]);
 
   useEffect(() => {
     setPrizeMoneyDraft(createPrizeMoneySystemsDraft(selectedEdition?.prizeMoneySystems));
@@ -1353,14 +1361,48 @@ export function WebsiteEditionPage({ Panel }) {
                 />
               </div>
             </div>
+            <div style={{ fontSize: "0.78rem", color: "#6b7280", marginBottom: 12 }}>
+              Ces deux chiffres alimentent les compteurs "Spectators" et "World Leads" affichés sur la home publique.
+              Athlètes et pays sont calculés automatiquement à partir des résultats de l'édition.
+              <br />
+              <strong>Important&nbsp;:</strong> la home affiche toujours les chiffres de la <strong>dernière édition clôturée</strong>
+              (celle marquée « ✓ » dans le sélecteur ci-dessus), pas forcément l'édition sélectionnée ici. Renseigne
+              donc ces champs sur l'édition clôturée, pas sur l'édition en préparation.
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+              <div>
+                <div style={{ fontSize: "0.72rem", color: "#6b7280", marginBottom: 4 }}>Spectateurs</div>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="ex : 2500"
+                  value={spectatorCountInput}
+                  onChange={(e) => setSpectatorCountInput(e.target.value)}
+                  style={{ ...inp, width: "100%", boxSizing: "border-box" }}
+                />
+              </div>
+              <div>
+                <div style={{ fontSize: "0.72rem", color: "#6b7280", marginBottom: 4 }}>World Leads</div>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="ex : 3"
+                  value={worldLeadCountInput}
+                  onChange={(e) => setWorldLeadCountInput(e.target.value)}
+                  style={{ ...inp, width: "100%", boxSizing: "border-box" }}
+                />
+              </div>
+            </div>
             <button
               className="btn btn--secondary"
-              disabled={infoSaving || (!dateInput && !venueInput.trim())}
+              disabled={infoSaving || (!dateInput && !venueInput.trim() && spectatorCountInput === "" && worldLeadCountInput === "")}
               onClick={async () => {
                 setInfoSaving(true);
                 const fields = {};
                 if (dateInput) fields.date = new Date(`${dateInput}T12:00:00`);
                 if (venueInput.trim()) fields.venue = venueInput.trim();
+                if (spectatorCountInput !== "") fields.spectatorCount = Number(spectatorCountInput);
+                if (worldLeadCountInput !== "") fields.worldLeadCount = Number(worldLeadCountInput);
                 try {
                   await updateEdition(effectiveYear, fields);
                   await setSiteEditionYear(effectiveYear);

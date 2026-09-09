@@ -441,10 +441,12 @@ export function AuthProvider({ children }) {
                 .map((item) => item.trim())
                 .filter(Boolean)),
         ],
-        missionPreferences: formData.missionPreferences
-          .split(",")
-          .map((item) => item.trim())
-          .filter(Boolean),
+        missionPreferences: Array.isArray(formData.missionPreferences)
+          ? formData.missionPreferences
+          : String(formData.missionPreferences || "")
+              .split(",")
+              .map((item) => item.trim())
+              .filter(Boolean),
         legalGuardianRequired,
         legalGuardian: legalGuardianRequired
           ? {

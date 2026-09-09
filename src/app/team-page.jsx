@@ -1,14 +1,21 @@
 import { useMemo, useState } from "react";
-import { buildUserIdentitySet, isTeamLeadAssignment } from "./common-helpers";
+import { addDoc, collection, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
+import { buildUserIdentitySet, getDocumentUploadErrorMessage, isTeamLeadAssignment } from "./common-helpers";
 import { useTeamConfiguration } from "./config-hooks";
+import { getDocumentReferenceUrl, useDocumentsCollection } from "./documents-hooks";
+import { getDisplayName } from "./utils";
 import { useAuth } from "../context/auth-context";
+import { db } from "../services/firebase";
 
 function TeamPage(props) {
   const { AuthFormField, DataTable, Panel } = props;
   const { currentUser, userProfile } = useAuth();
   const { roles, teamAssignments, loading, error } = useTeamConfiguration();
+  const { documents, loading: documentsLoading, error: documentsError } = useDocumentsCollection(true);
   const [selectedRoleId, setSelectedRoleId] = useState("");
-  const [documentDraft, setDocumentDraft] = useState("");
+  const [documentForm, setDocumentForm] = useState({ title: "", reference: "" });
+  const [isSavingDocument, setIsSavingDocument] = useState(false);
+  const [documentStatus, setDocumentStatus] = useState("");
 
   const userIdentitySet = useMemo(
     () => buildUserIdentitySet(userProfile, currentUser),
@@ -69,9 +76,71 @@ function TeamPage(props) {
     contact: member.email || member.phone || "Contact non renseigné",
   }));
 
-  function addDocument() {
-    if (!documentDraft.trim()) return;
-    setDocumentDraft("");
+  const teamDocuments = useMemo(
+    () =>
+      documents
+        .filter((documentItem) => documentItem.documentType !== "invoice")
+        .filter(
+          (documentItem) =>
+            documentItem.scope === "global" ||
+            (documentItem.scope === "teams" && documentItem.teams.includes(selectedRole?.roleName)),
+        )
+        .sort((left, right) => right.createdAtMs - left.createdAtMs),
+    [documents, selectedRole],
+  );
+
+  function handleDocumentFormChange(event) {
+    const { name, value } = event.target;
+    setDocumentForm((current) => ({ ...current, [name]: value }));
+  }
+
+  async function addDocument(event) {
+    event.preventDefault();
+    if (!selectedRole || isSavingDocument) return;
+    if (!documentForm.title.trim() || !documentForm.reference.trim()) return;
+
+    setIsSavingDocument(true);
+    setDocumentStatus("Enregistrement du document...");
+
+    try {
+      await addDoc(collection(db, "documents"), {
+        documentType: "document",
+        title: documentForm.title.trim(),
+        reference: documentForm.reference.trim(),
+        fileName: "",
+        filePath: "",
+        fileUrl: "",
+        scope: "teams",
+        teams: [selectedRole.roleName],
+        visibility: "Équipes ciblées",
+        uploadedByUid: String(currentUser?.uid || "").trim(),
+        uploadedByName: getDisplayName(userProfile, currentUser?.email),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      setDocumentForm({ title: "", reference: "" });
+      setDocumentStatus("Document ajouté et visible par ton équipe.");
+    } catch (persistError) {
+      console.error("Impossible d'enregistrer le document d'équipe.", persistError);
+      setDocumentStatus(getDocumentUploadErrorMessage(persistError));
+    } finally {
+      setIsSavingDocument(false);
+    }
+  }
+
+  async function removeDocument(documentItem) {
+    if (isSavingDocument) return;
+    setIsSavingDocument(true);
+    setDocumentStatus("");
+
+    try {
+      await deleteDoc(doc(db, "documents", documentItem.id));
+    } catch (deleteError) {
+      console.error("Impossible de supprimer le document d'équipe.", deleteError);
+      setDocumentStatus("La suppression du document a échoué.");
+    } finally {
+      setIsSavingDocument(false);
+    }
   }
 
   return (
@@ -128,19 +197,19 @@ function TeamPage(props) {
               <dl className="detail-list">
                 <div>
                   <dt>Nom</dt>
-                  <dd>{selectedRole.leaderName}</dd>
+                  <dd>{selectedRole.leaderName || "À confirmer"}</dd>
                 </div>
                 <div>
                   <dt>Contact</dt>
-                  <dd>{selectedRole.leaderContact}</dd>
+                  <dd>{selectedRole.leaderContact || "À confirmer"}</dd>
                 </div>
                 <div>
                   <dt>Briefing</dt>
-                  <dd>{selectedRole.briefingTime}</dd>
+                  <dd>{selectedRole.briefingTime || "À confirmer"}</dd>
                 </div>
                 <div>
                   <dt>Horaire du poste</dt>
-                  <dd>{selectedRole.shiftTime}</dd>
+                  <dd>{selectedRole.shiftTime || "À confirmer"}</dd>
                 </div>
               </dl>
             </Panel>
@@ -159,26 +228,78 @@ function TeamPage(props) {
 
           <Panel
             title="Documents équipe"
-            subtitle="Le chef d'équipe ou l'admin peut importer, compléter et mettre à jour les documents utiles."
-            actions={
-              <div className="table-actions">
-                <input
-                  placeholder="Ajouter un document ou un lien"
-                  value={documentDraft}
-                  readOnly
-                />
-                <button className="button button--secondary" disabled type="button" onClick={addDocument}>
-                  Bientôt disponible
+            subtitle="Ajoute un document ou un lien visible par ton équipe. Les administrateurs voient aussi ces documents dans l'espace documentaire."
+          >
+            <form className="section-stack" onSubmit={addDocument}>
+              <div className="field-grid">
+                <AuthFormField label="Titre du document">
+                  <input
+                    name="title"
+                    required
+                    placeholder="Briefing équipe, plan d'accès, feuille de route..."
+                    value={documentForm.title}
+                    disabled={isSavingDocument}
+                    onChange={handleDocumentFormChange}
+                  />
+                </AuthFormField>
+                <AuthFormField label="Lien de consultation">
+                  <input
+                    name="reference"
+                    required
+                    placeholder="Collez le lien du document"
+                    value={documentForm.reference}
+                    disabled={isSavingDocument}
+                    onChange={handleDocumentFormChange}
+                  />
+                </AuthFormField>
+              </div>
+              <div className="table-actions table-actions--inline">
+                <button className="button button--secondary" disabled={isSavingDocument} type="submit">
+                  {isSavingDocument ? "Enregistrement..." : "Ajouter le document"}
                 </button>
               </div>
-            }
-          >
+            </form>
+
+            {documentStatus ? <p className="panel-note">{documentStatus}</p> : null}
+            {documentsError ? <p className="panel-note">{documentsError}</p> : null}
+            {documentsLoading ? <p className="panel-note">Chargement des documents...</p> : null}
+
             <div className="document-tag-list">
-              {selectedRole.documents.map((document) => (
-                <span key={document} className="document-tag">
-                  {document}
-                </span>
-              ))}
+              {teamDocuments.length ? (
+                teamDocuments.map((documentItem) => {
+                  const consultationUrl = getDocumentReferenceUrl(documentItem);
+                  const canRemove =
+                    documentItem.scope === "teams" &&
+                    documentItem.uploadedByUid === String(currentUser?.uid || "").trim();
+
+                  return (
+                    <span key={documentItem.id} className="document-tag">
+                      <button
+                        className="document-tag__link"
+                        type="button"
+                        disabled={!consultationUrl}
+                        onClick={() => window.open(consultationUrl, "_blank", "noopener,noreferrer")}
+                      >
+                        {documentItem.title}
+                      </button>
+                      {canRemove ? (
+                        <button
+                          className="document-tag__remove"
+                          type="button"
+                          disabled={isSavingDocument}
+                          aria-label={`Retirer ${documentItem.title}`}
+                          title="Retirer ce document"
+                          onClick={() => removeDocument(documentItem)}
+                        >
+                          ×
+                        </button>
+                      ) : null}
+                    </span>
+                  );
+                })
+              ) : (
+                <p className="panel-note">Aucun document d'équipe ajouté pour l'instant.</p>
+              )}
             </div>
           </Panel>
 

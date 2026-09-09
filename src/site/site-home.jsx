@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useSiteEditionYear } from "../app/edition";
 import { formatEditionLabel, getEditionDisplayNumber } from "../app/meeting-edition-utils";
@@ -139,6 +139,7 @@ export function SiteHome() {
   const configuredSiteEdition = siteEditionYear
     ? editions.find((edition) => Number(edition.year || edition.id) === Number(siteEditionYear)) || null
     : null;
+  // Hero/timetable/live links/prize money always reflect the current (upcoming) edition being organised.
   const heroEdition = configuredSiteEdition || latestEdition || null;
   const latestYear = latestEdition ? Number(latestEdition.year || latestEdition.id) || null : null;
   const heroEditionYear = heroEdition ? Number(heroEdition.year || heroEdition.id) || null : null;
@@ -147,17 +148,36 @@ export function SiteHome() {
     ? meetingEditionsSeed.find((edition) => Number(edition.year) === heroEditionYear) || seededLatestEdition
     : seededLatestEdition;
   const displayEdition = heroEdition || fallbackEdition;
-  const statsEdition = meetingEditionsSeed.find((edition) => Number(edition.year) === 2026) || fallbackEdition;
+  // "Key numbers" reflect the last COMPLETED edition (final athlete/country/spectator counts only exist
+  // once the meeting happened and was closed), not the current/upcoming one being promoted above.
+  const lastClosedEdition = editions.find((edition) => edition.isClosed) || null;
+  const statsEdition = lastClosedEdition || fallbackEdition;
   const statsEditionNumber = getEditionDisplayNumber(statsEdition) || 23;
-  const statsEditionYear = Number(statsEdition?.year) || 2026;
+  const statsEditionYear = Number(statsEdition?.year) || null;
 
   const { results: latestResults } = useMeetingResultsForYear(latestYear);
+  const { results: statsResults } = useMeetingResultsForYear(statsEditionYear);
 
-  // Derive key stats from data
-  const totalCountries = 41;
-  const totalAthletes = 158;
-  const totalSpectators = 2497;
-  const worldLeadingPerformances = 6;
+  // Derive key stats from the athlete registry / results of the stats edition
+  const totalAthletes = useMemo(() => {
+    const athleteKeys = new Set(
+      statsResults.map((result) =>
+        [result.lastName, result.firstName, result.noc]
+          .map((value) => String(value || "").trim().toLowerCase())
+          .join("|"),
+      ),
+    );
+    return athleteKeys.size;
+  }, [statsResults]);
+  const totalCountries = useMemo(() => {
+    const countryCodes = new Set(
+      statsResults.map((result) => String(result.noc || "").trim().toUpperCase()).filter(Boolean),
+    );
+    return countryCodes.size;
+  }, [statsResults]);
+  // Manually entered per edition in Website admin > Édition (meetingEditions/{year}).
+  const totalSpectators = Number.isFinite(statsEdition?.spectatorCount) ? statsEdition.spectatorCount : 0;
+  const worldLeadingPerformances = Number.isFinite(statsEdition?.worldLeadCount) ? statsEdition.worldLeadCount : 0;
 
   // Next edition info from back office
   const nextDate = formatEditionDate(displayEdition?.date || fallbackEdition?.date);

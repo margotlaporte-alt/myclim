@@ -1071,6 +1071,7 @@ function DocumentsPage(props) {
                     <th>Titre</th>
                     <th>Périmètre</th>
                     <th>Équipes</th>
+                    <th>Ajouté par</th>
                     <th>Consultation</th>
                     <th>Actions admin</th>
                   </tr>
@@ -1093,6 +1094,7 @@ function DocumentsPage(props) {
                           </div>
                         )}
                       </td>
+                      <td>{documentItem.uploadedByName || "Admin"}</td>
                       <td>
                         <button
                           className="document-icon-button"
@@ -1134,7 +1136,7 @@ function DocumentsPage(props) {
                   ))}
                   {!documentsLoading && documents.length === 0 ? (
                     <tr>
-                      <td colSpan="5">Aucun document publié pour le moment.</td>
+                      <td colSpan="6">Aucun document publié pour le moment.</td>
                     </tr>
                   ) : null}
                 </tbody>

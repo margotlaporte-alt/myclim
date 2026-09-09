@@ -73,7 +73,6 @@ const LoginPage = lazyNamed(() => import("./app/public-auth-pages"), "LoginPage"
 const VolunteerAccessPage = lazyNamed(() => import("./app/public-auth-pages"), "VolunteerAccessPage");
 const RegisterPage = lazyNamed(() => import("./app/public-auth-pages"), "RegisterPage");
 const U14AccessPage = lazyNamed(() => import("./app/public-auth-pages"), "U14AccessPage");
-const VolunteerApplyPage = lazyNamed(() => import("./app/public-auth-pages"), "VolunteerApplyPage");
 const VipAccessPage = lazyNamed(() => import("./app/vip-pages"), "VipAccessPage");
 const VipPartnerPortalPage = lazyNamed(() => import("./app/vip-pages"), "VipPartnerPortalPage");
 const VipAdminPage = lazyNamed(() => import("./app/vip-admin-page"), "VipAdminPage");
@@ -464,7 +463,6 @@ export default function App() {
           <Route path="/presse" element={<PressRegistrationPage loadMailQueueModule={loadMailQueueModule} />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          <Route path="/volunteer-apply" element={<VolunteerApplyPage />} />
 
           <Route element={<RequireAuth />}>
             <Route path="/app" element={<AppShell />}>

@@ -1,11 +1,11 @@
 import { extractRolesFromProfile } from "./utils";
 
-function makeSection(title, links) {
-  return { type: "section", title, links };
+function makeSection(titleKey, title, links) {
+  return { type: "section", titleKey, title, links };
 }
 
-function makeLink(to, label, icon) {
-  return { to, label, icon };
+function makeLink(to, labelKey, label, icon) {
+  return { to, labelKey, label, icon };
 }
 
 function getActiveRoles(profile) {
@@ -44,41 +44,41 @@ function getDefaultRouteByRoles(roles = []) {
 function buildNavigationFromRoles(roles) {
   const isAdminNavigation = roles.includes("admin");
   const preProgrammeLinks = [
-    makeLink("/app/u14", "U12 / U14", "spark"),
-    makeLink("/app/u14/porte-panier", "Porte-panier", "child"),
+    makeLink("/app/u14", "navPreprogramU12U14", "U12 / U14", "spark"),
+    makeLink("/app/u14/porte-panier", "navPreprogramBasketCarrier", "Porte-panier", "child"),
   ];
 
   if (isAdminNavigation) {
     return [
-      makeSection("Vue générale", [
-        makeLink("/app", "Tableau de bord", "dashboard"),
-        makeLink("/app/documents", "Documents", "folder"),
-        makeLink("/app/budget", "Budget", "dashboard"),
+      makeSection("navSectionOverview", "Vue générale", [
+        makeLink("/app", "navDashboard", "Tableau de bord", "dashboard"),
+        makeLink("/app/documents", "navDocuments", "Documents", "folder"),
+        makeLink("/app/budget", "navBudget", "Budget", "dashboard"),
       ]),
-      makeSection("Bénévoles", [
-        makeLink("/app/benevoles", "Bénévoles", "users"),
-        makeLink("/app/postes", "Équipes & postes", "grid"),
-        makeLink("/app/presences", "Présences", "check"),
+      makeSection("navSectionVolunteers", "Bénévoles", [
+        makeLink("/app/benevoles", "navVolunteersLink", "Bénévoles", "users"),
+        makeLink("/app/postes", "navTeamsAndPosts", "Équipes & postes", "grid"),
+        makeLink("/app/presences", "navAttendance", "Présences", "check"),
       ]),
-      makeSection("Accréditations", [
-        makeLink("/app/accreditations/benevoles", "Bénévoles", "ticket"),
-        makeLink("/app/accreditations/juges", "Juges", "badge"),
-        makeLink("/app/presse", "Presse", "badge"),
-        makeLink("/app/vip", "VIP", "ticket"),
+      makeSection("navSectionAccreditations", "Accréditations", [
+        makeLink("/app/accreditations/benevoles", "navAccreditationVolunteers", "Bénévoles", "ticket"),
+        makeLink("/app/accreditations/juges", "navAccreditationJudges", "Juges", "badge"),
+        makeLink("/app/presse", "navPress", "Presse", "badge"),
+        makeLink("/app/vip", "navVip", "VIP", "ticket"),
       ]),
-      makeSection("Pré-programme", preProgrammeLinks),
-      makeSection("Site web", [
-        makeLink("/app/website", "Vue d’ensemble", "grid"),
-        makeLink("/app/website/edition", "Édition courante", "calendar"),
-        makeLink("/app/website/emagazine", "E-magazine", "folder"),
-        makeLink("/app/website/news", "Actualités", "spark"),
-        makeLink("/app/website/sponsors", "Partenaires", "badge"),
-        makeLink("/app/website/press", "Communiqués presse", "folder"),
+      makeSection("navSectionPreprogram", "Pré-programme", preProgrammeLinks),
+      makeSection("navSectionWebsite", "Site web", [
+        makeLink("/app/website", "navWebsiteOverviewAdmin", "Vue d’ensemble", "grid"),
+        makeLink("/app/website/edition", "navWebsiteEdition", "Édition courante", "calendar"),
+        makeLink("/app/website/emagazine", "navWebsiteEmagazine", "E-magazine", "folder"),
+        makeLink("/app/website/news", "navWebsiteNews", "Actualités", "spark"),
+        makeLink("/app/website/sponsors", "navWebsitePartners", "Partenaires", "badge"),
+        makeLink("/app/website/press", "navWebsitePressReleases", "Communiqués presse", "folder"),
       ]),
-      makeSection("Réglages", [
-        makeLink("/app/roles", "Rôles & accès", "shield"),
-        makeLink("/app/invitations", "Invitations", "spark"),
-        makeLink("/app/profil", "Mon profil", "profile"),
+      makeSection("navSectionSettings", "Réglages", [
+        makeLink("/app/roles", "navRolesAccess", "Rôles & accès", "shield"),
+        makeLink("/app/invitations", "navInvitations", "Invitations", "spark"),
+        makeLink("/app/profil", "navMyProfile", "Mon profil", "profile"),
       ]),
     ];
   }
@@ -87,125 +87,127 @@ function buildNavigationFromRoles(roles) {
     const personalLinks = [];
 
     if (roles.includes("chef_equipe")) {
-      personalLinks.push(makeLink("/app/equipe", "Mon équipe", "users"));
+      personalLinks.push(makeLink("/app/equipe", "navMyTeam", "Mon équipe", "users"));
     }
 
     if (roles.includes("benevole")) {
       personalLinks.push(
-        makeLink("/app/mon-dossier-benevole", "Mon dossier bénévole", "badge"),
-        makeLink("/app/mes-affectations", "Mes affectations", "pin"),
-        makeLink("/app/mes-documents", "Mes documents", "folder"),
+        makeLink("/app/mon-dossier-benevole", "navMyVolunteerFile", "Mon dossier bénévole", "badge"),
+        makeLink("/app/mes-affectations", "navMyAssignments", "Mes affectations", "pin"),
+        makeLink("/app/mes-documents", "navMyDocuments", "Mes documents", "folder"),
       );
     }
 
     if (roles.includes("parent_u14")) {
-      personalLinks.push(makeLink("/app/mes-enfants", "Mes enfants", "child"));
+      personalLinks.push(makeLink("/app/mes-enfants", "navMyChildren", "Mes enfants", "child"));
     }
 
     const navigation = [
-      makeSection("Vue générale", [
-        makeLink("/app", "Vue d'ensemble", "dashboard"),
-        makeLink("/app/documents", "Documents", "folder"),
-        ...(roles.includes("budget") ? [makeLink("/app/budget", "Budget", "dashboard")] : []),
+      makeSection("navSectionOverview", "Vue générale", [
+        makeLink("/app", "navOverview", "Vue d'ensemble", "dashboard"),
+        makeLink("/app/documents", "navDocuments", "Documents", "folder"),
+        ...(roles.includes("budget") ? [makeLink("/app/budget", "navBudget", "Budget", "dashboard")] : []),
       ]),
-      makeSection("Bénévoles", [
-        makeLink("/app/benevoles", "Bénévoles", "users"),
-        makeLink("/app/presences", "Présences", "check"),
+      makeSection("navSectionVolunteers", "Bénévoles", [
+        makeLink("/app/benevoles", "navVolunteersLink", "Bénévoles", "users"),
+        makeLink("/app/presences", "navAttendance", "Présences", "check"),
       ]),
-      makeSection("Accréditations", [
-        makeLink("/app/accreditations/benevoles", "Bénévoles", "ticket"),
-        makeLink("/app/accreditations/juges", "Juges", "badge"),
-        makeLink("/app/presse", "Presse", "badge"),
-        makeLink("/app/vip", "VIP", "ticket"),
+      makeSection("navSectionAccreditations", "Accréditations", [
+        makeLink("/app/accreditations/benevoles", "navAccreditationVolunteers", "Bénévoles", "ticket"),
+        makeLink("/app/accreditations/juges", "navAccreditationJudges", "Juges", "badge"),
+        makeLink("/app/presse", "navPress", "Presse", "badge"),
+        makeLink("/app/vip", "navVip", "VIP", "ticket"),
       ]),
-      makeSection("Pré-programme", preProgrammeLinks),
+      makeSection("navSectionPreprogram", "Pré-programme", preProgrammeLinks),
     ];
 
     if (roles.includes("gestionnaire_site")) {
       navigation.push(
-        makeSection("Site web", [
-          makeLink("/app/website", "Site web — vue d'ensemble", "grid"),
-          makeLink("/app/website/edition", "Édition courante", "calendar"),
-          makeLink("/app/website/emagazine", "E-magazine", "folder"),
-          makeLink("/app/website/news", "Actualités", "spark"),
-          makeLink("/app/website/sponsors", "Partenaires", "badge"),
-          makeLink("/app/website/press", "Communiqués presse", "folder"),
+        makeSection("navSectionWebsite", "Site web", [
+          makeLink("/app/website", "navWebsiteOverviewManager", "Site web — vue d'ensemble", "grid"),
+          makeLink("/app/website/edition", "navWebsiteEdition", "Édition courante", "calendar"),
+          makeLink("/app/website/emagazine", "navWebsiteEmagazine", "E-magazine", "folder"),
+          makeLink("/app/website/news", "navWebsiteNews", "Actualités", "spark"),
+          makeLink("/app/website/sponsors", "navWebsitePartners", "Partenaires", "badge"),
+          makeLink("/app/website/press", "navWebsitePressReleases", "Communiqués presse", "folder"),
         ]),
       );
     }
 
     if (personalLinks.length) {
-      navigation.push(makeSection("Mes accès", personalLinks));
+      navigation.push(makeSection("navSectionMyAccess", "Mes accès", personalLinks));
     }
 
-    navigation.push(makeSection("Réglages", [makeLink("/app/profil", "Mon profil", "profile")]));
+    navigation.push(
+      makeSection("navSectionSettings", "Réglages", [makeLink("/app/profil", "navMyProfile", "Mon profil", "profile")]),
+    );
 
     return navigation;
   }
 
-  const links = [makeLink("/app", "Vue d'ensemble", "dashboard")];
+  const links = [makeLink("/app", "navOverview", "Vue d'ensemble", "dashboard")];
 
   if (roles.includes("budget")) {
-    links.push(makeLink("/app/budget", "Budget", "dashboard"));
+    links.push(makeLink("/app/budget", "navBudget", "Budget", "dashboard"));
   }
 
   if (roles.includes("chef_equipe")) {
     links.push(
-      makeLink("/app/equipe", "Mon équipe", "users"),
-      makeLink("/app/presences", "Présences", "check"),
+      makeLink("/app/equipe", "navMyTeam", "Mon équipe", "users"),
+      makeLink("/app/presences", "navAttendance", "Présences", "check"),
     );
   }
 
   if (roles.includes("benevole")) {
     links.push(
-      makeLink("/app/mon-dossier-benevole", "Mon dossier bénévole", "badge"),
-      makeLink("/app/mes-affectations", "Mes affectations", "pin"),
-      makeLink("/app/mes-documents", "Mes documents", "folder"),
+      makeLink("/app/mon-dossier-benevole", "navMyVolunteerFile", "Mon dossier bénévole", "badge"),
+      makeLink("/app/mes-affectations", "navMyAssignments", "Mes affectations", "pin"),
+      makeLink("/app/mes-documents", "navMyDocuments", "Mes documents", "folder"),
     );
   }
 
   if (roles.includes("gestionnaire_site")) {
     links.push(
-      makeLink("/app/website", "Site web — vue d'ensemble", "grid"),
-      makeLink("/app/website/edition", "Édition courante", "calendar"),
-      makeLink("/app/website/emagazine", "E-magazine", "folder"),
-      makeLink("/app/website/news", "Actualités", "spark"),
-      makeLink("/app/website/sponsors", "Partenaires", "badge"),
-      makeLink("/app/website/press", "Communiqués presse", "folder"),
+      makeLink("/app/website", "navWebsiteOverviewManager", "Site web — vue d'ensemble", "grid"),
+      makeLink("/app/website/edition", "navWebsiteEdition", "Édition courante", "calendar"),
+      makeLink("/app/website/emagazine", "navWebsiteEmagazine", "E-magazine", "folder"),
+      makeLink("/app/website/news", "navWebsiteNews", "Actualités", "spark"),
+      makeLink("/app/website/sponsors", "navWebsitePartners", "Partenaires", "badge"),
+      makeLink("/app/website/press", "navWebsitePressReleases", "Communiqués presse", "folder"),
     );
   }
 
   if (roles.includes("parent_u14")) {
-    links.push(makeLink("/app/mes-enfants", "Mes enfants", "child"));
+    links.push(makeLink("/app/mes-enfants", "navMyChildren", "Mes enfants", "child"));
   }
 
   if (roles.includes("chef_transport_athletes")) {
-    links.push(makeLink("/app/athlete-portal/transport", "Transport athlètes", "users"));
+    links.push(makeLink("/app/athlete-portal/transport", "navAthleteTransport", "Transport athlètes", "users"));
   }
 
   if (roles.includes("benevole_transport_athletes")) {
-    links.push(makeLink("/app/athlete-portal/mes-transport", "Mes transports", "pin"));
+    links.push(makeLink("/app/athlete-portal/mes-transport", "navMyTransports", "Mes transports", "pin"));
   }
 
-  links.push(makeLink("/app/profil", "Mon profil", "profile"));
+  links.push(makeLink("/app/profil", "navMyProfile", "Mon profil", "profile"));
 
   return links;
 }
 
 function buildAthletePortalNavigation(roles, portalSettings, { canImport }) {
   const isAdmin = roles.includes("admin") || roles.includes("meeting_director");
-  const links = [makeLink("/app/athlete-portal/athletes", "Athlètes", "users")];
+  const links = [makeLink("/app/athlete-portal/athletes", "navAthletes", "Athlètes", "users")];
 
   if (roles.includes("chef_transport_athletes") || roles.includes("admin")) {
-    links.push(makeLink("/app/athlete-portal/transport", "Transport athlètes", "users"));
+    links.push(makeLink("/app/athlete-portal/transport", "navAthleteTransport", "Transport athlètes", "users"));
   }
 
   if (roles.includes("benevole_transport_athletes")) {
-    links.push(makeLink("/app/athlete-portal/mes-transport", "Mes transports", "pin"));
+    links.push(makeLink("/app/athlete-portal/mes-transport", "navMyTransports", "Mes transports", "pin"));
   }
 
   if (roles.includes("admin")) {
-    links.push(makeLink("/app/athlete-portal/settings", "Réglages portal", "shield"));
+    links.push(makeLink("/app/athlete-portal/settings", "navPortalSettings", "Réglages portal", "shield"));
   }
 
   return links;
@@ -216,10 +218,10 @@ function buildStatisticsNavigation(roles) {
   if (!isAdmin) return [];
 
   return [
-    makeLink("/app/statistics/registry", "Base athlètes", "users"),
-    makeLink("/app/statistics/results", "Résultats meeting", "calendar"),
-    makeLink("/app/statistics/records", "Records meeting", "star"),
-    makeLink("/app/statistics/winners", "Hall of Winners", "trophy"),
+    makeLink("/app/statistics/registry", "navAthleteRegistry", "Base athlètes", "users"),
+    makeLink("/app/statistics/results", "navMeetingResults", "Résultats meeting", "calendar"),
+    makeLink("/app/statistics/records", "navMeetingRecords", "Records meeting", "star"),
+    makeLink("/app/statistics/winners", "navHallOfWinners", "Hall of Winners", "trophy"),
   ];
 }
 

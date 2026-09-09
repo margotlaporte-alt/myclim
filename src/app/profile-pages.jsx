@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
 import { addDoc, collection, doc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { NavLink } from "react-router-dom";
-import { getEditionLabel, normalizeEditionId, useActiveEdition } from "./edition";
+import { getEditionLabel, normalizeEditionId, useActiveEdition, useVolunteerRoleOptions } from "./edition";
+import { formatVolunteerApplicationStatus } from "./common-helpers";
 import { AuthFormField, PhoneInput } from "./form-components";
 import {
   buildVolunteerApplicationPayload,
@@ -72,6 +73,7 @@ function VolunteerProfilePage(props) {
   const { currentUser, userProfile } = useAuth();
   const { application: volunteerApplication, loading, error } = useVolunteerApplication(currentUser?.uid);
   const { activeEditionId, activeEditionLabel } = useActiveEdition(Boolean(currentUser?.uid));
+  const volunteerRoleOptions = useVolunteerRoleOptions();
   const [formData, setFormData] = useState(createEmptyVolunteerProfileFormData);
   const [isSaving, setIsSaving] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
@@ -104,6 +106,17 @@ function VolunteerProfilePage(props) {
       availability: current.availability.includes(option)
         ? current.availability.filter((item) => item !== option)
         : [...current.availability, option],
+    }));
+    setStatusMessage("");
+    setErrorMessage("");
+  }
+
+  function toggleMissionPreferenceOption(option) {
+    setFormData((current) => ({
+      ...current,
+      missionPreferences: current.missionPreferences.includes(option)
+        ? current.missionPreferences.filter((item) => item !== option)
+        : [...current.missionPreferences, option],
     }));
     setStatusMessage("");
     setErrorMessage("");
@@ -239,7 +252,7 @@ function VolunteerProfilePage(props) {
         {volunteerApplication ? (
           <div className="status-cluster">
             <span className="status-pill status-pill--accent">
-              {volunteerApplication.status || "candidature_recue"}
+              {formatVolunteerApplicationStatus(volunteerApplication.status)}
             </span>
           </div>
         ) : null}
@@ -528,13 +541,32 @@ function VolunteerProfilePage(props) {
               ))}
             </div>
           </div>
-          <AuthFormField label="Préférences de mission" hint="Ex: transport, accueil, warm-up">
-            <input
-              name="missionPreferences"
-              onChange={handleChange}
-              value={formData.missionPreferences}
-            />
-          </AuthFormField>
+          <div className="language-card">
+            <div className="form-section-head">
+              <p className="eyebrow">Préférences de mission</p>
+              <h3>Sur quelles missions aimerais-tu aider ?</h3>
+              <p className="availability-lead">
+                Tu peux en choisir plusieurs. Cela nous indique tes envies, mais ne garantit pas d'obtenir l'une de
+                ces missions — l'équipe attribue les rôles selon les besoins réels de l'événement.
+              </p>
+            </div>
+            {volunteerRoleOptions.length ? (
+              <div className="choice-grid">
+                {volunteerRoleOptions.map((option) => (
+                  <label key={option} className="selection-card selection-card--compact">
+                    <input
+                      checked={formData.missionPreferences.includes(option)}
+                      type="checkbox"
+                      onChange={() => toggleMissionPreferenceOption(option)}
+                    />
+                    <div><strong>{option}</strong></div>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <p className="availability-lead">La liste des missions n'est pas encore disponible.</p>
+            )}
+          </div>
           <AuthFormField label="Informations sécurité / santé">
             <textarea
               name="healthSafetyInfo"

@@ -1,19 +1,21 @@
 import { useCallback, useMemo } from "react";
 import { buildUserIdentitySet, getAssignedTeamNames } from "./common-helpers";
 import { useBudgetInvoiceConfiguration, useTeamConfiguration } from "./config-hooks";
-import { useDocumentsCollection } from "./documents-hooks";
+import { getDocumentReferenceUrl, useDocumentsCollection } from "./documents-hooks";
 import { useActiveEdition } from "./edition";
 import { canUserUploadBudgetInvoice } from "./budget-invoice-config";
 import { formatInvoiceStatusLabel, getInvoiceDocumentUrl, InvoiceUploadForm } from "./invoice-management";
 import { buildParticipationCertificateMarkup, getRoundedParticipationHours, normalizePresenceRecord } from "./presence-helpers";
-import { assignmentRows } from "./seed-data";
 import { extractRolesFromProfile, normalizeRole } from "./utils";
+import { useLanguage } from "./language-context";
 import { useAuth } from "../context/auth-context";
 
 function MyAssignmentsPage(props) {
   const { DataTable, Panel } = props;
+  const { t } = useLanguage();
   const { currentUser, userProfile } = useAuth();
   const { roles, teamAssignments, loading, error } = useTeamConfiguration();
+  const { documents } = useDocumentsCollection(true);
   const userIdentitySet = useMemo(
     () => buildUserIdentitySet(userProfile, currentUser),
     [buildUserIdentitySet, currentUser, userProfile],
@@ -34,12 +36,9 @@ function MyAssignmentsPage(props) {
     return {
       assignmentEntryId: "profile-fallback",
       assignedRole: assignedTeamNames[0],
-      teamRole: userProfile?.teamRole || "Bénévole",
+      teamRole: userProfile?.teamRole || t("volunteerFallbackLabel"),
     };
-  }, [assignedTeamNames, userProfile]);
-  const fallbackAssignment =
-    assignmentRows.find((assignment) => normalizeRole(assignment.team) === normalizeRole(userProfile?.assignedRole)) ??
-    assignmentRows[0];
+  }, [assignedTeamNames, t, userProfile]);
   const availableAssignments = useMemo(() => {
     if (myAssignments.length) return myAssignments;
     return fallbackProfileAssignment ? [fallbackProfileAssignment] : [];
@@ -51,7 +50,7 @@ function MyAssignmentsPage(props) {
           roles.find(
             (role) =>
               normalizeRole(role.id) === normalizeRole(assignment?.assignedRoleId) ||
-              normalizeRole(role.roleName) === normalizeRole(assignment?.assignedRole || fallbackAssignment.team),
+              normalizeRole(role.roleName) === normalizeRole(assignment?.assignedRole),
           ) ?? null;
         const teamMembers = teamAssignments.filter((member) => member.assignedRoleId === selectedRole?.id);
         const leader = teamMembers.find((member) => member.teamRole === "Chef d'équipe") ?? null;
@@ -64,36 +63,46 @@ function MyAssignmentsPage(props) {
               : "Visible via le briefing",
         }));
 
+        const roleDocuments = documents
+          .filter((documentItem) => documentItem.documentType !== "invoice")
+          .filter(
+            (documentItem) =>
+              documentItem.scope === "global" ||
+              (documentItem.scope === "teams" && documentItem.teams.includes(selectedRole?.roleName)),
+          )
+          .sort((left, right) => right.createdAtMs - left.createdAtMs);
+
         return {
           key: assignment.assignmentEntryId || `${assignment.id || "assignment"}-${assignment.assignedRoleId || index}`,
           assignment,
           selectedRole,
           leader,
           teamRows,
+          roleDocuments,
         };
       }),
-    [availableAssignments, fallbackAssignment.team, roles, teamAssignments],
+    [availableAssignments, documents, roles, teamAssignments],
   );
 
   return (
     <div className="page">
       <section className="page-header">
         <div>
-          <p className="eyebrow">Espace benevole</p>
-          <h1>Mes affectations</h1>
-          <p>Consulte ici ton poste dès qu'il te sera attribué, ainsi que les informations utiles pour bien te préparer.</p>
+          <p className="eyebrow">{t("assignmentsEyebrow")}</p>
+          <h1>{t("assignmentsTitle")}</h1>
+          <p>{t("assignmentsSubtitle")}</p>
         </div>
       </section>
       {error ? <p className="status-note">{error}</p> : null}
-      {loading ? <p className="status-note">Chargement de mes affectations...</p> : null}
+      {loading ? <p className="status-note">{t("assignmentsLoading")}</p> : null}
 
       {assignmentDetails.length > 1 ? (
-        <Panel title="Mes missions" subtitle="Toutes tes affectations bénévoles visibles au même endroit.">
+        <Panel title={t("assignmentsMissionsPanelTitle")} subtitle={t("assignmentsMissionsPanelSubtitle")}>
           <div className="role-chip-grid">
             {assignmentDetails.map(({ key, assignment, selectedRole }) => (
               <div key={key} className="role-chip role-chip--active">
-                <strong>{selectedRole?.roleName || assignment.assignedRole || "Affectation"}</strong>
-                <span>{assignment.teamRole || "Bénévole"}</span>
+                <strong>{selectedRole?.roleName || assignment.assignedRole || t("assignmentsMissionFallbackTitle")}</strong>
+                <span>{assignment.teamRole || t("volunteerFallbackLabel")}</span>
               </div>
             ))}
           </div>
@@ -102,103 +111,100 @@ function MyAssignmentsPage(props) {
 
       {assignmentDetails.length ? (
         <>
-          {assignmentDetails.map(({ key, assignment, selectedRole, leader, teamRows }) => (
+          {assignmentDetails.map(({ key, assignment, selectedRole, leader, teamRows, roleDocuments }) => (
             <section key={key} className="assignment-group">
               <div className="assignment-group__header">
-                <p className="assignment-group__eyebrow">Mission</p>
-                <h2>{selectedRole?.roleName || assignment.assignedRole || "Affectation"}</h2>
-                <p>
-                  Toutes les informations ci-dessous concernent cette mission et vont ensemble.
-                </p>
+                <p className="assignment-group__eyebrow">{t("assignmentsMissionEyebrow")}</p>
+                <h2>{selectedRole?.roleName || assignment.assignedRole || t("assignmentsMissionFallbackTitle")}</h2>
+                <p>{t("assignmentsMissionIntro")}</p>
               </div>
               <section className="panel-grid panel-grid--2">
                 <Panel
-                  title={selectedRole?.roleName || assignment.assignedRole || "Ma mission"}
-                  subtitle="Ce que je dois connaître pour ce poste."
+                  title={selectedRole?.roleName || assignment.assignedRole || t("assignmentsMissionFallbackTitle")}
+                  subtitle={t("assignmentsMissionPanelSubtitle")}
                 >
                   <dl className="detail-list">
                     <div>
-                      <dt>Équipe</dt>
-                      <dd>{selectedRole?.roleName || assignment.assignedRole || fallbackAssignment.team}</dd>
+                      <dt>{t("assignmentsTeamLabel")}</dt>
+                      <dd>{selectedRole?.roleName || assignment.assignedRole || t("assignmentsToBeConfirmed")}</dd>
                     </div>
                     <div>
-                      <dt>Fonction</dt>
-                      <dd>{assignment.teamRole || userProfile?.teamRole || "Bénévole"}</dd>
+                      <dt>{t("assignmentsFunctionLabel")}</dt>
+                      <dd>{assignment.teamRole || userProfile?.teamRole || t("volunteerFallbackLabel")}</dd>
                     </div>
                     <div>
-                      <dt>Créneau</dt>
-                      <dd>{userProfile?.shift || selectedRole?.shiftTime || fallbackAssignment.shift}</dd>
+                      <dt>{t("assignmentsShiftLabel")}</dt>
+                      <dd>{userProfile?.shift || selectedRole?.shiftTime || t("assignmentsToBeConfirmed")}</dd>
                     </div>
                     <div>
-                      <dt>Statut</dt>
-                      <dd>{userProfile?.assignmentStatus || fallbackAssignment.status}</dd>
-                    </div>
-                    <div>
-                      <dt>Accès</dt>
-                      <dd>{fallbackAssignment.accreditation}</dd>
+                      <dt>{t("assignmentsStatusLabel")}</dt>
+                      <dd>{userProfile?.assignmentStatus || t("assignmentsToBeConfirmed")}</dd>
                     </div>
                   </dl>
                 </Panel>
 
-                <Panel title="Repères équipe" subtitle="Vue lecture seule des informations de coordination.">
+                <Panel title={t("assignmentsCoordinationPanelTitle")} subtitle={t("assignmentsCoordinationPanelSubtitle")}>
                   <dl className="detail-list">
                     <div>
-                      <dt>Chef d'équipe</dt>
-                      <dd>{leader ? `${leader.firstName} ${leader.lastName}`.trim() : selectedRole?.leaderName || "À confirmer"}</dd>
+                      <dt>{t("assignmentsTeamLeadLabel")}</dt>
+                      <dd>{leader ? `${leader.firstName} ${leader.lastName}`.trim() : selectedRole?.leaderName || t("assignmentsToBeConfirmed")}</dd>
                     </div>
                     <div>
-                      <dt>Contact</dt>
-                      <dd>{leader?.email || leader?.phone || selectedRole?.leaderContact || "À confirmer"}</dd>
+                      <dt>{t("assignmentsContactLabel")}</dt>
+                      <dd>{leader?.email || leader?.phone || selectedRole?.leaderContact || t("assignmentsToBeConfirmed")}</dd>
                     </div>
                     <div>
-                      <dt>Briefing</dt>
-                      <dd>{selectedRole?.briefingTime || "À confirmer"}</dd>
+                      <dt>{t("assignmentsBriefingLabel")}</dt>
+                      <dd>{selectedRole?.briefingTime || t("assignmentsToBeConfirmed")}</dd>
                     </div>
                     <div>
-                      <dt>Consignes</dt>
-                      <dd>{selectedRole?.teamInfo || selectedRole?.teamInfoPlaceholder || "Les consignes seront partagées ici."}</dd>
+                      <dt>{t("assignmentsInstructionsLabel")}</dt>
+                      <dd>{selectedRole?.teamInfo || selectedRole?.teamInfoPlaceholder || t("assignmentsInstructionsFallback")}</dd>
                     </div>
                   </dl>
                 </Panel>
               </section>
 
-              <Panel title="Mon équipe" subtitle="Composition actuelle de l'équipe liée à cette affectation.">
+              <Panel title={t("assignmentsTeamPanelTitle")} subtitle={t("assignmentsTeamPanelSubtitle")}>
                 <DataTable
                   columns={[
-                    { key: "name", label: "Nom" },
-                    { key: "role", label: "Fonction" },
-                    { key: "contact", label: "Contact" },
+                    { key: "name", label: t("assignmentsColumnName") },
+                    { key: "role", label: t("assignmentsColumnFunction") },
+                    { key: "contact", label: t("assignmentsColumnContact") },
                   ]}
-                  rows={teamRows.length ? teamRows : [{ name: "Composition non disponible", role: "-", contact: "-" }]}
+                  rows={teamRows.length ? teamRows : [{ name: t("assignmentsTeamUnavailable"), role: "-", contact: "-" }]}
                 />
               </Panel>
 
-              <Panel title="Documents d'équipe" subtitle="Documents utiles associés à cette affectation.">
-                {selectedRole?.documents?.length ? (
+              <Panel title={t("assignmentsDocumentsPanelTitle")} subtitle={t("assignmentsDocumentsPanelSubtitle")}>
+                {roleDocuments.length ? (
                   <div className="document-tag-list">
-                    {selectedRole.documents.map((document) => (
-                      <span key={document} className="document-tag">
-                        {document}
-                      </span>
-                    ))}
+                    {roleDocuments.map((documentItem) => {
+                      const consultationUrl = getDocumentReferenceUrl(documentItem);
+                      return (
+                        <button
+                          key={documentItem.id}
+                          className="document-tag document-tag--removable"
+                          type="button"
+                          disabled={!consultationUrl}
+                          onClick={() => window.open(consultationUrl, "_blank", "noopener,noreferrer")}
+                        >
+                          {documentItem.title}
+                        </button>
+                      );
+                    })}
                   </div>
                 ) : (
-                  <p className="panel-note">Aucun document d'équipe n'est encore publié pour cette affectation.</p>
+                  <p className="panel-note">{t("assignmentsDocumentsEmpty")}</p>
                 )}
               </Panel>
             </section>
           ))}
         </>
       ) : (
-        <Panel title="Mes affectations" subtitle="Ton affectation n'est pas encore disponible pour le moment.">
-          <p className="panel-note">
-            Tu n'as pas encore de rôle attribué sur cette édition. Notre équipe finalise actuellement les affectations
-            bénévoles et tu seras informé(e) de ton poste au plus tard le <strong>10 décembre</strong>.
-          </p>
-          <p className="panel-note">
-            Dès qu'il sera confirmé, ton poste apparaîtra ici avec les informations utiles pour ta mission. Merci pour ta
-            patience et pour ton engagement à nos côtés.
-          </p>
+        <Panel title={t("assignmentsEmptyPanelTitle")} subtitle={t("assignmentsEmptyPanelSubtitle")}>
+          <p className="panel-note">{t("assignmentsEmptyParagraph1")}</p>
+          <p className="panel-note">{t("assignmentsEmptyParagraph2")}</p>
         </Panel>
       )}
     </div>
@@ -207,6 +213,7 @@ function MyAssignmentsPage(props) {
 
 function MyDocumentsPage(props) {
   const { DataTable, Panel, getDocumentConsultationUrl, getTimestampMs, signatory } = props;
+  const { t } = useLanguage();
   const { currentUser, userProfile } = useAuth();
   const { documents, loading: documentsLoading, error: documentsError } = useDocumentsCollection(true);
   const { activeEditionId } = useActiveEdition(Boolean(currentUser?.uid));
@@ -285,8 +292,8 @@ function MyDocumentsPage(props) {
             className="document-icon-button"
             type="button"
             disabled={!getDocumentConsultationUrl(document)}
-            aria-label={`Ouvrir ${document.title}`}
-            title={`Ouvrir ${document.title}`}
+            aria-label={t("documentsOpenAria").replace("{title}", document.title)}
+            title={t("documentsOpenAria").replace("{title}", document.title)}
             onClick={() => window.open(getDocumentConsultationUrl(document), "_blank", "noopener,noreferrer")}
           >
             <span aria-hidden="true">↗</span>
@@ -295,8 +302,8 @@ function MyDocumentsPage(props) {
       }));
 
       rows.unshift({
-        title: "Certificate of Participation",
-        team: assignedTeams[0] || "Volunteer Team",
+        title: t("documentsCertificateTitle"),
+        team: assignedTeams[0] || t("volunteerFallbackLabel"),
         open: (
           <button
             className="button button--secondary"
@@ -304,7 +311,7 @@ function MyDocumentsPage(props) {
             disabled={!canGenerateCertificate}
             onClick={openParticipationCertificate}
           >
-            {canGenerateCertificate ? "Generate" : "Not available yet"}
+            {canGenerateCertificate ? t("documentsCertificateGenerate") : t("documentsCertificateUnavailable")}
           </button>
         ),
       });
@@ -317,6 +324,7 @@ function MyDocumentsPage(props) {
       canGenerateCertificate,
       getDocumentConsultationUrl,
       openParticipationCertificate,
+      t,
     ],
   );
 
@@ -324,17 +332,14 @@ function MyDocumentsPage(props) {
     <div className="page">
       <section className="page-header">
         <div>
-          <p className="eyebrow">Espace benevole</p>
-          <h1>Mes documents</h1>
-          <p>Briefings, plans, procedures et infos utiles accessibles selon l'affectation.</p>
+          <p className="eyebrow">{t("documentsEyebrow")}</p>
+          <h1>{t("documentsTitle")}</h1>
+          <p>{t("documentsSubtitle")}</p>
         </div>
       </section>
       {documentsError ? <p className="panel-note">{documentsError}</p> : null}
       {canUploadInvoices ? (
-        <Panel
-          title="Déposer une facture"
-          subtitle="Dépose ici une facture liée à l'édition en cours. Elle remontera automatiquement dans le budget pour classement."
-        >
+        <Panel title={t("documentsUploadInvoicePanelTitle")} subtitle={t("documentsUploadInvoicePanelSubtitle")}>
           <InvoiceUploadForm
             editionId={activeEditionId}
             currentUser={currentUser}
@@ -343,51 +348,46 @@ function MyDocumentsPage(props) {
           />
         </Panel>
       ) : null}
-      <Panel title="Documents disponibles">
-        {documentsLoading ? <p className="panel-note">Chargement des documents...</p> : null}
+      <Panel title={t("documentsAvailablePanelTitle")}>
+        {documentsLoading ? <p className="panel-note">{t("documentsLoading")}</p> : null}
         <DataTable
           columns={[
-            { key: "title", label: "Titre" },
-            { key: "team", label: "Equipe" },
-            { key: "open", label: "Consultation" },
+            { key: "title", label: t("documentsColumnTitle") },
+            { key: "team", label: t("documentsColumnTeam") },
+            { key: "open", label: t("documentsColumnOpen") },
           ]}
           rows={
             documentRows.length
               ? documentRows
               : [
                   {
-                    title: assignedTeams.length ? "Aucun document disponible" : "Aucun document global disponible",
-                    team: assignedTeams.join(", ") || "En attente d'affectation",
+                    title: assignedTeams.length ? t("documentsEmptyWithTeam") : t("documentsEmptyNoTeam"),
+                    team: assignedTeams.join(", ") || t("documentsPendingAssignment"),
                     open: "-",
                   },
                 ]
           }
         />
         <p className="panel-note">
-          {canGenerateCertificate
-            ? "Your participation certificate is now available. You can generate it whenever you need it."
-            : "Your participation certificate will become available after your departure has been recorded by your team lead or by the welcome desk."}
+          {canGenerateCertificate ? t("documentsCertificateReadyNote") : t("documentsCertificatePendingNote")}
         </p>
       </Panel>
 
       {canUploadInvoices || ownInvoices.length ? (
-        <Panel
-          title="Mes factures"
-          subtitle="Retrouve ici les factures que tu as déposées et leur état de classement dans le budget."
-        >
+        <Panel title={t("documentsInvoicesPanelTitle")} subtitle={t("documentsInvoicesPanelSubtitle")}>
           <DataTable
             columns={[
-              { key: "title", label: "Facture" },
-              { key: "edition", label: "Édition" },
-              { key: "status", label: "Classement" },
-              { key: "open", label: "Consultation" },
+              { key: "title", label: t("documentsColumnInvoice") },
+              { key: "edition", label: t("documentsColumnEdition") },
+              { key: "status", label: t("documentsColumnStatus") },
+              { key: "open", label: t("documentsColumnOpen") },
             ]}
             rows={
               ownInvoices.length
                 ? ownInvoices.map((invoice) => ({
-                    title: invoice.title || invoice.fileName || "Facture",
+                    title: invoice.title || invoice.fileName || t("documentsColumnInvoice"),
                     edition: invoice.editionId || "—",
-                    status: formatInvoiceStatusLabel(invoice),
+                    status: formatInvoiceStatusLabel(invoice, t),
                     open: (
                       <button
                         className="button button--secondary"
@@ -395,13 +395,13 @@ function MyDocumentsPage(props) {
                         disabled={!getInvoiceDocumentUrl(invoice)}
                         onClick={() => window.open(getInvoiceDocumentUrl(invoice), "_blank", "noopener,noreferrer")}
                       >
-                        {invoice.fileName || "Ouvrir"}
+                        {invoice.fileName || t("documentsOpenButtonFallback")}
                       </button>
                     ),
                   }))
                 : [
                     {
-                      title: "Aucune facture déposée",
+                      title: t("documentsNoInvoice"),
                       edition: activeEditionId || "—",
                       status: "—",
                       open: "—",

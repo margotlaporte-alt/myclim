@@ -1,18 +1,20 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../context/auth-context";
+import { useLanguage } from "./language-context";
 import { getActiveRoles, getDefaultRouteByRoles } from "./navigation";
 
 function RequireAuth() {
   const { currentUser, loading } = useAuth();
+  const { t } = useLanguage();
   const location = useLocation();
   if (loading) {
     return (
       <div className="page">
         <section className="page-header">
           <div>
-            <p className="eyebrow">Chargement</p>
-            <h1>Ouverture de MyCLIM</h1>
-            <p>Nous restaurons votre session et vos accès.</p>
+            <p className="eyebrow">{t("authLoadingEyebrow")}</p>
+            <h1>{t("authLoadingTitle")}</h1>
+            <p>{t("authLoadingBody")}</p>
           </div>
         </section>
       </div>
@@ -23,6 +25,7 @@ function RequireAuth() {
 
 function RequireRouteAccess({ allowedRoles }) {
   const { userProfile } = useAuth();
+  const { t } = useLanguage();
   const roles = getActiveRoles(userProfile);
 
   if (!allowedRoles?.length || allowedRoles.some((role) => roles.includes(role))) {
@@ -34,8 +37,7 @@ function RequireRouteAccess({ allowedRoles }) {
       replace
       to={getDefaultRouteByRoles(roles)}
       state={{
-        accessDeniedMessage:
-          "Vous n'avez pas les droits pour ouvrir cette page. Vous avez été redirigé vers un espace autorisé.",
+        accessDeniedMessage: t("accessDeniedMessage"),
       }}
     />
   );

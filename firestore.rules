@@ -33,6 +33,10 @@ service cloud.firestore {
         );
     }
 
+    function isTeamLead() {
+      return isSignedIn() && "chef_equipe" in userTypes();
+    }
+
     function isWebsiteManager() {
       return isSignedIn() &&
         (
@@ -126,8 +130,15 @@ service cloud.firestore {
     // ── Documents partagés ──────────────────────────────────────────────────
     // Lecture ouverte aux bénévoles et chefs d'équipe (actuellement bloqué par catch-all)
     match /documents/{docId} {
-      allow read:  if isSignedIn();
-      allow write: if isAdminOrManager();
+      allow read:   if isSignedIn();
+      allow write:  if isAdminOrManager();
+      // Un chef d'équipe peut publier des documents pour son équipe et retirer
+      // uniquement ceux qu'il a lui-même ajoutés (pas les documents admin/globaux).
+      allow create: if isTeamLead() &&
+        request.resource.data.documentType == "document" &&
+        request.resource.data.scope == "teams" &&
+        request.resource.data.uploadedByUid == request.auth.uid;
+      allow delete: if isTeamLead() && resource.data.uploadedByUid == request.auth.uid;
     }
 
     // ── Configuration équipes ────────────────────────────────────────────────

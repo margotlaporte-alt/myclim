@@ -10,14 +10,14 @@ function getDocumentUploadErrorMessage(error) {
   return error?.message || "L'enregistrement du document a échoué.";
 }
 
-function formatVolunteerApplicationStatus(status) {
+function formatVolunteerApplicationStatus(status, t) {
   switch (String(status || "").trim().toLowerCase()) {
     case "candidature_recue":
-      return "Candidature reçue";
+      return t ? t("statusReceived") : "Candidature reçue";
     case "pending_guardian_approval":
-      return "Accord parental attendu";
+      return t ? t("statusPendingGuardianApproval") : "Accord parental attendu";
     default:
-      return String(status || "À compléter");
+      return String(status || (t ? t("dashboardToComplete") : "À compléter"));
   }
 }
 

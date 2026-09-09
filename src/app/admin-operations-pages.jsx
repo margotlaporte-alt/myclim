@@ -923,6 +923,14 @@ function TeamsPage(props) {
         if (cancelled) return;
         lastPersistedTeamsRef.current = serializedPayload;
         setTeamsStatus("Équipes enregistrées.");
+        // Mirror just the role names (no PII, unlike the full team configuration
+        // above) onto the already publicly-readable platform doc, so the public
+        // volunteer application form can offer an up-to-date mission preference list.
+        return setDoc(
+          doc(db, "appSettings", "platform"),
+          { volunteerRoleOptions: roles.map((role) => role.roleName) },
+          { merge: true },
+        );
       })
       .catch(() => {
         if (cancelled) return;

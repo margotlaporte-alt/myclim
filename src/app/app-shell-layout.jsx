@@ -18,6 +18,8 @@ import { useParentU14Children, useU14RequestsList } from "./u14-hooks";
 import { buildUserIdentitySet, formatVolunteerApplicationStatus, isTeamLeadAssignment } from "./common-helpers";
 import { ACCREDITATION_CONFIGURATION_DOC_PATH, TEAM_CONFIGURATION_DOC_PATH } from "./seed-data";
 import { getDisplayName, normalizeRole } from "./utils";
+import { LanguageSwitch } from "./language";
+import { useLanguage } from "./language-context";
 import { db } from "../services/firebase";
 
 function flattenNavigationItems(items) {
@@ -29,21 +31,22 @@ function isRouteMatch(pathname, targetPath) {
   return pathname === targetPath || pathname.startsWith(`${targetPath}/`);
 }
 
-function formatRoleLabel(role) {
-  const labels = {
-    admin: "Administrateur",
-    budget: "Budget",
-    gestionnaire: "Gestionnaire",
-    chef_equipe: "Chef d’équipe",
-    benevole: "Bénévole",
-    parent_u14: "Parent U14",
-    gestionnaire_site: "Gestionnaire site",
-    chef_transport_athletes: "Transport athlètes",
-    benevole_transport_athletes: "Navettes athlètes",
-    meeting_director: "Direction meeting",
+function formatRoleLabel(role, t) {
+  const labelKeys = {
+    admin: "roleLabelAdmin",
+    budget: "roleLabelBudget",
+    gestionnaire: "roleLabelManager",
+    chef_equipe: "roleLabelTeamLead",
+    benevole: "roleLabelVolunteer",
+    parent_u14: "roleLabelParentU14",
+    gestionnaire_site: "roleLabelWebsiteManager",
+    chef_transport_athletes: "roleLabelAthleteTransportLead",
+    benevole_transport_athletes: "roleLabelAthleteTransportVolunteer",
+    meeting_director: "roleLabelMeetingDirector",
   };
 
-  return labels[role] || String(role || "").replaceAll("_", " ");
+  const labelKey = labelKeys[role];
+  return labelKey ? t(labelKey) : String(role || "").replaceAll("_", " ");
 }
 
 function NavIcon({ icon }) {
@@ -76,6 +79,7 @@ function NavIcon({ icon }) {
 
 function AppShell(props) {
   const { cmcmLogo } = props;
+  const { t } = useLanguage();
   const { currentUser, logout, userProfile } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -104,6 +108,7 @@ function AppShell(props) {
     if (portalSettingsLoading || !canAccessAthletePortal(effectiveRoles, portalSettings)) return null;
     return {
       type: "section",
+      titleKey: "navSectionAthletePortal",
       title: "Athlete Portal",
       links: buildAthletePortalNavigation(effectiveRoles, portalSettings, { canImport: portalCanImport }),
     };
@@ -113,6 +118,7 @@ function AppShell(props) {
     if (!links.length) return null;
     return {
       type: "section",
+      titleKey: "navSectionStatistics",
       title: "Statistiques",
       links,
     };
@@ -122,7 +128,7 @@ function AppShell(props) {
     const nav = buildNavigationFromRoles(effectiveRoles);
 
     if (statisticsSection && Array.isArray(nav)) {
-      const settingsIndex = nav.findIndex((item) => item.type === "section" && item.title === "Réglages");
+      const settingsIndex = nav.findIndex((item) => item.type === "section" && item.titleKey === "navSectionSettings");
       if (settingsIndex >= 0) {
         nav.splice(settingsIndex, 0, statisticsSection);
       } else {
@@ -131,7 +137,7 @@ function AppShell(props) {
     }
 
     if (portalSection && Array.isArray(nav)) {
-      const settingsIndex = nav.findIndex((item) => item.type === "section" && item.title === "Réglages");
+      const settingsIndex = nav.findIndex((item) => item.type === "section" && item.titleKey === "navSectionSettings");
       if (settingsIndex >= 0) {
         nav.splice(settingsIndex, 0, portalSection);
       } else {
@@ -146,13 +152,10 @@ function AppShell(props) {
   const flatNavigation = useMemo(() => flattenNavigationItems(navigation), [navigation]);
   const [openSections, setOpenSections] = useState({});
   const displayName = getDisplayName(userProfile, currentUser?.email);
-  const currentRouteLabel = useMemo(
-    () =>
-      flatNavigation.find((item) => item.to === location.pathname)?.label ||
-      flatNavigation.find((item) => item.to !== "/app" && isRouteMatch(location.pathname, item.to))?.label ||
-      "Menu",
-    [flatNavigation, location.pathname],
-  );
+  const currentRouteLabelKey =
+    flatNavigation.find((item) => item.to === location.pathname)?.labelKey ||
+    flatNavigation.find((item) => item.to !== "/app" && isRouteMatch(location.pathname, item.to))?.labelKey;
+  const currentRouteLabel = currentRouteLabelKey ? t(currentRouteLabelKey) : t("shellMenuLabel");
 
   useEffect(() => {
     function syncSidebarWithViewport() {
@@ -202,16 +205,16 @@ function AppShell(props) {
   }
 
   function isSectionOpen(section, index) {
-    const hasManualValue = Object.prototype.hasOwnProperty.call(openSections, section.title);
-    if (hasManualValue) return openSections[section.title];
+    const hasManualValue = Object.prototype.hasOwnProperty.call(openSections, section.titleKey);
+    if (hasManualValue) return openSections[section.titleKey];
     return section.links.some((link) => isRouteMatch(location.pathname, link.to)) || index === 0;
   }
 
-  function toggleSection(title, fallbackOpen) {
+  function toggleSection(titleKey, fallbackOpen) {
     setOpenSections((current) => {
-      const hasManualValue = Object.prototype.hasOwnProperty.call(current, title);
-      const currentValue = hasManualValue ? current[title] : fallbackOpen;
-      return { ...current, [title]: !currentValue };
+      const hasManualValue = Object.prototype.hasOwnProperty.call(current, titleKey);
+      const currentValue = hasManualValue ? current[titleKey] : fallbackOpen;
+      return { ...current, [titleKey]: !currentValue };
     });
   }
 
@@ -220,7 +223,7 @@ function AppShell(props) {
       <aside className={`sidebar${isSidebarOpen ? " sidebar--open" : ""}`}>
         <div className="sidebar-header">
           <div className="sidebar-brand">
-            <a href="/" className="sidebar-brand-lockup sidebar-brand-lockup--link" title="Retour au site public">
+            <a href="/" className="sidebar-brand-lockup sidebar-brand-lockup--link" title={t("shellBackToSite")}>
               <div className="sidebar-brand-logo-shell">
                 <img alt="Logo CMCM Luxembourg Indoor Meeting" className="sidebar-brand-logo" src={cmcmLogo} />
               </div>
@@ -228,14 +231,14 @@ function AppShell(props) {
                 <h2>MyCLIM</h2>
               </div>
             </a>
-            <p className="sidebar-brand-tagline">Plateforme équipes et accès meeting.</p>
+            <p className="sidebar-brand-tagline">{t("shellTagline")}</p>
           </div>
           <button
             className="button button--ghost sidebar-toggle sidebar-toggle--inside"
             type="button"
             onClick={() => setIsSidebarOpen(false)}
           >
-            Replier
+            {t("shellCollapse")}
           </button>
         </div>
         <div className="sidebar-main">
@@ -245,21 +248,22 @@ function AppShell(props) {
                 (() => {
                   const sectionOpen = isSectionOpen(item, index);
                   const sectionActive = item.links.some((link) => isRouteMatch(location.pathname, link.to));
+                  const sectionTitle = t(item.titleKey) || item.title;
 
                   return (
                     <section
-                      key={item.title}
+                      key={item.titleKey}
                       className={`sidebar-nav-section${sectionOpen ? " sidebar-nav-section--open" : ""}${sectionActive ? " sidebar-nav-section--active" : ""}`}
-                      aria-label={item.title}
+                      aria-label={sectionTitle}
                     >
                       <button
                         aria-expanded={sectionOpen}
                         className="sidebar-nav-section__button"
                         type="button"
-                        onClick={() => toggleSection(item.title, sectionOpen)}
+                        onClick={() => toggleSection(item.titleKey, sectionOpen)}
                       >
                         <span className="sidebar-nav-section__header">
-                          <span className="sidebar-nav-section__title">{item.title}</span>
+                          <span className="sidebar-nav-section__title">{sectionTitle}</span>
                           <span className="sidebar-nav-section__meta">{item.links.length}</span>
                         </span>
                         <span aria-hidden="true" className="sidebar-nav-section__chevron">
@@ -277,7 +281,7 @@ function AppShell(props) {
                             >
                               <span className="nav-link__label">
                                 <NavIcon icon={link.icon} />
-                                <span>{link.label}</span>
+                                <span>{t(link.labelKey) || link.label}</span>
                               </span>
                               <span aria-hidden="true" className="nav-link__chevron">
                                 ›
@@ -298,7 +302,7 @@ function AppShell(props) {
                 >
                   <span className="nav-link__label">
                     <NavIcon icon={item.icon} />
-                    <span>{item.label}</span>
+                    <span>{t(item.labelKey) || item.label}</span>
                   </span>
                   <span aria-hidden="true" className="nav-link__chevron">
                     ›
@@ -312,19 +316,22 @@ function AppShell(props) {
           <div className="sidebar-footer__identity">
             <strong>{displayName}</strong>
             <p>{currentUser?.email}</p>
-            <p>Édition active: {activeEditionLabel}</p>
+            <p>{t("shellActiveEditionLabel")}: {activeEditionLabel}</p>
           </div>
           <div className="sidebar-footer__actions">
-            <span className="status-pill status-pill--accent">{formatRoleLabel(roles.includes("admin") ? viewAsRole : primaryRole)}</span>
+            <span className="status-pill status-pill--accent">
+              {formatRoleLabel(roles.includes("admin") ? viewAsRole : primaryRole, t)}
+            </span>
+            <LanguageSwitch />
             <button className="button button--secondary sidebar-footer__logout" onClick={handleLogout} type="button">
-              Se deconnecter
+              {t("shellLogout")}
             </button>
           </div>
         </div>
       </aside>
       {isSidebarOpen ? (
         <button
-          aria-label="Fermer le menu"
+          aria-label={t("shellCloseMenuAria")}
           className="sidebar-backdrop"
           type="button"
           onClick={() => setIsSidebarOpen(false)}
@@ -336,9 +343,9 @@ function AppShell(props) {
             className="shell-sidebar-rail"
             type="button"
             onClick={() => setIsSidebarOpen(true)}
-            aria-label="Rouvrir le menu"
+            aria-label={t("shellReopenMenuAria")}
           >
-            Menu
+            {t("shellMenuLabel")}
           </button>
         ) : null}
         <div className="shell-mobile-bar">
@@ -347,30 +354,30 @@ function AppShell(props) {
             type="button"
             onClick={() => setIsSidebarOpen((current) => !current)}
           >
-            {isSidebarOpen ? "Fermer" : "Menu"}
+            {isSidebarOpen ? t("shellCloseLabel") : t("shellMenuLabel")}
           </button>
           <span className="shell-mobile-bar__route">{currentRouteLabel}</span>
         </div>
         {roles.includes("admin") ? (
           <div className="content-toolbar">
             <label className="view-switcher">
-              <span>Voir comme</span>
+              <span>{t("shellViewAsLabel")}</span>
               <select value={viewAsRole} onChange={(event) => handleViewAsChange(event.target.value)}>
-                {roles.includes("admin") ? <option value="admin">Administrateur</option> : null}
-                {roles.includes("budget") ? <option value="budget">Budget</option> : null}
-                {roles.includes("chef_equipe") ? <option value="chef_equipe">Chef d'équipe</option> : null}
-                {roles.includes("benevole") ? <option value="benevole">Bénévole</option> : null}
-                {roles.includes("parent_u14") ? <option value="parent_u14">Parent U14</option> : null}
+                {roles.includes("admin") ? <option value="admin">{t("roleLabelAdmin")}</option> : null}
+                {roles.includes("budget") ? <option value="budget">{t("roleLabelBudget")}</option> : null}
+                {roles.includes("chef_equipe") ? <option value="chef_equipe">{t("roleLabelTeamLead")}</option> : null}
+                {roles.includes("benevole") ? <option value="benevole">{t("roleLabelVolunteer")}</option> : null}
+                {roles.includes("parent_u14") ? <option value="parent_u14">{t("roleLabelParentU14")}</option> : null}
               </select>
             </label>
             {viewAsRole === "admin" ? (
-              <p className="content-toolbar__hint">Vue admin simplifiee: un menu par domaine, sans melanger les parcours.</p>
+              <p className="content-toolbar__hint">{t("shellAdminViewHint")}</p>
             ) : null}
           </div>
         ) : null}
         {location.state?.accessDeniedMessage ? (
           <div className="notice-card notice-card--warn">
-            <strong>Accès limité</strong>
+            <strong>{t("shellAccessDeniedTitle")}</strong>
             <p>{location.state.accessDeniedMessage}</p>
           </div>
         ) : null}
@@ -388,6 +395,7 @@ function AppShell(props) {
 
 function DashboardHome(props) {
   const { Panel } = props;
+  const { t } = useLanguage();
   const { currentUser, userProfile } = useAuth();
   const roles = getActiveRoles(userProfile);
   const {
@@ -409,16 +417,18 @@ function DashboardHome(props) {
       .sort((left, right) => Number(right) - Number(left));
 
     return [
-      { value: "test", label: "test — configuration modèle" },
+      { value: "test", label: `test — ${t("dashboardTemplateConfiguration")}` },
       ...numericEditionIds.map((editionId) => {
         const edition = (meetingEditions || []).find((entry) => normalizeEditionId(entry.year) === editionId);
         return {
           value: editionId,
-          label: edition?.isClosed ? `édition ${editionId} — clôturée` : `édition ${editionId}`,
+          label: edition?.isClosed
+            ? `${t("dashboardEditionWord")} ${editionId} — ${t("dashboardClosed")}`
+            : `${t("dashboardEditionWord")} ${editionId}`,
         };
       }),
     ];
-  }, [meetingEditions]);
+  }, [meetingEditions, t]);
 
   useEffect(() => {
     setEditionDraft(activeEditionId);
@@ -548,9 +558,9 @@ function DashboardHome(props) {
   );
   const nextVolunteerRole = myTeamRoles[0] ?? null;
   const volunteerAssignmentSummary =
-    nextVolunteerRole?.roleName || userProfile?.assignedRole || "Aucune affectation confirmée pour l'instant";
-  const volunteerShiftSummary = userProfile?.shift || nextVolunteerRole?.shiftTime || "Créneau à confirmer";
-  const volunteerBriefingSummary = nextVolunteerRole?.briefingTime || "Briefing à confirmer";
+    nextVolunteerRole?.roleName || userProfile?.assignedRole || t("dashboardNoAssignmentYet");
+  const volunteerShiftSummary = userProfile?.shift || nextVolunteerRole?.shiftTime || t("assignmentsToBeConfirmed");
+  const volunteerBriefingSummary = nextVolunteerRole?.briefingTime || t("dashboardBriefingToBeConfirmed");
   const parentConfirmedCount = parentRequestRows.filter((child) => child.status === "Confirmée").length;
   const parentPendingCount = parentRequestRows.filter((child) => child.status !== "Confirmée").length;
   const adminDataLoading = teamsLoading || volunteerApplicationsLoading || documentsLoading || u14RequestsLoading;
@@ -561,7 +571,7 @@ function DashboardHome(props) {
     event.preventDefault();
 
     const nextEditionId = normalizeEditionId(editionDraft);
-    setEditionSaveStatus("Sauvegarde de l'édition en cours...");
+    setEditionSaveStatus(t("dashboardEditionSaving"));
 
     try {
       if (nextEditionId !== activeEditionId) {
@@ -615,10 +625,10 @@ function DashboardHome(props) {
         },
         { merge: true },
       );
-      setEditionSaveStatus(`Édition active mise à jour: ${getEditionLabel(nextEditionId)}.`);
+      setEditionSaveStatus(`${t("dashboardEditionUpdated")}: ${getEditionLabel(nextEditionId)}.`);
     } catch (error) {
       console.error("Unable to switch active edition", error);
-      setEditionSaveStatus("La bascule d'édition a échoué.");
+      setEditionSaveStatus(t("dashboardEditionSwitchFailed"));
     }
   }
 
@@ -900,23 +910,23 @@ function DashboardHome(props) {
     if (activeRole === "admin") {
       return (
         <section className="panel-grid panel-grid--2">
-          <Panel title="Mes priorités" subtitle="Les décisions et actions de pilotage à prendre aujourd'hui.">
+          <Panel title={t("dashboardPrioritiesTitle")} subtitle={t("dashboardAdminPrioritiesSubtitle")}>
             <ul className="compact-list">
-              <li>{adminDataLoading ? "Chargement des candidatures bénévoles..." : `${pendingApplicationsCount} candidatures bénévoles à traiter`}</li>
-              <li>{adminDataLoading ? "Chargement de la composition des équipes..." : `${incompleteTeamsCount} équipes encore incomplètes à sécuriser`}</li>
-              <li>{documentsLoading ? "Chargement des documents..." : `${documents.length} document(s) publiés à relire ou diffuser`}</li>
-              <li>{u14RequestsLoading ? "Chargement des demandes U14..." : `${submittedU14RequestsCount} demande(s) d'inscription au pré-programme reçue(s) à suivre`}</li>
+              <li>{adminDataLoading ? t("dashboardLoadingApplications") : t("dashboardAdminApplicationsToProcess").replace("{count}", pendingApplicationsCount)}</li>
+              <li>{adminDataLoading ? t("dashboardLoadingTeams") : t("dashboardAdminIncompleteTeams").replace("{count}", incompleteTeamsCount)}</li>
+              <li>{documentsLoading ? t("dashboardLoadingDocuments") : t("dashboardAdminDocumentsToReview").replace("{count}", documents.length)}</li>
+              <li>{u14RequestsLoading ? t("dashboardLoadingU14Requests") : t("dashboardAdminU14RequestsToFollow").replace("{count}", submittedU14RequestsCount)}</li>
             </ul>
           </Panel>
-          <Panel title="Accès rapides" subtitle="Entrées directes vers les modules de pilotage.">
+          <Panel title={t("dashboardQuickAccessTitle")} subtitle={t("dashboardAdminQuickAccessSubtitle")}>
             <div className="dashboard-action-grid">
-              <NavLink className="button button--secondary button-link" to="/app/benevoles">Gérer les bénévoles</NavLink>
-              <NavLink className="button button--secondary button-link" to="/app/roles">Gérer les rôles</NavLink>
-              <NavLink className="button button--secondary button-link" to="/app/postes">Ajuster les équipes</NavLink>
-              <NavLink className="button button--secondary button-link" to="/app/accreditations">Produire les badges</NavLink>
-              <NavLink className="button button--secondary button-link" to="/app/website">Gérer le site internet</NavLink>
-              <NavLink className="button button--secondary button-link" to="/app/athlete-portal/athletes">Gérer les athlètes</NavLink>
-              <NavLink className="button button--secondary button-link" to="/app/statistics/results">Gérer les résultats</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/benevoles">{t("dashboardManageVolunteers")}</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/roles">{t("dashboardManageRoles")}</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/postes">{t("dashboardAdjustTeams")}</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/accreditations">{t("dashboardProduceBadges")}</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/website">{t("dashboardManageWebsite")}</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/athlete-portal/athletes">{t("dashboardManageAthletes")}</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/statistics/results">{t("dashboardManageResults")}</NavLink>
             </div>
           </Panel>
         </section>
@@ -926,20 +936,20 @@ function DashboardHome(props) {
     if (activeRole === "benevole") {
       return (
         <section className="panel-grid panel-grid--2">
-          <Panel title="Mes priorités" subtitle="L'essentiel pour être prêt le jour du meeting.">
+          <Panel title={t("dashboardPrioritiesTitle")} subtitle={t("dashboardVolunteerPrioritiesSubtitle")}>
             <ul className="compact-list">
-              <li>{volunteerDataLoading ? "Chargement de ton affectation..." : `Affectation actuelle: ${volunteerAssignmentSummary}`}</li>
-              <li>Créneau prévu: {volunteerShiftSummary}</li>
-              <li>Statut du dossier bénévole: {formatVolunteerApplicationStatus(volunteerApplication?.status)}</li>
-              <li>{documentsLoading ? "Chargement des documents de mission..." : `${myDocumentsCount} document(s) disponible(s) pour tes équipes`}</li>
-              <li>Briefing: {volunteerBriefingSummary}</li>
-              <li>Après ta mission, pense à signaler ton départ à ton responsable pour débloquer ton certificat.</li>
+              <li>{volunteerDataLoading ? t("dashboardLoadingAssignment") : `${t("dashboardCurrentAssignment")}: ${volunteerAssignmentSummary}`}</li>
+              <li>{t("dashboardPlannedShift")}: {volunteerShiftSummary}</li>
+              <li>{t("dashboardVolunteerFileStatus")}: {formatVolunteerApplicationStatus(volunteerApplication?.status, t)}</li>
+              <li>{documentsLoading ? t("dashboardLoadingMissionDocuments") : t("dashboardDocumentsAvailableForTeams").replace("{count}", myDocumentsCount)}</li>
+              <li>{t("dashboardBriefingLabel")}: {volunteerBriefingSummary}</li>
+              <li>{t("dashboardVolunteerDepartureReminder")}</li>
             </ul>
           </Panel>
-          <Panel title="Accès rapides" subtitle="Retrouve tes écrans bénévoles en un clic.">
+          <Panel title={t("dashboardQuickAccessTitle")} subtitle={t("dashboardVolunteerQuickAccessSubtitle")}>
             <div className="dashboard-action-grid">
-              <NavLink className="button button--secondary button-link" to="/app/mes-affectations">Mes affectations</NavLink>
-              <NavLink className="button button--secondary button-link" to="/app/mes-documents">Mes documents</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/mes-affectations">{t("navMyAssignments")}</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/mes-documents">{t("navMyDocuments")}</NavLink>
             </div>
           </Panel>
         </section>
@@ -949,20 +959,20 @@ function DashboardHome(props) {
     if (activeRole === "gestionnaire") {
       return (
         <section className="panel-grid panel-grid--2">
-          <Panel title="Mes priorités" subtitle="Le suivi d'accueil et de coordination du jour J.">
+          <Panel title={t("dashboardPrioritiesTitle")} subtitle={t("dashboardManagerPrioritiesSubtitle")}>
             <ul className="compact-list">
-              <li>Pointer les arrivées au guichet bénévoles et distribuer badge + tee-shirt</li>
-              <li>Suivre la récupération des sandwichs à midi</li>
-              <li>Mettre à jour les présences et horaires de départ avec les chefs d'équipe</li>
+              <li>{t("dashboardManagerTaskCheckIn")}</li>
+              <li>{t("dashboardManagerTaskLunch")}</li>
+              <li>{t("dashboardManagerTaskAttendance")}</li>
             </ul>
           </Panel>
-          <Panel title="Accès rapides" subtitle="Outils opérationnels pour le guichet bénévoles.">
+          <Panel title={t("dashboardQuickAccessTitle")} subtitle={t("dashboardManagerQuickAccessSubtitle")}>
             <div className="dashboard-action-grid">
-              <NavLink className="button button--secondary button-link" to="/app/benevoles">Bénévoles</NavLink>
-              <NavLink className="button button--secondary button-link" to="/app/accreditations">Accréditations</NavLink>
-              <NavLink className="button button--secondary button-link" to="/app/presences">Présences</NavLink>
-              <NavLink className="button button--secondary button-link" to="/app/u14">Pré-programme</NavLink>
-              <NavLink className="button button--secondary button-link" to="/app/documents">Documents</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/benevoles">{t("navVolunteersLink")}</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/accreditations">{t("navSectionAccreditations")}</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/presences">{t("navAttendance")}</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/u14">{t("navSectionPreprogram")}</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/documents">{t("navDocuments")}</NavLink>
             </div>
           </Panel>
         </section>
@@ -972,22 +982,26 @@ function DashboardHome(props) {
     if (activeRole === "parent_u14") {
       return (
         <section className="panel-grid panel-grid--2">
-          <Panel title="Mes priorités" subtitle="Les prochains éléments à suivre pour mes enfants.">
+          <Panel title={t("dashboardPrioritiesTitle")} subtitle={t("dashboardParentPrioritiesSubtitle")}>
             <ul className="compact-list">
-              {parentRowsLoading ? <li>Chargement des demandes U14...</li> : null}
-              {!parentRowsLoading && parentRequestRows.length === 0 ? <li>Aucune demande U14 liée à ce compte pour l'instant.</li> : null}
+              {parentRowsLoading ? <li>{t("dashboardLoadingU14Requests")}</li> : null}
+              {!parentRowsLoading && parentRequestRows.length === 0 ? <li>{t("dashboardNoU14Request")}</li> : null}
               {!parentRowsLoading && parentRequestRows.map((child) => (
                 <li key={child.id}>{child.name}: {child.status} - {child.schedule}</li>
               ))}
             </ul>
           </Panel>
-          <Panel title="Accès rapides" subtitle="Tout le suivi parent centralisé dans un seul espace.">
+          <Panel title={t("dashboardQuickAccessTitle")} subtitle={t("dashboardParentQuickAccessSubtitle")}>
             <div className="dashboard-action-grid">
-              <NavLink className="button button--secondary button-link" to="/app/mes-enfants">Mes enfants</NavLink>
-              <NavLink className="button button--secondary button-link" to="/app/profil">Mon profil</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/mes-enfants">{t("navMyChildren")}</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/profil">{t("navMyProfile")}</NavLink>
             </div>
             {!parentRowsLoading && parentRequestRows.length > 0 ? (
-              <p className="panel-note">{parentConfirmedCount} demande(s) confirmée(s), {parentPendingCount} encore en attente.</p>
+              <p className="panel-note">
+                {t("dashboardParentConfirmedPending")
+                  .replace("{confirmed}", parentConfirmedCount)
+                  .replace("{pending}", parentPendingCount)}
+              </p>
             ) : null}
           </Panel>
         </section>
@@ -997,20 +1011,28 @@ function DashboardHome(props) {
     if (activeRole === "chef_equipe") {
       return (
         <section className="panel-grid panel-grid--2">
-          <Panel title="Mes priorités" subtitle="Ce qu'il faut suivre pour faire tourner l'équipe.">
+          <Panel title={t("dashboardPrioritiesTitle")} subtitle={t("dashboardTeamLeadPrioritiesSubtitle")}>
             <ul className="compact-list">
-              <li>{leadDataLoading ? "Chargement de tes équipes..." : totalOpenPositions > 0 ? `${totalOpenPositions} poste(s) encore ouvert(s) sur ${ledRoles.map((role) => role.roleName).join(", ")}` : "Toutes tes équipes ont atteint leur effectif prévu"}</li>
-              <li>{leadDataLoading ? "Chargement des affectations..." : `${totalLeadMembers} membre(s) actuellement rattaché(s) à tes équipes`}</li>
-              <li>{documentsLoading ? "Chargement des documents d'équipe..." : `${leadDocumentsCount} document(s) d'équipe déjà disponibles`}</li>
-              <li>{leadDataLoading ? "Chargement des remplaçants..." : `${totalReplacements} remplaçant(s) actuellement identifié(s)`}</li>
-              <li>Avant qu'un bénévole parte, pense à pointer son départ pour rendre son certificat disponible.</li>
+              <li>
+                {leadDataLoading
+                  ? t("dashboardLoadingTeams")
+                  : totalOpenPositions > 0
+                    ? t("dashboardOpenPositions")
+                        .replace("{count}", totalOpenPositions)
+                        .replace("{roles}", ledRoles.map((role) => role.roleName).join(", "))
+                    : t("dashboardAllTeamsFull")}
+              </li>
+              <li>{leadDataLoading ? t("dashboardLoadingAssignments") : t("dashboardTeamMembersCount").replace("{count}", totalLeadMembers)}</li>
+              <li>{documentsLoading ? t("dashboardLoadingTeamDocuments") : t("dashboardTeamDocumentsAvailable").replace("{count}", leadDocumentsCount)}</li>
+              <li>{leadDataLoading ? t("dashboardLoadingReplacements") : t("dashboardReplacementsIdentified").replace("{count}", totalReplacements)}</li>
+              <li>{t("dashboardTeamLeadDepartureReminder")}</li>
             </ul>
           </Panel>
-          <Panel title="Accès rapides" subtitle="Les outils de coordination chef d'équipe.">
+          <Panel title={t("dashboardQuickAccessTitle")} subtitle={t("dashboardTeamLeadQuickAccessSubtitle")}>
             <div className="dashboard-action-grid">
-              <NavLink className="button button--secondary button-link" to="/app/equipe">Mon équipe</NavLink>
-              <NavLink className="button button--secondary button-link" to="/app/presences">Présences</NavLink>
-              <NavLink className="button button--secondary button-link" to="/app/mes-documents">Documents</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/equipe">{t("navMyTeam")}</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/presences">{t("navAttendance")}</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/mes-documents">{t("navDocuments")}</NavLink>
             </div>
           </Panel>
         </section>
@@ -1024,18 +1046,15 @@ function DashboardHome(props) {
     <div className="page">
       <section className="page-header">
         <div>
-          <p className="eyebrow">Vue d'ensemble</p>
-          <h1>Bienvenue {getDisplayName(userProfile, currentUser?.email)}</h1>
-          <p>Ton compte centralise tes modules actifs et ouvre les bons parcours selon ton profil.</p>
+          <p className="eyebrow">{t("navOverview")}</p>
+          <h1>{t("dashboardWelcome")} {getDisplayName(userProfile, currentUser?.email)}</h1>
+          <p>{t("dashboardIntro")}</p>
         </div>
       </section>
 
       {activeRole === "admin" ? (
         <section className="panel-grid panel-grid--2">
-          <Panel
-            title="Édition active"
-            subtitle="Les nouvelles candidatures bénévoles et pré-programme sont rattachées à cette édition."
-          >
+          <Panel title={t("dashboardActiveEditionTitle")} subtitle={t("dashboardActiveEditionSubtitle")}>
             <form className="profile-form" onSubmit={handleEditionSwitch}>
               <AuthEditionField
                 activeEditionLabel={activeEditionLabel}
@@ -1045,32 +1064,33 @@ function DashboardHome(props) {
                 onEditionDraftChange={setEditionDraft}
                 preprogramOpeningDraft={preprogramOpeningDraft}
                 onPreprogramOpeningDraftChange={setPreprogramOpeningDraft}
+                t={t}
               />
               <div className="dashboard-action-grid">
                 <button className="button button--primary" disabled={editionLoading} type="submit">
-                  Changer d'édition
+                  {t("dashboardSwitchEdition")}
                 </button>
               </div>
               {editionSaveStatus ? <p className="panel-note">{editionSaveStatus}</p> : null}
             </form>
           </Panel>
-          <Panel title="Effet de la bascule" subtitle="Ce que la plateforme fera immédiatement après changement.">
+          <Panel title={t("dashboardSwitchEffectTitle")} subtitle={t("dashboardSwitchEffectSubtitle")}>
             <ul className="compact-list">
-              <li>Les comptes existants restent intacts dans `users`.</li>
-              <li>Les rôles et tâches support servent de base pour préparer l'édition suivante.</li>
-              <li>Le module bénévole redevient vide pour la nouvelle édition tant qu'un nouveau dossier n'est pas rempli.</li>
-              <li>Les inscriptions pré-programme repartent de zéro sur la nouvelle édition.</li>
-              <li>Si tu avances vers une édition plus récente, l'édition quittée est marquée comme clôturée.</li>
-              <li>Les données des anciennes éditions restent conservées en base et peuvent être consultées en rebasculant.</li>
+              <li>{t("dashboardSwitchEffectAccounts")}</li>
+              <li>{t("dashboardSwitchEffectRoles")}</li>
+              <li>{t("dashboardSwitchEffectVolunteerModule")}</li>
+              <li>{t("dashboardSwitchEffectPreprogram")}</li>
+              <li>{t("dashboardSwitchEffectClosedEdition")}</li>
+              <li>{t("dashboardSwitchEffectArchivedData")}</li>
             </ul>
           </Panel>
         </section>
       ) : null}
 
       <article className="info-card install-app-card">
-        <h3>Ajoute MyCLIM à ton téléphone</h3>
-        <p>Garde MyCLIM sous la main comme une vraie appli, directement depuis l'écran d'accueil.</p>
-        <section className="install-app-grid" aria-label="Instructions d'installation">
+        <h3>{t("dashboardInstallTitle")}</h3>
+        <p>{t("dashboardInstallIntro")}</p>
+        <section className="install-app-grid" aria-label={t("dashboardInstallInstructionsAria")}>
           <article className="install-app-step">
             <strong className="install-app-step__title">
               <span className="install-app-step__icon" aria-hidden="true">
@@ -1079,9 +1099,9 @@ function DashboardHome(props) {
                   <path d="M17.4 12.7c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.7.8-3.5.8s-1.9-.8-3.1-.8c-1.6 0-3 .9-3.8 2.3-1.6 2.7-.4 6.8 1.1 8.9.7 1 1.6 2.2 2.8 2.1 1.1 0 1.6-.7 3-.7 1.4 0 1.9.7 3 .7 1.2 0 2-.9 2.7-1.9.8-1.2 1.2-2.3 1.2-2.4-.1-.1-2-.8-2-3.7Z" />
                 </svg>
               </span>
-              Sur iPhone
+              {t("dashboardInstallOnIphone")}
             </strong>
-            <p>Ouvre MyCLIM dans Safari, touche Partager puis choisis Sur l'écran d'accueil.</p>
+            <p>{t("dashboardInstallIphoneSteps")}</p>
           </article>
           <article className="install-app-step">
             <strong className="install-app-step__title">
@@ -1094,12 +1114,12 @@ function DashboardHome(props) {
                   <circle cx="14" cy="11.1" r=".7" />
                 </svg>
               </span>
-              Sur Android
+              {t("dashboardInstallOnAndroid")}
             </strong>
-            <p>Ouvre MyCLIM dans Chrome, touche le menu puis choisis Ajouter à l'écran d'accueil.</p>
+            <p>{t("dashboardInstallAndroidSteps")}</p>
           </article>
         </section>
-        <p className="install-app-note">Tu pourras lancer MyCLIM en un clic, comme une application classique.</p>
+        <p className="install-app-note">{t("dashboardInstallNote")}</p>
       </article>
 
       {renderRoleSummary()}
@@ -1107,19 +1127,19 @@ function DashboardHome(props) {
       {volunteerApplication ? (
         <section className="panel-grid panel-grid--2">
           <Panel
-            title="Mon dossier bénévole"
-            subtitle="Retrouve ici l'état de ta candidature et les informations transmises."
-            actions={<NavLink className="button button--primary button-link" to="/app/mon-dossier-benevole">Ouvrir mon dossier</NavLink>}
+            title={t("navMyVolunteerFile")}
+            subtitle={t("dashboardVolunteerFileSubtitle")}
+            actions={<NavLink className="button button--primary button-link" to="/app/mon-dossier-benevole">{t("dashboardOpenMyFile")}</NavLink>}
           >
             <ul className="compact-list">
-              <li>Statut: {volunteerApplication.status || "Candidature reçue"}</li>
-              <li>Préférences: {Array.isArray(volunteerApplication.missionPreferences) && volunteerApplication.missionPreferences.length ? volunteerApplication.missionPreferences.join(", ") : "À compléter"}</li>
-              <li>Disponibilités: {Array.isArray(volunteerApplication.availability) && volunteerApplication.availability.length ? volunteerApplication.availability.join(", ") : "À compléter"}</li>
+              <li>{t("assignmentsStatusLabel")}: {formatVolunteerApplicationStatus(volunteerApplication.status, t)}</li>
+              <li>{t("statedPreferences")}: {Array.isArray(volunteerApplication.missionPreferences) && volunteerApplication.missionPreferences.length ? volunteerApplication.missionPreferences.join(", ") : t("dashboardToComplete")}</li>
+              <li>{t("dashboardAvailabilityLabel")}: {Array.isArray(volunteerApplication.availability) && volunteerApplication.availability.length ? volunteerApplication.availability.join(", ") : t("dashboardToComplete")}</li>
             </ul>
           </Panel>
           <article className="info-card">
-            <h3>Ce que tu peux faire ici</h3>
-            <p>Relire ta candidature, compléter certaines réponses et garder tes informations bénévoles à jour sans recréer un compte.</p>
+            <h3>{t("dashboardWhatYouCanDoTitle")}</h3>
+            <p>{t("dashboardWhatYouCanDoBody")}</p>
           </article>
         </section>
       ) : null}
@@ -1127,14 +1147,14 @@ function DashboardHome(props) {
       {shouldPromptParentToVolunteer ? (
         <section className="panel-grid panel-grid--2">
           <Panel
-            title="Envie de rejoindre aussi les bénévoles ?"
-            subtitle="Ton espace parent reste actif, et tu peux ajouter le parcours bénévole sur le même compte."
-            actions={<NavLink className="button button--primary button-link" to="/app/mon-dossier-benevole">Devenir bénévole</NavLink>}
+            title={t("dashboardJoinVolunteersTitle")}
+            subtitle={t("dashboardJoinVolunteersSubtitle")}
+            actions={<NavLink className="button button--primary button-link" to="/app/mon-dossier-benevole">{t("dashboardBecomeVolunteer")}</NavLink>}
           >
             <ul className="compact-list">
-              <li>Un seul compte pour suivre tes enfants et tes missions bénévoles</li>
-              <li>Accès ensuite aux affectations, documents et accréditations bénévoles</li>
-              <li>La candidature bénévole reste indépendante de ton module parent U14</li>
+              <li>{t("dashboardJoinVolunteersPoint1")}</li>
+              <li>{t("dashboardJoinVolunteersPoint2")}</li>
+              <li>{t("dashboardJoinVolunteersPoint3")}</li>
             </ul>
           </Panel>
         </section>
@@ -1152,12 +1172,13 @@ function AuthEditionField(props) {
     onEditionDraftChange,
     preprogramOpeningDraft,
     onPreprogramOpeningDraftChange,
+    t,
   } = props;
 
   return (
     <>
       <label className="field">
-        <span>Édition cible</span>
+        <span>{t("dashboardTargetEdition")}</span>
         <select
           disabled={editionLoading}
           onChange={(event) => onEditionDraftChange(event.target.value)}
@@ -1171,10 +1192,10 @@ function AuthEditionField(props) {
         </select>
       </label>
       <p className="panel-note">
-        Édition actuellement visible dans l'application: {editionLoading ? "Chargement..." : activeEditionLabel}
+        {t("dashboardCurrentlyVisibleEdition")}: {editionLoading ? t("dashboardLoadingGeneric") : activeEditionLabel}
       </p>
       <label className="field">
-        <span>Ouverture pré-programme</span>
+        <span>{t("dashboardPreprogramOpening")}</span>
         <input
           disabled={editionLoading}
           onChange={(event) => onPreprogramOpeningDraftChange(event.target.value)}

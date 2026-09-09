@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { FileUpload } from "./file-upload";
+import { useLanguage } from "./language-context";
 import { getDisplayName } from "./utils";
 import { db } from "../services/firebase";
 
@@ -10,12 +11,13 @@ function getInvoiceDocumentUrl(document) {
   return "";
 }
 
-function formatInvoiceStatusLabel(invoice) {
+function formatInvoiceStatusLabel(invoice, t) {
   if (String(invoice?.invoiceStatus || "").trim() === "linked" && invoice?.linkedBudgetRowLabel) {
-    return `Classée · ${invoice.linkedBudgetRowLabel}`;
+    const label = t ? t("invoiceClassified") : "Classée";
+    return `${label} · ${invoice.linkedBudgetRowLabel}`;
   }
 
-  return "À classer";
+  return t ? t("invoiceToClassify") : "À classer";
 }
 
 function buildBudgetExpenseTargetOptions(sections = [], editionId = "") {
@@ -40,6 +42,7 @@ function InvoiceUploadForm({
   defaultTargetId = "",
   onSaved,
 }) {
+  const { t } = useLanguage();
   const [formState, setFormState] = useState({
     title: "",
     note: "",
@@ -66,17 +69,17 @@ function InvoiceUploadForm({
     event.preventDefault();
     if (!currentUser?.uid) return;
     if (!formState.fileUrl) {
-      setStatus("Ajoute d'abord le fichier de facture.");
+      setStatus(t("invoiceAddFileFirst"));
       return;
     }
 
     setIsSubmitting(true);
-    setStatus("Enregistrement de la facture...");
+    setStatus(t("invoiceSaving"));
 
     try {
       await addDoc(collection(db, "documents"), {
         documentType: "invoice",
-        title: String(formState.title || "").trim() || formState.fileName || "Facture",
+        title: String(formState.title || "").trim() || formState.fileName || t("invoiceDefaultTitle"),
         reference: formState.fileUrl,
         fileName: formState.fileName,
         fileUrl: formState.fileUrl,
@@ -109,11 +112,11 @@ function InvoiceUploadForm({
         mimeType: "",
         selectedTargetId: defaultTargetId,
       });
-      setStatus(selectedTarget ? "Facture déposée et liée à une ligne de dépense." : "Facture déposée. Elle est prête à être classée.");
+      setStatus(selectedTarget ? t("invoiceSavedLinked") : t("invoiceSavedUnlinked"));
       onSaved?.();
     } catch (error) {
       console.error("Unable to save invoice document", error);
-      setStatus("Le dépôt de la facture a échoué.");
+      setStatus(t("invoiceSaveFailed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -122,17 +125,17 @@ function InvoiceUploadForm({
   return (
     <form className="section-stack invoice-upload-form" onSubmit={handleSubmit}>
       <div className="field">
-        <span>Titre</span>
+        <span>{t("invoiceTitleLabel")}</span>
         <input
           name="title"
-          placeholder="Facture hôtel, repas, transport..."
+          placeholder={t("invoiceTitlePlaceholder")}
           value={formState.title}
           onChange={handleChange}
         />
       </div>
 
       <div className="field">
-        <span>Fichier</span>
+        <span>{t("invoiceFileLabel")}</span>
         <FileUpload
           value={formState.fileUrl}
           onChange={(url) => setFormState((current) => ({ ...current, fileUrl: url }))}
@@ -148,16 +151,16 @@ function InvoiceUploadForm({
           }
           accept=".pdf,image/*"
           storagePath={`budget-invoices/${String(editionId || "active").trim() || "active"}`}
-          label="Déposer une facture"
-          helperText="PDF ou image · le fichier est stocké puis relié au budget"
+          label={t("invoiceUploadLabel")}
+          helperText={t("invoiceUploadHelper")}
         />
       </div>
 
       {expenseTargets.length ? (
         <div className="field">
-          <span>Ligne de dépense</span>
+          <span>{t("invoiceExpenseLineLabel")}</span>
           <select name="selectedTargetId" value={formState.selectedTargetId} onChange={handleChange}>
-            <option value="">À classer plus tard</option>
+            <option value="">{t("invoiceClassifyLater")}</option>
             {expenseTargets.map((target) => (
               <option key={target.value} value={target.value}>
                 {target.rowLabel} · {target.sectionName}
@@ -168,10 +171,10 @@ function InvoiceUploadForm({
       ) : null}
 
       <div className="field">
-        <span>Note</span>
+        <span>{t("invoiceNoteLabel")}</span>
         <textarea
           name="note"
-          placeholder="Référence fournisseur, commentaire utile..."
+          placeholder={t("invoiceNotePlaceholder")}
           rows={3}
           value={formState.note}
           onChange={handleChange}
@@ -180,7 +183,7 @@ function InvoiceUploadForm({
 
       <div className="table-actions table-actions--inline invoice-upload-form__actions">
         <button className="button button--primary" type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Enregistrement..." : "Déposer la facture"}
+          {isSubmitting ? t("invoiceSubmitting") : t("invoiceSubmitButton")}
         </button>
       </div>
 
@@ -190,6 +193,8 @@ function InvoiceUploadForm({
 }
 
 function InvoiceInlineList({ invoices = [], canManage = false, onDetach }) {
+  const { t } = useLanguage();
+
   if (!invoices.length) {
     return <span className="budget-invoice-list__empty">—</span>;
   }
@@ -209,15 +214,15 @@ function InvoiceInlineList({ invoices = [], canManage = false, onDetach }) {
                 window.open(consultationUrl, "_blank", "noopener,noreferrer");
               }}
             >
-              {invoice.fileName || invoice.title || "Facture"}
+              {invoice.fileName || invoice.title || t("invoiceDefaultTitle")}
             </button>
             {canManage ? (
               <button
                 className="budget-invoice-pill__detach"
                 type="button"
                 onClick={() => onDetach?.(invoice)}
-                aria-label={`Délier ${invoice.fileName || invoice.title || "la facture"}`}
-                title="Délier la facture"
+                aria-label={t("invoiceDetachAria").replace("{name}", invoice.fileName || invoice.title || t("invoiceDefaultTitle"))}
+                title={t("invoiceDetachTitle")}
               >
                 ×
               </button>

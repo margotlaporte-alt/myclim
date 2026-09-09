@@ -194,6 +194,25 @@ function useSiteEditionYear(enabled = true) {
   };
 }
 
+function useVolunteerRoleOptions() {
+  const [roleOptions, setRoleOptions] = useState([]);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      doc(db, ...ACTIVE_EDITION_DOC_PATH),
+      (snapshot) => {
+        const data = snapshot.exists() ? snapshot.data() : {};
+        setRoleOptions(Array.isArray(data?.volunteerRoleOptions) ? data.volunteerRoleOptions : []);
+      },
+      () => setRoleOptions([]),
+    );
+
+    return unsubscribe;
+  }, []);
+
+  return roleOptions;
+}
+
 export {
   ACTIVE_EDITION_DOC_PATH,
   DEFAULT_ACTIVE_EDITION,
@@ -212,4 +231,5 @@ export {
   setSiteEditionYear,
   useActiveEdition,
   useSiteEditionYear,
+  useVolunteerRoleOptions,
 };

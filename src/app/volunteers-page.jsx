@@ -11,6 +11,7 @@ import { mapVolunteerApplicationToAdminVolunteer } from "./volunteer-helpers";
 import { useVolunteerAlertLog, useVolunteerApplicationsList } from "./volunteer-hooks";
 import { defaultTeamRoles, getAvailableTeamRoles, normalizeSubRoles, normalizeTeamConfigurationPayload } from "./team-config";
 import { db } from "../services/firebase";
+import { useLanguage } from "./language-context";
 
 const DEFAULT_LIST_PAGE_SIZE = 10;
 
@@ -21,6 +22,7 @@ function VolunteersPage(props) {
     syncVolunteerAssignmentToUserProfile,
     syncVolunteerAssignmentsToTeamConfiguration,
   } = props;
+  const { t } = useLanguage();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("Tous");
   const [activeVolunteerView, setActiveVolunteerView] = useState("meeting");
@@ -31,8 +33,7 @@ function VolunteersPage(props) {
   const [volunteers, setVolunteers] = useState([]);
   const [teamRoleConfigs, setTeamRoleConfigs] = useState(defaultTeamRoles);
   const [rolePickerOpenByVolunteer, setRolePickerOpenByVolunteer] = useState({});
-  const [primaryRoleEditorOpenByVolunteer, setPrimaryRoleEditorOpenByVolunteer] = useState({});
-  const [statusEditorOpenByVolunteer, setStatusEditorOpenByVolunteer] = useState({});
+  const [teamRoleEditorOpenByKey, setTeamRoleEditorOpenByKey] = useState({});
   const [volunteerActionStatus, setVolunteerActionStatus] = useState(null);
   const [selectedVolunteerIds, setSelectedVolunteerIds] = useState(() => new Set());
   const [isSendingBulk, setIsSendingBulk] = useState(false);
@@ -141,11 +142,6 @@ function VolunteersPage(props) {
     [getVolunteerAssignedRoles],
   );
 
-  const getSecondaryAssignedRoles = useCallback(
-    (volunteer) => getVolunteerAssignedRoles(volunteer).slice(1),
-    [getVolunteerAssignedRoles],
-  );
-
   const getVolunteerTeamRoleAssignments = useCallback(
     (volunteer, assignedRoles = getVolunteerAssignedRoles(volunteer)) => {
       const rawAssignments =
@@ -201,12 +197,12 @@ function VolunteersPage(props) {
       getTeamConfigByRoleName(primaryRole),
       [nextPrimaryTeamRole],
     );
-    const nextWorkflowStatus =
-      volunteer.workflowStatus === "Annulé"
-        ? "Annulé"
-        : primaryRole
-          ? "Affecté"
-          : "Candidature reçue";
+    // "Affecté" is only reached once the assignment email has actually been sent
+    // (see markVolunteerInformed). Any change to the mission here — picking, adding,
+    // removing a role — puts the volunteer back to "Candidature reçue" until that
+    // email goes out (or stays "Annulé" if they withdrew), so a stale badge never
+    // survives an assignment change.
+    const nextWorkflowStatus = volunteer.workflowStatus === "Annulé" ? "Annulé" : "Candidature reçue";
 
     return {
       assignedRole: primaryRole,
@@ -215,6 +211,11 @@ function VolunteersPage(props) {
       teamRole: nextTeamRoleOptions.includes(nextPrimaryTeamRole) ? nextPrimaryTeamRole : "Bénévole",
       teamRoleAssignments: nextTeamRoleAssignments,
       teamEmailSent: false,
+      // Kept for history only — never overwritten once set — so the team can still see
+      // what a volunteer was originally lined up for even after their mission changes.
+      ...(primaryRole && !volunteer.firstAssignedRole
+        ? { firstAssignedRole: primaryRole, firstAssignedAt: serverTimestamp() }
+        : {}),
     };
   }
 
@@ -395,10 +396,6 @@ function VolunteersPage(props) {
     (volunteer) => volunteer.workflowStatus === "Candidature reçue" && getVolunteerAssignedRoles(volunteer).length === 0,
   );
 
-  const assignedVolunteerCount = volunteers.filter(
-    (volunteer) => getVolunteerAssignedRoles(volunteer).length > 0,
-  ).length;
-
   const assignedVolunteers = filteredVolunteers.filter(
     (volunteer) => volunteer.workflowStatus !== "Candidature reçue" || getVolunteerAssignedRoles(volunteer).length > 0,
   );
@@ -576,6 +573,9 @@ function VolunteersPage(props) {
     };
     const primaryRole = assignedRoles[0] || "";
 
+    // Unlike changing the mission itself (buildVolunteerAssignmentPatch), adjusting just
+    // the function within the same role is considered a minor correction — it doesn't
+    // reset the workflow status or require re-sending the assignment email.
     await persistVolunteerPatchAndSync(id, {
       teamRoleAssignments: nextTeamRoleAssignments,
       teamRole: primaryRole ? nextTeamRoleAssignments[primaryRole] || "Bénévole" : "Bénévole",
@@ -593,18 +593,50 @@ function VolunteersPage(props) {
     }));
   }
 
-  function togglePrimaryRoleEditor(id) {
-    setPrimaryRoleEditorOpenByVolunteer((current) => ({
+  function toggleTeamRoleEditor(key) {
+    setTeamRoleEditorOpenByKey((current) => ({
       ...current,
-      [id]: !current[id],
+      [key]: !current[key],
     }));
   }
 
-  function toggleStatusEditor(id) {
-    setStatusEditorOpenByVolunteer((current) => ({
-      ...current,
-      [id]: !current[id],
-    }));
+  function getStatusLabel(status) {
+    switch (status) {
+      case "Candidature reçue":
+        return t("statusReceived");
+      case "Affecté":
+        return t("statusAssigned");
+      case "Informé":
+        return t("statusInformed");
+      case "Confirmé":
+        return t("statusConfirmed");
+      case "Annulé":
+        return t("statusCancelled");
+      default:
+        return status;
+    }
+  }
+
+  function formatVolunteerTimestamp(value) {
+    if (!value) return null;
+    const date = typeof value?.toDate === "function" ? value.toDate() : new Date(value);
+    return Number.isNaN(date.getTime())
+      ? null
+      : date.toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" });
+  }
+
+  function getVolunteerStatusHistoryTitle(volunteer) {
+    const lines = [t("statusBadgeTooltip")];
+    if (volunteer.firstAssignedRole) {
+      lines.push(t("initialAssignmentLabel").replace("{role}", volunteer.firstAssignedRole));
+    }
+    const lastMailSentAt = formatVolunteerTimestamp(volunteer.lastMailSentAt);
+    if (lastMailSentAt) {
+      lines.push(
+        t("lastMailSentLabel").replace("{date}", lastMailSentAt).replace("{role}", volunteer.lastMailSentRole || "-"),
+      );
+    }
+    return lines.join("\n");
   }
 
   async function updateVolunteerStatus(id, nextStatus) {
@@ -658,14 +690,13 @@ function VolunteersPage(props) {
 
     const internallyAssignedVolunteer = {
       ...volunteer,
-      workflowStatus: volunteer.workflowStatus === "Annulé" ? "Annulé" : "Affecté",
       teamEmailSent: false,
       assignmentStatus: volunteer.assignmentStatus || "Proposé",
     };
 
     const nextVolunteer = {
       ...volunteer,
-      workflowStatus: "Informé",
+      workflowStatus: volunteer.workflowStatus === "Annulé" ? "Annulé" : "Affecté",
       teamEmailSent: true,
       assignmentStatus: volunteer.assignmentStatus || "Proposé",
     };
@@ -693,7 +724,13 @@ function VolunteersPage(props) {
 
       const persistedVolunteer = await persistVolunteerPatchAndSync(
         id,
-        { workflowStatus: "Informé", teamEmailSent: true },
+        {
+          workflowStatus: nextVolunteer.workflowStatus,
+          teamEmailSent: true,
+          lastMailSentRole: nextVolunteer.assignedRole,
+          lastMailSentTeamRole: nextVolunteer.teamRole,
+          lastMailSentAt: serverTimestamp(),
+        },
         {
           message:
             "Le mail est parti, mais la mise a jour finale du statut d'information n'a pas pu etre synchronisee partout.",
@@ -734,13 +771,12 @@ function VolunteersPage(props) {
         const { buildVolunteerRoleAssignmentMail, enqueueTransactionalMail } = await loadMailQueueModule();
         const internallyAssignedVolunteer = {
           ...volunteer,
-          workflowStatus: volunteer.workflowStatus === "Annulé" ? "Annulé" : "Affecté",
           teamEmailSent: false,
           assignmentStatus: volunteer.assignmentStatus || "Proposé",
         };
         const nextVolunteer = {
           ...volunteer,
-          workflowStatus: "Informé",
+          workflowStatus: volunteer.workflowStatus === "Annulé" ? "Annulé" : "Affecté",
           teamEmailSent: true,
           assignmentStatus: volunteer.assignmentStatus || "Proposé",
         };
@@ -760,7 +796,13 @@ function VolunteersPage(props) {
         }
         const persistedVolunteer = await persistVolunteerPatchAndSync(
           volunteer.id,
-          { workflowStatus: "Informé", teamEmailSent: true },
+          {
+            workflowStatus: nextVolunteer.workflowStatus,
+            teamEmailSent: true,
+            lastMailSentRole: nextVolunteer.assignedRole,
+            lastMailSentTeamRole: nextVolunteer.teamRole,
+            lastMailSentAt: serverTimestamp(),
+          },
           {
             message:
               "Le mail est parti, mais la mise a jour finale du statut d'information n'a pas pu etre synchronisee partout.",
@@ -811,11 +853,8 @@ function VolunteersPage(props) {
       <section className="page-header">
         <div>
           <p className="eyebrow">Admin</p>
-          <h1>Gestion des bénévoles</h1>
-          <p>
-            Tableau de travail pour relire les candidatures, attribuer un poste et distinguer la
-            présence meeting du dimanche de l'aide autour de l'événement.
-          </p>
+          <h1>{t("adminVolPageTitle")}</h1>
+          <p>{t("adminVolPageSubtitle")}</p>
         </div>
       </section>
       {volunteerApplicationsError ? <p className="status-note status-note--error">{volunteerApplicationsError}</p> : null}
@@ -829,49 +868,43 @@ function VolunteersPage(props) {
         </div>
       ) : null}
 
-      <section className="metric-grid">
-        <article className="metric-card">
-          <span>Total bénévoles</span>
-          <strong>{volunteers.length}</strong>
+      <section className="status-legend">
+        <article className="status-legend__item">
+          <span className={getWorkflowStatusClass("Candidature reçue")}>{t("statusReceived")}</span>
+          <p>{t("statusReceivedDesc")}</p>
         </article>
-        <article className="metric-card metric-card--warn">
-          <span>Candidatures à traiter</span>
-          <strong>
-            {volunteers.filter((volunteer) => volunteer.workflowStatus !== "Confirmé").length}
-          </strong>
+        <article className="status-legend__item">
+          <span className={getWorkflowStatusClass("Affecté")}>{t("statusAssigned")}</span>
+          <p>{t("statusAssignedDesc")}</p>
         </article>
-        <article className="metric-card metric-card--accent">
-          <span>Affectés à un poste</span>
-          <strong>
-            {assignedVolunteerCount}
-          </strong>
+        <article className="status-legend__item">
+          <span className={getWorkflowStatusClass("Confirmé")}>{t("statusConfirmed")}</span>
+          <p>{t("statusConfirmedDesc")}</p>
         </article>
-        <article className="metric-card metric-card--danger">
-          <span>Confirmés</span>
-          <strong>
-            {volunteers.filter((volunteer) => volunteer.workflowStatus === "Confirmé").length}
-          </strong>
+        <article className="status-legend__item">
+          <span className={getWorkflowStatusClass("Annulé")}>{t("statusCancelledLabel")}</span>
+          <p>{t("statusCancelledDesc")}</p>
         </article>
       </section>
 
       <Panel
         title={
           activeVolunteerView === "meeting"
-            ? "Bénévoles - meeting"
+            ? t("tabMeetingVolunteers")
             : activeVolunteerView === "assigned-posts"
-              ? "Tous les postes attribués"
+              ? t("panelTitleAllAssignedPosts")
               : activeVolunteerView === "alerts"
-                ? "Alertes affectations"
-              : "Aide autour du meeting"
+                ? t("panelTitleAlerts")
+              : t("tabMeetingSupport")
         }
         subtitle={
           activeVolunteerView === "meeting"
-            ? "Filtrez les candidatures puis affectez directement chaque personne au bon rôle."
+            ? t("meetingViewSubtitle")
             : activeVolunteerView === "assigned-posts"
-              ? "Vue compacte de type tableur avec une ligne par poste attribué pour filtrer, relire et ajuster rapidement les affectations."
+              ? t("panelSubtitleAssignedPosts")
               : activeVolunteerView === "alerts"
-                ? "Historique des désistements, retraits d'affectation et badges à surveiller côté opérationnel."
-              : "Suivez ici les personnes disponibles avant ou après le meeting pour le montage, la préparation ou l'aide logistique."
+                ? t("panelSubtitleAlerts")
+              : t("panelSubtitleSupport")
         }
       >
         <div className="admin-subtabs">
@@ -880,14 +913,14 @@ function VolunteersPage(props) {
             type="button"
             onClick={() => setActiveVolunteerView("meeting")}
           >
-            Bénévoles - meeting ({filteredVolunteers.length})
+            {t("tabMeetingVolunteers")} ({filteredVolunteers.length})
           </button>
           <button
             className={`admin-subtab ${activeVolunteerView === "assigned-posts" ? "admin-subtab--active" : ""}`}
             type="button"
             onClick={() => setActiveVolunteerView("assigned-posts")}
           >
-            Postes attribués (
+            {t("tabAssignedPosts")} (
             {compactAssignmentGroups.reduce((total, group) => total + group.members.length, 0)})
           </button>
           <button
@@ -895,32 +928,32 @@ function VolunteersPage(props) {
             type="button"
             onClick={() => setActiveVolunteerView("support")}
           >
-            Aide autour du meeting ({supportVolunteers.length})
+            {t("tabMeetingSupport")} ({supportVolunteers.length})
           </button>
           <button
             className={`admin-subtab ${activeVolunteerView === "alerts" ? "admin-subtab--active" : ""}`}
             type="button"
             onClick={() => setActiveVolunteerView("alerts")}
           >
-            Alertes ({filteredVolunteerAlertEntries.length})
+            {t("tabAlerts")} ({filteredVolunteerAlertEntries.length})
           </button>
         </div>
 
         <div className="admin-toolbar">
           <label className="field">
-            <span>Recherche</span>
+            <span>{t("searchLabel")}</span>
             <input
-              placeholder="Nom, email, rôle..."
+              placeholder={t("searchPlaceholder")}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
           </label>
           <label className="field">
-            <span>Statut candidature</span>
+            <span>{t("statusFilterLabel")}</span>
             <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-              <option>Tous</option>
+              <option value="Tous">{t("allLabel")}</option>
               {volunteerWorkflowStatusOptions.map((option) => (
-                <option key={option}>{option}</option>
+                <option key={option} value={option}>{getStatusLabel(option)}</option>
               ))}
             </select>
           </label>
@@ -959,62 +992,49 @@ function VolunteersPage(props) {
         {selectedVolunteer ? (
           <div className="volunteer-detail-card">
             <div className="volunteer-detail-card__head">
-              <div className="table-stack">
-                <p className="eyebrow">Fiche bénévole</p>
-                <h3>
-                  {selectedVolunteer.firstName} {selectedVolunteer.lastName} ({selectedVolunteer.age} ans)
-                </h3>
-                <span className={getWorkflowStatusClass(selectedVolunteer.workflowStatus)}>
-                  {selectedVolunteer.workflowStatus}
-                </span>
-              </div>
+              <h3>
+                {selectedVolunteer.firstName} {selectedVolunteer.lastName} ({selectedVolunteer.age} {t("ageUnit")})
+              </h3>
+              <span className={getWorkflowStatusClass(selectedVolunteer.workflowStatus)}>
+                {getStatusLabel(selectedVolunteer.workflowStatus)}
+              </span>
               <button
-                className="button button--secondary"
+                className="button button--secondary button--small"
                 type="button"
                 onClick={() => setSelectedVolunteerId(null)}
               >
-                Fermer
+                {t("volunteerDetailClose")}
               </button>
             </div>
 
             <div className="volunteer-detail-grid">
               <div>
-                <strong>Contact</strong>
-                <p>{selectedVolunteer.email}</p>
-                <p>{selectedVolunteer.phone}</p>
+                <strong>{t("volunteerDetailContact")}</strong>
+                <p>{selectedVolunteer.email} · {selectedVolunteer.phone}</p>
               </div>
               <div>
-                <strong>Langues</strong>
+                <strong>{t("volunteerDetailLanguages")}</strong>
                 <p>{selectedVolunteer.languages.join(", ")}</p>
               </div>
               <div>
-                <strong>Rôle meeting</strong>
-                <p>{getVolunteerAssignedRoles(selectedVolunteer).join(", ") || "Non attribué"}</p>
-              </div>
-              <div>
-                <strong>Rôle dans l'équipe</strong>
+                <strong>{t("volunteerDetailMeetingRole")}</strong>
                 <p>
                   {getVolunteerAssignedRoles(selectedVolunteer)
                     .map(
                       (assignedRole) =>
-                        `${assignedRole}: ${getVolunteerTeamRoleForAssignedRole(selectedVolunteer, assignedRole)}`,
+                        `${assignedRole} (${getVolunteerTeamRoleForAssignedRole(selectedVolunteer, assignedRole)})`,
                     )
-                    .join(", ") || "Non attribué"}
+                    .join(", ") || t("volunteerNotAssigned")}
                 </p>
               </div>
               <div>
-                <strong>Meeting dimanche</strong>
+                <strong>{t("volunteerDetailSunday")}</strong>
                 <p>{selectedVolunteer.sundayAvailability}</p>
               </div>
               <div>
-                <strong>Aide autour du meeting</strong>
+                <strong>{t("volunteerDetailSupport")}</strong>
                 <p>{selectedVolunteer.supportAvailability}</p>
               </div>
-            </div>
-
-            <div className="volunteer-detail-notes">
-              <strong>Notes</strong>
-              <p>{selectedVolunteer.notes}</p>
             </div>
           </div>
         ) : null}
@@ -1024,26 +1044,29 @@ function VolunteersPage(props) {
             {!hideUnassignedBlock ? (
               <div className="section-stack">
                 <div className="section-intro">
-                  <h3>Candidatures reçues non affectées</h3>
-                  <p>
-                    Ces bénévoles ont reçu le mail automatique de confirmation de candidature et de
-                    création de compte. L'étape suivante consiste à les affecter en interne.
-                  </p>
+                  <h3>{t("unassignedSectionTitle")}</h3>
+                  <p>{t("unassignedSectionDesc")}</p>
                 </div>
 
                 <div className="table-wrap">
                   <table className="data-table data-table--admin">
                     <thead>
                       <tr>
-                        <th>Bénévole</th>
-                        <th>Coordonnées</th>
-                        <th>Langues</th>
-                        <th>Statut</th>
-                        <th>Rôle à attribuer</th>
-                        <th>Notes</th>
+                        <th>{t("colVolunteer")}</th>
+                        <th>{t("colContact")}</th>
+                        <th>{t("colLanguages")}</th>
+                        <th>{t("colStatus")}</th>
+                        <th>{t("colRoleToAssign")}</th>
                       </tr>
                     </thead>
                     <tbody>
+                      {visibleUnassignedApplications.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="table-empty-state">
+                            {t("emptyUnassigned")}
+                          </td>
+                        </tr>
+                      ) : null}
                       {visibleUnassignedApplications.map((volunteer) => (
                         <tr key={volunteer.id}>
                           <td>
@@ -1053,10 +1076,10 @@ function VolunteersPage(props) {
                                 type="button"
                                 onClick={() => setSelectedVolunteerId(volunteer.id)}
                               >
-                                {volunteer.firstName} {volunteer.lastName} ({volunteer.age} ans)
+                                {volunteer.firstName} {volunteer.lastName} ({volunteer.age} {t("ageUnit")})
                               </button>
                               <span className={getWorkflowStatusClass(volunteer.workflowStatus)}>
-                                {volunteer.workflowStatus}
+                                {getStatusLabel(volunteer.workflowStatus)}
                               </span>
                             </div>
                           </td>
@@ -1067,19 +1090,25 @@ function VolunteersPage(props) {
                             </div>
                           </td>
                           <td>{volunteer.languages.join(", ")}</td>
-                          <td>{volunteer.accountEmailSent ? "Compte + mail envoyés" : "À envoyer"}</td>
+                          <td>{volunteer.accountEmailSent ? t("accountMailSent") : t("accountMailPending")}</td>
                           <td>
                             <select
                               value={getPrimaryAssignedRole(volunteer)}
                               onChange={(event) => assignVolunteer(volunteer.id, event.target.value)}
                             >
-                              <option value="">Choisir un rôle</option>
+                              <option value="">{t("chooseRoleOption")}</option>
                               {roleOptions.map((option) => (
                                 <option key={option}>{option}</option>
                               ))}
                             </select>
+                            <p className="mission-preferences-hint">
+                              {t("statedPreferences")}
+                              {": "}
+                              {volunteer.missionPreferences.length
+                                ? volunteer.missionPreferences.join(", ")
+                                : t("noPreferenceStated")}
+                            </p>
                           </td>
-                          <td>{volunteer.notes}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1092,7 +1121,7 @@ function VolunteersPage(props) {
                       type="button"
                       onClick={() => showMoreListItems("unassigned-applications")}
                     >
-                      Afficher 10 de plus
+                      {t("showMoreButton")}
                     </button>
                   </div>
                 ) : null}
@@ -1101,11 +1130,8 @@ function VolunteersPage(props) {
 
             <div className="section-stack">
               <div className="section-intro">
-                <h3>Bénévoles affectés ou en cours d'information</h3>
-                <p>
-                  L'affectation interne est enregistree tout de suite. Le mail reste une etape de
-                  notification separee : tant qu'il n'est pas parti, la personne reste simplement a informer.
-                </p>
+                <h3>{t("assignedSectionTitle")}</h3>
+                <p>{t("assignedSectionDesc")}</p>
               </div>
 
               <div className="bulk-mail-bar">
@@ -1115,21 +1141,21 @@ function VolunteersPage(props) {
                     type="button"
                     onClick={() => setSelectedVolunteerIds(new Set(assignedVolunteers.map((v) => v.id)))}
                   >
-                    Tout sélectionner
+                    {t("selectAll")}
                   </button>
                   <button
                     className="button button--secondary"
                     type="button"
                     onClick={() => setSelectedVolunteerIds(new Set(assignedVolunteers.filter(volunteerNeedsInforming).map((v) => v.id)))}
                   >
-                    Sélectionner à informer
+                    {t("selectNeedsInfo")}
                   </button>
                   <button
                     className="button button--secondary"
                     type="button"
                     onClick={() => setSelectedVolunteerIds(new Set())}
                   >
-                    Désélectionner tout
+                    {t("deselectAll")}
                   </button>
                 </div>
                 {selectedVolunteerIds.size > 0 ? (
@@ -1140,8 +1166,8 @@ function VolunteersPage(props) {
                     onClick={sendBulkInformMails}
                   >
                     {isSendingBulk
-                      ? "Envoi en cours..."
-                      : `Envoyer aux ${selectedVolunteerIds.size} sélectionné(s)`}
+                      ? t("sendingInProgress")
+                      : t("sendToSelected").replace("{count}", selectedVolunteerIds.size)}
                   </button>
                 ) : null}
               </div>
@@ -1151,17 +1177,21 @@ function VolunteersPage(props) {
                   <thead>
                     <tr>
                       <th style={{ width: "32px" }} />
-                      <th>Bénévole</th>
-                      <th>Coordonnées</th>
-                      <th>Langues</th>
-                      <th>Statut</th>
-                      <th>Rôle attribué</th>
-                      <th>Rôle dans l'équipe</th>
-                      <th>Mail</th>
-                      <th>Notes</th>
+                      <th>{t("colVolunteer")}</th>
+                      <th>{t("colContact")}</th>
+                      <th>{t("colLanguages")}</th>
+                      <th>{t("colStatus")}</th>
+                      <th>{t("colMission")}</th>
                     </tr>
                   </thead>
                   <tbody>
+                    {visibleAssignedVolunteers.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="table-empty-state">
+                          {t("emptyAssigned")}
+                        </td>
+                      </tr>
+                    ) : null}
                     {visibleAssignedVolunteers.map((volunteer) => {
                       const hasRole = getVolunteerAssignedRoles(volunteer).length > 0;
                       const needsInfo = hasRole && !volunteer.teamEmailSent;
@@ -1188,7 +1218,7 @@ function VolunteersPage(props) {
                               type="button"
                               onClick={() => setSelectedVolunteerId(volunteer.id)}
                             >
-                              {volunteer.firstName} {volunteer.lastName} ({volunteer.age} ans)
+                              {volunteer.firstName} {volunteer.lastName} ({volunteer.age} {t("ageUnit")})
                             </button>
                           </div>
                         </td>
@@ -1201,179 +1231,197 @@ function VolunteersPage(props) {
                         <td>{volunteer.languages.join(", ")}</td>
                         <td>
                           <div className="status-cell">
-                            {!statusEditorOpenByVolunteer[volunteer.id] ? (
-                              <div className="inline-status-display">
-                                <span className={getWorkflowStatusClass(volunteer.workflowStatus)}>
-                                  {volunteer.workflowStatus}
-                                </span>
-                                <button
-                                  className="inline-role-display__button"
-                                  type="button"
-                                  onClick={() => toggleStatusEditor(volunteer.id)}
-                                  aria-label={`Modifier le statut de ${volunteer.firstName} ${volunteer.lastName}`}
-                                >
-                                  ↻
-                                </button>
-                              </div>
-                            ) : (
-                              <select
-                                value={volunteer.workflowStatus}
-                                onChange={(event) => {
-                                  updateVolunteerStatus(volunteer.id, event.target.value);
-                                  setStatusEditorOpenByVolunteer((current) => ({
-                                    ...current,
-                                    [volunteer.id]: false,
-                                  }));
-                                }}
-                                onBlur={() =>
-                                  setStatusEditorOpenByVolunteer((current) => ({
-                                    ...current,
-                                    [volunteer.id]: false,
-                                  }))
-                                }
+                            <span
+                              className={getWorkflowStatusClass(volunteer.workflowStatus)}
+                              title={getVolunteerStatusHistoryTitle(volunteer)}
+                            >
+                              {getStatusLabel(volunteer.workflowStatus)}
+                            </span>
+
+                            {hasRole && needsInfo && volunteer.workflowStatus !== "Confirmé" ? (
+                              <button
+                                type="button"
+                                className="button button--primary button--small"
+                                onClick={() => markVolunteerInformed(volunteer.id)}
                               >
-                                {volunteerWorkflowStatusOptions.map((option) => (
-                                  <option key={option}>{option}</option>
-                                ))}
-                              </select>
-                            )}
+                                {t("sendAssignmentEmail")}
+                              </button>
+                            ) : null}
+
+                            {hasRole && !needsInfo && volunteer.workflowStatus !== "Annulé" && volunteer.workflowStatus !== "Confirmé" ? (
+                              <button
+                                type="button"
+                                className="status-cell__mail-sent"
+                                title={t("alreadyInformedTooltip").replace(
+                                  "{date}",
+                                  formatVolunteerTimestamp(volunteer.lastMailSentAt)
+                                    ? ` (${formatVolunteerTimestamp(volunteer.lastMailSentAt)})`
+                                    : "",
+                                )}
+                                onClick={() => markVolunteerInformed(volunteer.id)}
+                              >
+                                {t("alreadyInformed")}
+                              </button>
+                            ) : null}
+
+                            <div className="status-cell__actions">
+                              {volunteer.workflowStatus === "Annulé" ? (
+                                <button
+                                  type="button"
+                                  className="button button--secondary button--small"
+                                  onClick={() => updateVolunteerStatus(volunteer.id, "Candidature reçue")}
+                                >
+                                  {t("reactivateAction")}
+                                </button>
+                              ) : (
+                                <>
+                                  {volunteer.workflowStatus === "Affecté" ? (
+                                    <button
+                                      type="button"
+                                      className="button button--secondary button--small"
+                                      onClick={() => updateVolunteerStatus(volunteer.id, "Confirmé")}
+                                    >
+                                      {t("confirmAction")}
+                                    </button>
+                                  ) : null}
+                                  <button
+                                    type="button"
+                                    className="button button--danger-soft button--small"
+                                    onClick={() => updateVolunteerStatus(volunteer.id, "Annulé")}
+                                  >
+                                    {t("cancelAction")}
+                                  </button>
+                                </>
+                              )}
+                            </div>
                           </div>
                         </td>
                         <td>
                           <div className="role-assignment-cell">
-                            <div className="role-assignment-cell__top">
-                              {getPrimaryAssignedRole(volunteer) && !primaryRoleEditorOpenByVolunteer[volunteer.id] ? (
-                                <div className="inline-role-display">
-                                  <strong>{getPrimaryAssignedRole(volunteer)}</strong>
-                                  <button
-                                    className="inline-role-display__button"
-                                    type="button"
-                                    disabled={volunteer.workflowStatus === "Annulé"}
-                                    onClick={() => togglePrimaryRoleEditor(volunteer.id)}
-                                    aria-label={`Changer le rôle principal de ${volunteer.firstName} ${volunteer.lastName}`}
+                            {getVolunteerAssignedRoles(volunteer).length === 0 ? (
+                              <select
+                                value=""
+                                disabled={volunteer.workflowStatus === "Annulé"}
+                                onChange={(event) => assignVolunteer(volunteer.id, event.target.value)}
+                              >
+                                <option value="">{t("chooseRoleOption")}</option>
+                                {roleOptions.map((option) => (
+                                  <option key={option}>{option}</option>
+                                ))}
+                              </select>
+                            ) : (
+                              getVolunteerAssignedRoles(volunteer).map((assignedRole, index) => {
+                                const teamRoleKey = `${volunteer.id}-${assignedRole}`;
+                                const isTeamRoleEditorOpen = teamRoleEditorOpenByKey[teamRoleKey];
+                                return (
+                                <div key={`${teamRoleKey}-row`} className="role-assignment-row">
+                                  <span
+                                    className="role-assignment-row__name"
+                                    title={
+                                      index === 0
+                                        ? t("primaryRoleTitle").replace("{role}", assignedRole)
+                                        : assignedRole
+                                    }
                                   >
-                                    ↻
-                                  </button>
-                                  {roleOptions.filter((option) => !getVolunteerAssignedRoles(volunteer).includes(option))
-                                    .length > 0 && !rolePickerOpenByVolunteer[volunteer.id] ? (
-                                    <button
-                                      className="inline-add-role__button"
-                                      type="button"
+                                    {assignedRole}
+                                  </span>
+                                  {isTeamRoleEditorOpen ? (
+                                    <select
+                                      autoFocus
+                                      className="role-assignment-row__team-role"
+                                      value={getVolunteerTeamRoleForAssignedRole(volunteer, assignedRole)}
                                       disabled={volunteer.workflowStatus === "Annulé"}
-                                      onClick={() => toggleRolePicker(volunteer.id)}
-                                      aria-label={`Ajouter un rôle à ${volunteer.firstName} ${volunteer.lastName}`}
+                                      onChange={(event) => {
+                                        updateVolunteerAssignedTeamRole(
+                                          volunteer.id,
+                                          assignedRole,
+                                          event.target.value,
+                                        );
+                                        toggleTeamRoleEditor(teamRoleKey);
+                                      }}
+                                      onBlur={() =>
+                                        setTeamRoleEditorOpenByKey((current) => ({ ...current, [teamRoleKey]: false }))
+                                      }
                                     >
-                                      +
-                                    </button>
-                                  ) : null}
+                                      {getVolunteerTeamRoleOptions(volunteer, assignedRole).map((teamRole) => (
+                                        <option key={`${teamRoleKey}-team-role-${teamRole}`}>
+                                          {teamRole}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  ) : (
+                                    <span className="role-assignment-row__team-role-display">
+                                      {getVolunteerTeamRoleForAssignedRole(volunteer, assignedRole)}
+                                      <button
+                                        type="button"
+                                        className="role-assignment-row__edit"
+                                        disabled={volunteer.workflowStatus === "Annulé"}
+                                        onClick={() => toggleTeamRoleEditor(teamRoleKey)}
+                                        aria-label={t("editFunctionAria")
+                                          .replace("{name}", `${volunteer.firstName} ${volunteer.lastName}`)
+                                          .replace("{role}", assignedRole)}
+                                        title={t("editFunctionTooltip")}
+                                      >
+                                        ✎
+                                      </button>
+                                    </span>
+                                  )}
+                                  <button
+                                    type="button"
+                                    className="role-assignment-row__remove"
+                                    disabled={volunteer.workflowStatus === "Annulé"}
+                                    onClick={() => removeVolunteerRole(volunteer.id, assignedRole)}
+                                    aria-label={t("removeRoleAria")
+                                      .replace("{role}", assignedRole)
+                                      .replace("{name}", `${volunteer.firstName} ${volunteer.lastName}`)}
+                                    title={t("removeRoleTitle").replace("{role}", assignedRole)}
+                                  >
+                                    ✕
+                                  </button>
                                 </div>
-                              ) : (
+                                );
+                              })
+                            )}
+                            {getVolunteerAssignedRoles(volunteer).length > 0 &&
+                            roleOptions.filter((option) => !getVolunteerAssignedRoles(volunteer).includes(option)).length > 0 ? (
+                              rolePickerOpenByVolunteer[volunteer.id] ? (
                                 <select
-                                  value={getPrimaryAssignedRole(volunteer)}
+                                  autoFocus
+                                  defaultValue=""
                                   disabled={volunteer.workflowStatus === "Annulé"}
-                                  onChange={(event) => {
-                                    assignVolunteer(volunteer.id, event.target.value);
-                                    setPrimaryRoleEditorOpenByVolunteer((current) => ({
-                                      ...current,
-                                      [volunteer.id]: false,
-                                    }));
-                                  }}
+                                  onChange={(event) => addVolunteerRole(volunteer.id, event.target.value)}
                                   onBlur={() =>
-                                    setPrimaryRoleEditorOpenByVolunteer((current) => ({
+                                    setRolePickerOpenByVolunteer((current) => ({
                                       ...current,
                                       [volunteer.id]: false,
                                     }))
                                   }
                                 >
-                                  <option value="">Aucun</option>
-                                  {roleOptions.map((option) => (
-                                    <option key={option}>{option}</option>
-                                  ))}
+                                  <option value="">{t("chooseRoleToAdd")}</option>
+                                  {roleOptions
+                                    .filter((option) => !getVolunteerAssignedRoles(volunteer).includes(option))
+                                    .map((option) => (
+                                      <option key={`${volunteer.id}-extra-${option}`}>{option}</option>
+                                    ))}
                                 </select>
-                              )}
-                            </div>
-                            {getSecondaryAssignedRoles(volunteer).length > 0 ? (
-                              <div className="team-subrole-list">
-                                {getSecondaryAssignedRoles(volunteer).map((assignedRole) => (
-                                  <button
-                                    key={`${volunteer.id}-${assignedRole}`}
-                                    className="team-subrole-chip"
-                                    type="button"
-                                    onClick={() => removeVolunteerRole(volunteer.id, assignedRole)}
-                                  >
-                                    {assignedRole} ×
-                                  </button>
-                                ))}
-                              </div>
-                            ) : null}
-                            {roleOptions.filter((option) => !getVolunteerAssignedRoles(volunteer).includes(option))
-                              .length > 0 ? (
-                              <div className="inline-add-role">
-                                {rolePickerOpenByVolunteer[volunteer.id] ? (
-                                  <select
-                                    autoFocus
-                                    defaultValue=""
-                                    disabled={volunteer.workflowStatus === "Annulé"}
-                                    onChange={(event) => addVolunteerRole(volunteer.id, event.target.value)}
-                                    onBlur={() =>
-                                      setRolePickerOpenByVolunteer((current) => ({
-                                        ...current,
-                                        [volunteer.id]: false,
-                                      }))
-                                    }
-                                  >
-                                    <option value="">Ajouter un rôle</option>
-                                    {roleOptions
-                                      .filter((option) => !getVolunteerAssignedRoles(volunteer).includes(option))
-                                      .map((option) => (
-                                        <option key={`${volunteer.id}-extra-${option}`}>{option}</option>
-                                      ))}
-                                  </select>
-                                ) : null}
-                              </div>
-                            ) : null}
-                          </div>
-                        </td>
-                        <td>
-                          <div className="table-stack">
-                            {getVolunteerAssignedRoles(volunteer).map((assignedRole) => (
-                              <label key={`${volunteer.id}-${assignedRole}-team-role`} className="support-task-row">
-                                <span>{assignedRole}</span>
-                                <select
-                                  value={getVolunteerTeamRoleForAssignedRole(volunteer, assignedRole)}
-                                  onChange={(event) =>
-                                    updateVolunteerAssignedTeamRole(
-                                      volunteer.id,
-                                      assignedRole,
-                                      event.target.value,
-                                    )
-                                  }
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="button button--secondary button--small"
+                                  disabled={volunteer.workflowStatus === "Annulé"}
+                                  onClick={() => toggleRolePicker(volunteer.id)}
                                 >
-                                  {getVolunteerTeamRoleOptions(volunteer, assignedRole).map((teamRole) => (
-                                    <option key={`${volunteer.id}-${assignedRole}-team-role-${teamRole}`}>
-                                      {teamRole}
-                                    </option>
-                                  ))}
-                                </select>
-                              </label>
-                            ))}
+                                  {t("addRoleButton")}
+                                </button>
+                              )
+                            ) : null}
+                            {volunteer.missionPreferences.length ? (
+                              <p className="mission-preferences-hint">
+                                {t("statedPreferences")}: {volunteer.missionPreferences.join(", ")}
+                              </p>
+                            ) : null}
                           </div>
                         </td>
-                        <td>
-                          {hasRole ? (
-                            <button
-                              className={`mail-send-button ${needsInfo ? "mail-send-button--active" : "mail-send-button--done"}`}
-                              type="button"
-                              title={needsInfo ? "Envoyer le mail d'affectation" : "Déjà informé — cliquer pour ré-envoyer"}
-                              onClick={() => markVolunteerInformed(volunteer.id)}
-                            >
-                              {needsInfo ? "✉ Envoyer" : "✓ Ré-envoyer"}
-                            </button>
-                          ) : (
-                            <span className="mail-send-button mail-send-button--disabled">Aucun poste</span>
-                          )}
-                        </td>
-                        <td>{volunteer.notes}</td>
                       </tr>
                     );
                     })}
@@ -1387,7 +1435,7 @@ function VolunteersPage(props) {
                     type="button"
                     onClick={() => showMoreListItems("assigned-volunteers")}
                   >
-                    Afficher 10 de plus
+                    {t("showMoreButton")}
                   </button>
                 </div>
               ) : null}
@@ -1416,10 +1464,16 @@ function VolunteersPage(props) {
                     <th>Statut</th>
                     <th>Mail</th>
                     <th>Dimanche</th>
-                    <th>Notes</th>
                   </tr>
                 </thead>
                 <tbody>
+                  {visibleCompactAssignmentGroups.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="table-empty-state">
+                        Aucun poste à afficher pour le moment.
+                      </td>
+                    </tr>
+                  ) : null}
                   {visibleCompactAssignmentGroups.map((group) => (
                     <Fragment key={group.roleName}>
                       <tr className="compact-group-row">
@@ -1429,7 +1483,7 @@ function VolunteersPage(props) {
                         <td>{group.neededCount}</td>
                         <td>{group.assignedCount}</td>
                         <td>{group.missingCount}</td>
-                        <td colSpan={6}>
+                        <td colSpan={5}>
                           {group.missingCount > 0
                             ? `${group.missingCount} personne(s) encore à trouver`
                             : "Équipe complète"}
@@ -1457,7 +1511,6 @@ function VolunteersPage(props) {
                           <td>{volunteer.workflowStatus}</td>
                           <td>{volunteer.teamEmailSent ? "Informé" : "À informer"}</td>
                           <td>{volunteer.sundayAvailability}</td>
-                          <td>{volunteer.notes}</td>
                         </tr>
                       ))}
                     </Fragment>
@@ -1472,7 +1525,7 @@ function VolunteersPage(props) {
                   type="button"
                   onClick={() => showMoreListItems("compact-assignment-groups")}
                 >
-                  Afficher 10 de plus
+                  {t("showMoreButton")}
                 </button>
               </div>
             ) : null}
@@ -1527,7 +1580,7 @@ function VolunteersPage(props) {
                   ))}
                   {!filteredVolunteerAlertEntries.length ? (
                     <tr>
-                      <td colSpan="7">Aucune alerte d'affectation enregistrée pour le moment.</td>
+                      <td colSpan="7" className="table-empty-state">Aucune alerte d'affectation enregistrée pour le moment.</td>
                     </tr>
                   ) : null}
                 </tbody>
@@ -1540,7 +1593,7 @@ function VolunteersPage(props) {
                   type="button"
                   onClick={() => showMoreListItems("volunteer-alerts")}
                 >
-                  Afficher 10 de plus
+                  {t("showMoreButton")}
                 </button>
               </div>
             ) : null}
@@ -1566,10 +1619,16 @@ function VolunteersPage(props) {
                     <th>Rôle meeting</th>
                     <th>Disponibilités complémentaires</th>
                     <th>Tâches par disponibilité</th>
-                    <th>Notes</th>
                   </tr>
                 </thead>
                 <tbody>
+                  {visibleSupportVolunteers.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="table-empty-state">
+                        Aucun bénévole disponible autour du meeting pour le moment.
+                      </td>
+                    </tr>
+                  ) : null}
                   {visibleSupportVolunteers.map((volunteer) => (
                     <tr key={volunteer.id}>
                       <td>
@@ -1579,7 +1638,7 @@ function VolunteersPage(props) {
                             type="button"
                             onClick={() => setSelectedVolunteerId(volunteer.id)}
                           >
-                            {volunteer.firstName} {volunteer.lastName} ({volunteer.age} ans)
+                            {volunteer.firstName} {volunteer.lastName} ({volunteer.age} {t("ageUnit")})
                           </button>
                           <span className={getWorkflowStatusClass(volunteer.workflowStatus)}>
                             {volunteer.workflowStatus}
@@ -1628,7 +1687,6 @@ function VolunteersPage(props) {
                           })}
                         </div>
                       </td>
-                      <td>{volunteer.notes}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1641,7 +1699,7 @@ function VolunteersPage(props) {
                   type="button"
                   onClick={() => showMoreListItems("support-volunteers")}
                 >
-                  Afficher 10 de plus
+                  {t("showMoreButton")}
                 </button>
               </div>
             ) : null}

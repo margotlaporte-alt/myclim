@@ -12,6 +12,45 @@ const VOLUNTEER_LANGUAGE_OPTIONS = [
   "Autre",
 ];
 const VOLUNTEER_MEETING_DAY_LABEL = "Meeting - dimanche 17/01/2027 9h30-19h00 (obligatoire)";
+const VOLUNTEER_LANGUAGE_OPTION_LABELS = {
+  fr: {
+    Français: "Français",
+    Anglais: "Anglais",
+    Allemand: "Allemand",
+    Luxembourgeois: "Luxembourgeois",
+    Portugais: "Portugais",
+    Italien: "Italien",
+    Espagnol: "Espagnol",
+    Néerlandais: "Néerlandais",
+    Autre: "Autre",
+  },
+  en: {
+    Français: "French",
+    Anglais: "English",
+    Allemand: "German",
+    Luxembourgeois: "Luxembourgish",
+    Portugais: "Portuguese",
+    Italien: "Italian",
+    Espagnol: "Spanish",
+    Néerlandais: "Dutch",
+    Autre: "Other",
+  },
+  de: {
+    Français: "Französisch",
+    Anglais: "Englisch",
+    Allemand: "Deutsch",
+    Luxembourgeois: "Luxemburgisch",
+    Portugais: "Portugiesisch",
+    Italien: "Italienisch",
+    Espagnol: "Spanisch",
+    Néerlandais: "Niederländisch",
+    Autre: "Andere",
+  },
+};
+
+function getVolunteerLanguageOptionLabel(option, language) {
+  return VOLUNTEER_LANGUAGE_OPTION_LABELS[language]?.[option] || option;
+}
 const PHONE_COUNTRY_OPTIONS = [
   { code: "+352", label: "Luxembourg" },
   { code: "+33", label: "France" },
@@ -206,6 +245,7 @@ export {
   PHONE_COUNTRY_OPTIONS,
   VOLUNTEER_LANGUAGE_OPTIONS,
   VOLUNTEER_MEETING_DAY_LABEL,
+  getVolunteerLanguageOptionLabel,
   buildPhoneValue,
   buildSearchPrefixes,
   buildUserSearchTokens,
