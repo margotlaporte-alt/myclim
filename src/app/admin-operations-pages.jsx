@@ -59,6 +59,16 @@ import { db } from "../services/firebase";
 
 const DEFAULT_LIST_PAGE_SIZE = 10;
 
+const ROLE_ACCESS_DESCRIPTIONS = {
+  admin: "Accès complet à toute l'application, y compris cette page de gestion des rôles et les réglages sensibles. Seul un admin peut changer les rôles d'un autre compte.",
+  budget: "Accès au module Budget (page dédiée) : suivi et modification du budget de l'édition active. N'inclut pas le dépôt de facture — celui-ci se gère séparément ci-dessous.",
+  gestionnaire: "Accès opérationnel au pilotage quotidien : bénévoles, équipes, présences, accréditations, presse, VIP et pré-programme. N'a pas accès à cette page de gestion des rôles ni aux réglages du site web (sauf rôle supplémentaire).",
+  gestionnaire_site: "Accès à la gestion du contenu du site public : actualités, partenaires, e-magazine et communiqués de presse.",
+  chef_equipe: "Accès à \"Mon équipe\" : consulter les membres de son équipe et ajouter des documents utiles pour elle. Voit aussi les présences limitées à ses équipes.",
+  benevole: "Accès à l'espace bénévole standard : dossier bénévole, mes affectations et mes documents.",
+  parent_u14: "Accès à \"Mes enfants\" : suivi des inscriptions au pré-programme U12/U14 et au porte-panier.",
+};
+
 function normalizeEmailKey(email) {
   return String(email || "").trim().toLowerCase();
 }
@@ -504,6 +514,30 @@ function RoleManagementPage(props) {
         </div>
       </section>
 
+      <Panel
+        title="Comprendre les rôles"
+        subtitle="Un compte peut cumuler plusieurs rôles à la fois (ex : bénévole + chef d'équipe). Chaque rôle ajoute des accès, il n'en retire jamais."
+      >
+        <dl className="detail-list">
+          {platformRoleOptions.map((roleOption) => (
+            <div key={roleOption.value}>
+              <dt>{roleOption.label}</dt>
+              <dd>{ROLE_ACCESS_DESCRIPTIONS[roleOption.value]}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="panel-note">
+          Pour ajouter ou retirer un rôle à quelqu'un : retrouve la personne dans le panneau "Recherche" ci-dessous
+          (par nom, e-mail ou groupe de rôle), coche ou décoche ses rôles dans le tableau "Gestion des accès", puis
+          clique sur "Sauvegarder" sur sa ligne. Un compte garde toujours au moins un rôle : si tu décoches tout, il
+          redevient automatiquement "Bénévole". Tu ne peux pas retirer ton propre rôle administrateur depuis cet écran.
+        </p>
+        <p className="panel-note">
+          Le dépôt de facture est une autorisation à part, indépendante des rôles ci-dessus : elle se configure dans
+          le panneau "Dépôt de facture" plus bas, par rôle ou en ajoutant une personne précise.
+        </p>
+      </Panel>
+
       <section className="panel-grid panel-grid--2">
         <Panel
           title="Vue d'ensemble"
@@ -551,7 +585,11 @@ function RoleManagementPage(props) {
         <div className="section-stack">
           <div className="choice-grid choice-grid--2">
             {platformRoleOptions.map((roleOption) => (
-              <label key={`invoice-${roleOption.value}`} className="selection-card selection-card--compact">
+              <label
+                key={`invoice-${roleOption.value}`}
+                className="selection-card selection-card--compact"
+                title={ROLE_ACCESS_DESCRIPTIONS[roleOption.value]}
+              >
                 <input
                   checked={invoicePermissionDraft.allowedUploaderRoles.includes(roleOption.value)}
                   type="checkbox"
@@ -721,7 +759,11 @@ function RoleManagementPage(props) {
                   <td>
                     <div className="choice-grid choice-grid--2">
                       {platformRoleOptions.map((roleOption) => (
-                        <label key={`${user.id}-${roleOption.value}`} className="selection-card selection-card--compact">
+                        <label
+                          key={`${user.id}-${roleOption.value}`}
+                          className="selection-card selection-card--compact"
+                          title={ROLE_ACCESS_DESCRIPTIONS[roleOption.value]}
+                        >
                           <input
                             checked={user.userTypes.includes(roleOption.value)}
                             type="checkbox"
