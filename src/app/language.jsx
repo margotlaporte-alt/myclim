@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { LanguageContext, useLanguage } from "./language-context";
 const LANGUAGE_STORAGE_KEY = "myclim-language";
 const supportedLanguages = ["en", "fr", "de"];
+const defaultVisibleLanguages = ["en", "fr"];
 
 const messages = {
   en: {
@@ -334,6 +335,7 @@ const messages = {
     navWebsitePartners: "Partners",
     navWebsitePressReleases: "Press releases",
     navRolesAccess: "Roles & access",
+    navEditionSettings: "Meeting edition",
     navInvitations: "Invitations",
     navMyProfile: "My profile",
     navOverview: "Overview",
@@ -822,6 +824,7 @@ const messages = {
     navWebsitePartners: "Partenaires",
     navWebsitePressReleases: "Communiqués presse",
     navRolesAccess: "Rôles & accès",
+    navEditionSettings: "Édition du meeting",
     navInvitations: "Invitations",
     navMyProfile: "Mon profil",
     navOverview: "Vue d'ensemble",
@@ -1160,12 +1163,12 @@ function LanguageProvider({ children }) {
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }
 
-function LanguageSwitch() {
+function LanguageSwitch({ languages = defaultVisibleLanguages }) {
   const { language, setLanguage, t } = useLanguage();
 
   return (
     <div className="language-switch" aria-label={t("languageLabel")}>
-      {supportedLanguages.map((option) => (
+      {languages.map((option) => (
         <button
           key={option}
           className={`language-switch__button ${language === option ? "language-switch__button--active" : ""}`}

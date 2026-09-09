@@ -398,49 +398,8 @@ function DashboardHome(props) {
   const { t } = useLanguage();
   const { currentUser, userProfile } = useAuth();
   const roles = getActiveRoles(userProfile);
-  const {
-    activeEditionId,
-    activeEditionLabel,
-    loading: editionLoading,
-    preprogramOpeningByEdition,
-    preprogramOpeningDate,
-  } = useActiveEdition();
   const outletContext = useOutletContext() ?? {};
   const activeRole = outletContext.activeRole || getPrimaryRole(userProfile);
-  const [editionDraft, setEditionDraft] = useState(activeEditionId);
-  const [preprogramOpeningDraft, setPreprogramOpeningDraft] = useState("");
-  const [editionSaveStatus, setEditionSaveStatus] = useState("");
-  const currentPreprogramOpeningValue = preprogramOpeningByEdition?.[normalizeEditionId(activeEditionId)] || "";
-  const { editions: meetingEditions } = useMeetingEditions();
-  const availableEditionOptions = useMemo(() => {
-    const numericEditionIds = [...new Set((meetingEditions || []).map((edition) => normalizeEditionId(edition.year)).filter(Boolean))]
-      .sort((left, right) => Number(right) - Number(left));
-
-    return [
-      { value: "test", label: `test — ${t("dashboardTemplateConfiguration")}` },
-      ...numericEditionIds.map((editionId) => {
-        const edition = (meetingEditions || []).find((entry) => normalizeEditionId(entry.year) === editionId);
-        return {
-          value: editionId,
-          label: edition?.isClosed
-            ? `${t("dashboardEditionWord")} ${editionId} — ${t("dashboardClosed")}`
-            : `${t("dashboardEditionWord")} ${editionId}`,
-        };
-      }),
-    ];
-  }, [meetingEditions, t]);
-
-  useEffect(() => {
-    setEditionDraft(activeEditionId);
-  }, [activeEditionId]);
-
-  useEffect(() => {
-    setPreprogramOpeningDraft(
-      preprogramOpeningDate && !Number.isNaN(preprogramOpeningDate.getTime())
-        ? formatDateTimeLocalValue(preprogramOpeningDate)
-        : "",
-    );
-  }, [activeEditionId, currentPreprogramOpeningValue]);
   const { application: volunteerApplication } = useVolunteerApplication(currentUser?.uid);
   const { roles: teamRoles, teamAssignments, loading: teamsLoading } = useTeamConfiguration();
   const { applications: volunteerApplications, loading: volunteerApplicationsLoading } = useVolunteerApplicationsList(
@@ -566,6 +525,274 @@ function DashboardHome(props) {
   const adminDataLoading = teamsLoading || volunteerApplicationsLoading || documentsLoading || u14RequestsLoading;
   const volunteerDataLoading = teamsLoading || documentsLoading;
   const leadDataLoading = teamsLoading || documentsLoading;
+
+  function renderRoleSummary() {
+    if (activeRole === "admin") {
+      return (
+        <section className="panel-grid panel-grid--2">
+          <Panel title={t("dashboardPrioritiesTitle")} subtitle={t("dashboardAdminPrioritiesSubtitle")}>
+            <ul className="compact-list">
+              <li>{adminDataLoading ? t("dashboardLoadingApplications") : t("dashboardAdminApplicationsToProcess").replace("{count}", pendingApplicationsCount)}</li>
+              <li>{adminDataLoading ? t("dashboardLoadingTeams") : t("dashboardAdminIncompleteTeams").replace("{count}", incompleteTeamsCount)}</li>
+              <li>{documentsLoading ? t("dashboardLoadingDocuments") : t("dashboardAdminDocumentsToReview").replace("{count}", documents.length)}</li>
+              <li>{u14RequestsLoading ? t("dashboardLoadingU14Requests") : t("dashboardAdminU14RequestsToFollow").replace("{count}", submittedU14RequestsCount)}</li>
+            </ul>
+          </Panel>
+          <Panel title={t("dashboardQuickAccessTitle")} subtitle={t("dashboardAdminQuickAccessSubtitle")}>
+            <div className="dashboard-action-grid">
+              <NavLink className="button button--secondary button-link" to="/app/benevoles">{t("dashboardManageVolunteers")}</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/roles">{t("dashboardManageRoles")}</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/edition-meeting">{t("navEditionSettings")}</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/postes">{t("dashboardAdjustTeams")}</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/accreditations">{t("dashboardProduceBadges")}</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/website">{t("dashboardManageWebsite")}</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/athlete-portal/athletes">{t("dashboardManageAthletes")}</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/statistics/results">{t("dashboardManageResults")}</NavLink>
+            </div>
+          </Panel>
+        </section>
+      );
+    }
+
+    if (activeRole === "benevole") {
+      return (
+        <section className="panel-grid panel-grid--2">
+          <Panel title={t("dashboardPrioritiesTitle")} subtitle={t("dashboardVolunteerPrioritiesSubtitle")}>
+            <ul className="compact-list">
+              <li>{volunteerDataLoading ? t("dashboardLoadingAssignment") : `${t("dashboardCurrentAssignment")}: ${volunteerAssignmentSummary}`}</li>
+              <li>{t("dashboardPlannedShift")}: {volunteerShiftSummary}</li>
+              <li>{t("dashboardVolunteerFileStatus")}: {formatVolunteerApplicationStatus(volunteerApplication?.status, t)}</li>
+              <li>{documentsLoading ? t("dashboardLoadingMissionDocuments") : t("dashboardDocumentsAvailableForTeams").replace("{count}", myDocumentsCount)}</li>
+              <li>{t("dashboardBriefingLabel")}: {volunteerBriefingSummary}</li>
+              <li>{t("dashboardVolunteerDepartureReminder")}</li>
+            </ul>
+          </Panel>
+          <Panel title={t("dashboardQuickAccessTitle")} subtitle={t("dashboardVolunteerQuickAccessSubtitle")}>
+            <div className="dashboard-action-grid">
+              <NavLink className="button button--secondary button-link" to="/app/mes-affectations">{t("navMyAssignments")}</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/mes-documents">{t("navMyDocuments")}</NavLink>
+            </div>
+          </Panel>
+        </section>
+      );
+    }
+
+    if (activeRole === "gestionnaire") {
+      return (
+        <section className="panel-grid panel-grid--2">
+          <Panel title={t("dashboardPrioritiesTitle")} subtitle={t("dashboardManagerPrioritiesSubtitle")}>
+            <ul className="compact-list">
+              <li>{t("dashboardManagerTaskCheckIn")}</li>
+              <li>{t("dashboardManagerTaskLunch")}</li>
+              <li>{t("dashboardManagerTaskAttendance")}</li>
+            </ul>
+          </Panel>
+          <Panel title={t("dashboardQuickAccessTitle")} subtitle={t("dashboardManagerQuickAccessSubtitle")}>
+            <div className="dashboard-action-grid">
+              <NavLink className="button button--secondary button-link" to="/app/benevoles">{t("navVolunteersLink")}</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/accreditations">{t("navSectionAccreditations")}</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/presences">{t("navAttendance")}</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/u14">{t("navSectionPreprogram")}</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/documents">{t("navDocuments")}</NavLink>
+            </div>
+          </Panel>
+        </section>
+      );
+    }
+
+    if (activeRole === "parent_u14") {
+      return (
+        <section className="panel-grid panel-grid--2">
+          <Panel title={t("dashboardPrioritiesTitle")} subtitle={t("dashboardParentPrioritiesSubtitle")}>
+            <ul className="compact-list">
+              {parentRowsLoading ? <li>{t("dashboardLoadingU14Requests")}</li> : null}
+              {!parentRowsLoading && parentRequestRows.length === 0 ? <li>{t("dashboardNoU14Request")}</li> : null}
+              {!parentRowsLoading && parentRequestRows.map((child) => (
+                <li key={child.id}>{child.name}: {child.status} - {child.schedule}</li>
+              ))}
+            </ul>
+          </Panel>
+          <Panel title={t("dashboardQuickAccessTitle")} subtitle={t("dashboardParentQuickAccessSubtitle")}>
+            <div className="dashboard-action-grid">
+              <NavLink className="button button--secondary button-link" to="/app/mes-enfants">{t("navMyChildren")}</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/profil">{t("navMyProfile")}</NavLink>
+            </div>
+            {!parentRowsLoading && parentRequestRows.length > 0 ? (
+              <p className="panel-note">
+                {t("dashboardParentConfirmedPending")
+                  .replace("{confirmed}", parentConfirmedCount)
+                  .replace("{pending}", parentPendingCount)}
+              </p>
+            ) : null}
+          </Panel>
+        </section>
+      );
+    }
+
+    if (activeRole === "chef_equipe") {
+      return (
+        <section className="panel-grid panel-grid--2">
+          <Panel title={t("dashboardPrioritiesTitle")} subtitle={t("dashboardTeamLeadPrioritiesSubtitle")}>
+            <ul className="compact-list">
+              <li>
+                {leadDataLoading
+                  ? t("dashboardLoadingTeams")
+                  : totalOpenPositions > 0
+                    ? t("dashboardOpenPositions")
+                        .replace("{count}", totalOpenPositions)
+                        .replace("{roles}", ledRoles.map((role) => role.roleName).join(", "))
+                    : t("dashboardAllTeamsFull")}
+              </li>
+              <li>{leadDataLoading ? t("dashboardLoadingAssignments") : t("dashboardTeamMembersCount").replace("{count}", totalLeadMembers)}</li>
+              <li>{documentsLoading ? t("dashboardLoadingTeamDocuments") : t("dashboardTeamDocumentsAvailable").replace("{count}", leadDocumentsCount)}</li>
+              <li>{leadDataLoading ? t("dashboardLoadingReplacements") : t("dashboardReplacementsIdentified").replace("{count}", totalReplacements)}</li>
+              <li>{t("dashboardTeamLeadDepartureReminder")}</li>
+            </ul>
+          </Panel>
+          <Panel title={t("dashboardQuickAccessTitle")} subtitle={t("dashboardTeamLeadQuickAccessSubtitle")}>
+            <div className="dashboard-action-grid">
+              <NavLink className="button button--secondary button-link" to="/app/equipe">{t("navMyTeam")}</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/presences">{t("navAttendance")}</NavLink>
+              <NavLink className="button button--secondary button-link" to="/app/mes-documents">{t("navDocuments")}</NavLink>
+            </div>
+          </Panel>
+        </section>
+      );
+    }
+
+    return null;
+  }
+
+  return (
+    <div className="page">
+      <section className="page-header">
+        <div>
+          <p className="eyebrow">{t("navOverview")}</p>
+          <h1>{t("dashboardWelcome")} {getDisplayName(userProfile, currentUser?.email)}</h1>
+          <p>{t("dashboardIntro")}</p>
+        </div>
+      </section>
+
+      <article className="info-card install-app-card">
+        <h3>{t("dashboardInstallTitle")}</h3>
+        <p>{t("dashboardInstallIntro")}</p>
+        <section className="install-app-grid" aria-label={t("dashboardInstallInstructionsAria")}>
+          <article className="install-app-step">
+            <strong className="install-app-step__title">
+              <span className="install-app-step__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path d="M15.2 3.6c.7-.8 1.2-1.8 1.1-2.9-1 .1-2.1.7-2.8 1.5-.6.7-1.2 1.8-1 2.8 1.1.1 2-.5 2.7-1.4Z" />
+                  <path d="M17.4 12.7c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.7.8-3.5.8s-1.9-.8-3.1-.8c-1.6 0-3 .9-3.8 2.3-1.6 2.7-.4 6.8 1.1 8.9.7 1 1.6 2.2 2.8 2.1 1.1 0 1.6-.7 3-.7 1.4 0 1.9.7 3 .7 1.2 0 2-.9 2.7-1.9.8-1.2 1.2-2.3 1.2-2.4-.1-.1-2-.8-2-3.7Z" />
+                </svg>
+              </span>
+              {t("dashboardInstallOnIphone")}
+            </strong>
+            <p>{t("dashboardInstallIphoneSteps")}</p>
+          </article>
+          <article className="install-app-step">
+            <strong className="install-app-step__title">
+              <span className="install-app-step__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path d="M7.1 8.1h9.8c.6 0 1 .5 1 1v6.8c0 .6-.4 1-1 1h-.7v2.3c0 .5-.4.9-.9.9s-.9-.4-.9-.9v-2.3h-4.8v2.3c0 .5-.4.9-.9.9s-.9-.4-.9-.9v-2.3h-.7c-.6 0-1-.4-1-1V9.1c0-.5.4-1 1-1Z" />
+                  <path d="M8.7 6.8a3.4 3.4 0 0 1 6.6 0Z" />
+                  <path d="M9.2 4.2 8 2.7m8 1.5 1.2-1.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <circle cx="10" cy="11.1" r=".7" />
+                  <circle cx="14" cy="11.1" r=".7" />
+                </svg>
+              </span>
+              {t("dashboardInstallOnAndroid")}
+            </strong>
+            <p>{t("dashboardInstallAndroidSteps")}</p>
+          </article>
+        </section>
+        <p className="install-app-note">{t("dashboardInstallNote")}</p>
+      </article>
+
+      {renderRoleSummary()}
+
+      {volunteerApplication ? (
+        <section className="panel-grid panel-grid--2">
+          <Panel
+            title={t("navMyVolunteerFile")}
+            subtitle={t("dashboardVolunteerFileSubtitle")}
+            actions={<NavLink className="button button--primary button-link" to="/app/mon-dossier-benevole">{t("dashboardOpenMyFile")}</NavLink>}
+          >
+            <ul className="compact-list">
+              <li>{t("assignmentsStatusLabel")}: {formatVolunteerApplicationStatus(volunteerApplication.status, t)}</li>
+              <li>{t("statedPreferences")}: {Array.isArray(volunteerApplication.missionPreferences) && volunteerApplication.missionPreferences.length ? volunteerApplication.missionPreferences.join(", ") : t("dashboardToComplete")}</li>
+              <li>{t("dashboardAvailabilityLabel")}: {Array.isArray(volunteerApplication.availability) && volunteerApplication.availability.length ? volunteerApplication.availability.join(", ") : t("dashboardToComplete")}</li>
+            </ul>
+          </Panel>
+          <article className="info-card">
+            <h3>{t("dashboardWhatYouCanDoTitle")}</h3>
+            <p>{t("dashboardWhatYouCanDoBody")}</p>
+          </article>
+        </section>
+      ) : null}
+
+      {shouldPromptParentToVolunteer ? (
+        <section className="panel-grid panel-grid--2">
+          <Panel
+            title={t("dashboardJoinVolunteersTitle")}
+            subtitle={t("dashboardJoinVolunteersSubtitle")}
+            actions={<NavLink className="button button--primary button-link" to="/app/mon-dossier-benevole">{t("dashboardBecomeVolunteer")}</NavLink>}
+          >
+            <ul className="compact-list">
+              <li>{t("dashboardJoinVolunteersPoint1")}</li>
+              <li>{t("dashboardJoinVolunteersPoint2")}</li>
+              <li>{t("dashboardJoinVolunteersPoint3")}</li>
+            </ul>
+          </Panel>
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
+function EditionSettingsPage(props) {
+  const { Panel } = props;
+  const { t } = useLanguage();
+  const {
+    activeEditionId,
+    activeEditionLabel,
+    loading: editionLoading,
+    preprogramOpeningByEdition,
+    preprogramOpeningDate,
+  } = useActiveEdition();
+  const [editionDraft, setEditionDraft] = useState(activeEditionId);
+  const [preprogramOpeningDraft, setPreprogramOpeningDraft] = useState("");
+  const [editionSaveStatus, setEditionSaveStatus] = useState("");
+  const currentPreprogramOpeningValue = preprogramOpeningByEdition?.[normalizeEditionId(activeEditionId)] || "";
+  const { editions: meetingEditions } = useMeetingEditions();
+  const availableEditionOptions = useMemo(() => {
+    const numericEditionIds = [...new Set((meetingEditions || []).map((edition) => normalizeEditionId(edition.year)).filter(Boolean))]
+      .sort((left, right) => Number(right) - Number(left));
+
+    return [
+      { value: "test", label: `test — ${t("dashboardTemplateConfiguration")}` },
+      ...numericEditionIds.map((editionId) => {
+        const edition = (meetingEditions || []).find((entry) => normalizeEditionId(entry.year) === editionId);
+        return {
+          value: editionId,
+          label: edition?.isClosed
+            ? `${t("dashboardEditionWord")} ${editionId} — ${t("dashboardClosed")}`
+            : `${t("dashboardEditionWord")} ${editionId}`,
+        };
+      }),
+    ];
+  }, [meetingEditions, t]);
+
+  useEffect(() => {
+    setEditionDraft(activeEditionId);
+  }, [activeEditionId]);
+
+  useEffect(() => {
+    setPreprogramOpeningDraft(
+      preprogramOpeningDate && !Number.isNaN(preprogramOpeningDate.getTime())
+        ? formatDateTimeLocalValue(preprogramOpeningDate)
+        : "",
+    );
+  }, [activeEditionId, currentPreprogramOpeningValue]);
 
   async function handleEditionSwitch(event) {
     event.preventDefault();
@@ -906,259 +1133,48 @@ function DashboardHome(props) {
     await batch.commit();
   }
 
-  function renderRoleSummary() {
-    if (activeRole === "admin") {
-      return (
-        <section className="panel-grid panel-grid--2">
-          <Panel title={t("dashboardPrioritiesTitle")} subtitle={t("dashboardAdminPrioritiesSubtitle")}>
-            <ul className="compact-list">
-              <li>{adminDataLoading ? t("dashboardLoadingApplications") : t("dashboardAdminApplicationsToProcess").replace("{count}", pendingApplicationsCount)}</li>
-              <li>{adminDataLoading ? t("dashboardLoadingTeams") : t("dashboardAdminIncompleteTeams").replace("{count}", incompleteTeamsCount)}</li>
-              <li>{documentsLoading ? t("dashboardLoadingDocuments") : t("dashboardAdminDocumentsToReview").replace("{count}", documents.length)}</li>
-              <li>{u14RequestsLoading ? t("dashboardLoadingU14Requests") : t("dashboardAdminU14RequestsToFollow").replace("{count}", submittedU14RequestsCount)}</li>
-            </ul>
-          </Panel>
-          <Panel title={t("dashboardQuickAccessTitle")} subtitle={t("dashboardAdminQuickAccessSubtitle")}>
-            <div className="dashboard-action-grid">
-              <NavLink className="button button--secondary button-link" to="/app/benevoles">{t("dashboardManageVolunteers")}</NavLink>
-              <NavLink className="button button--secondary button-link" to="/app/roles">{t("dashboardManageRoles")}</NavLink>
-              <NavLink className="button button--secondary button-link" to="/app/postes">{t("dashboardAdjustTeams")}</NavLink>
-              <NavLink className="button button--secondary button-link" to="/app/accreditations">{t("dashboardProduceBadges")}</NavLink>
-              <NavLink className="button button--secondary button-link" to="/app/website">{t("dashboardManageWebsite")}</NavLink>
-              <NavLink className="button button--secondary button-link" to="/app/athlete-portal/athletes">{t("dashboardManageAthletes")}</NavLink>
-              <NavLink className="button button--secondary button-link" to="/app/statistics/results">{t("dashboardManageResults")}</NavLink>
-            </div>
-          </Panel>
-        </section>
-      );
-    }
-
-    if (activeRole === "benevole") {
-      return (
-        <section className="panel-grid panel-grid--2">
-          <Panel title={t("dashboardPrioritiesTitle")} subtitle={t("dashboardVolunteerPrioritiesSubtitle")}>
-            <ul className="compact-list">
-              <li>{volunteerDataLoading ? t("dashboardLoadingAssignment") : `${t("dashboardCurrentAssignment")}: ${volunteerAssignmentSummary}`}</li>
-              <li>{t("dashboardPlannedShift")}: {volunteerShiftSummary}</li>
-              <li>{t("dashboardVolunteerFileStatus")}: {formatVolunteerApplicationStatus(volunteerApplication?.status, t)}</li>
-              <li>{documentsLoading ? t("dashboardLoadingMissionDocuments") : t("dashboardDocumentsAvailableForTeams").replace("{count}", myDocumentsCount)}</li>
-              <li>{t("dashboardBriefingLabel")}: {volunteerBriefingSummary}</li>
-              <li>{t("dashboardVolunteerDepartureReminder")}</li>
-            </ul>
-          </Panel>
-          <Panel title={t("dashboardQuickAccessTitle")} subtitle={t("dashboardVolunteerQuickAccessSubtitle")}>
-            <div className="dashboard-action-grid">
-              <NavLink className="button button--secondary button-link" to="/app/mes-affectations">{t("navMyAssignments")}</NavLink>
-              <NavLink className="button button--secondary button-link" to="/app/mes-documents">{t("navMyDocuments")}</NavLink>
-            </div>
-          </Panel>
-        </section>
-      );
-    }
-
-    if (activeRole === "gestionnaire") {
-      return (
-        <section className="panel-grid panel-grid--2">
-          <Panel title={t("dashboardPrioritiesTitle")} subtitle={t("dashboardManagerPrioritiesSubtitle")}>
-            <ul className="compact-list">
-              <li>{t("dashboardManagerTaskCheckIn")}</li>
-              <li>{t("dashboardManagerTaskLunch")}</li>
-              <li>{t("dashboardManagerTaskAttendance")}</li>
-            </ul>
-          </Panel>
-          <Panel title={t("dashboardQuickAccessTitle")} subtitle={t("dashboardManagerQuickAccessSubtitle")}>
-            <div className="dashboard-action-grid">
-              <NavLink className="button button--secondary button-link" to="/app/benevoles">{t("navVolunteersLink")}</NavLink>
-              <NavLink className="button button--secondary button-link" to="/app/accreditations">{t("navSectionAccreditations")}</NavLink>
-              <NavLink className="button button--secondary button-link" to="/app/presences">{t("navAttendance")}</NavLink>
-              <NavLink className="button button--secondary button-link" to="/app/u14">{t("navSectionPreprogram")}</NavLink>
-              <NavLink className="button button--secondary button-link" to="/app/documents">{t("navDocuments")}</NavLink>
-            </div>
-          </Panel>
-        </section>
-      );
-    }
-
-    if (activeRole === "parent_u14") {
-      return (
-        <section className="panel-grid panel-grid--2">
-          <Panel title={t("dashboardPrioritiesTitle")} subtitle={t("dashboardParentPrioritiesSubtitle")}>
-            <ul className="compact-list">
-              {parentRowsLoading ? <li>{t("dashboardLoadingU14Requests")}</li> : null}
-              {!parentRowsLoading && parentRequestRows.length === 0 ? <li>{t("dashboardNoU14Request")}</li> : null}
-              {!parentRowsLoading && parentRequestRows.map((child) => (
-                <li key={child.id}>{child.name}: {child.status} - {child.schedule}</li>
-              ))}
-            </ul>
-          </Panel>
-          <Panel title={t("dashboardQuickAccessTitle")} subtitle={t("dashboardParentQuickAccessSubtitle")}>
-            <div className="dashboard-action-grid">
-              <NavLink className="button button--secondary button-link" to="/app/mes-enfants">{t("navMyChildren")}</NavLink>
-              <NavLink className="button button--secondary button-link" to="/app/profil">{t("navMyProfile")}</NavLink>
-            </div>
-            {!parentRowsLoading && parentRequestRows.length > 0 ? (
-              <p className="panel-note">
-                {t("dashboardParentConfirmedPending")
-                  .replace("{confirmed}", parentConfirmedCount)
-                  .replace("{pending}", parentPendingCount)}
-              </p>
-            ) : null}
-          </Panel>
-        </section>
-      );
-    }
-
-    if (activeRole === "chef_equipe") {
-      return (
-        <section className="panel-grid panel-grid--2">
-          <Panel title={t("dashboardPrioritiesTitle")} subtitle={t("dashboardTeamLeadPrioritiesSubtitle")}>
-            <ul className="compact-list">
-              <li>
-                {leadDataLoading
-                  ? t("dashboardLoadingTeams")
-                  : totalOpenPositions > 0
-                    ? t("dashboardOpenPositions")
-                        .replace("{count}", totalOpenPositions)
-                        .replace("{roles}", ledRoles.map((role) => role.roleName).join(", "))
-                    : t("dashboardAllTeamsFull")}
-              </li>
-              <li>{leadDataLoading ? t("dashboardLoadingAssignments") : t("dashboardTeamMembersCount").replace("{count}", totalLeadMembers)}</li>
-              <li>{documentsLoading ? t("dashboardLoadingTeamDocuments") : t("dashboardTeamDocumentsAvailable").replace("{count}", leadDocumentsCount)}</li>
-              <li>{leadDataLoading ? t("dashboardLoadingReplacements") : t("dashboardReplacementsIdentified").replace("{count}", totalReplacements)}</li>
-              <li>{t("dashboardTeamLeadDepartureReminder")}</li>
-            </ul>
-          </Panel>
-          <Panel title={t("dashboardQuickAccessTitle")} subtitle={t("dashboardTeamLeadQuickAccessSubtitle")}>
-            <div className="dashboard-action-grid">
-              <NavLink className="button button--secondary button-link" to="/app/equipe">{t("navMyTeam")}</NavLink>
-              <NavLink className="button button--secondary button-link" to="/app/presences">{t("navAttendance")}</NavLink>
-              <NavLink className="button button--secondary button-link" to="/app/mes-documents">{t("navDocuments")}</NavLink>
-            </div>
-          </Panel>
-        </section>
-      );
-    }
-
-    return null;
-  }
-
   return (
     <div className="page">
       <section className="page-header">
         <div>
-          <p className="eyebrow">{t("navOverview")}</p>
-          <h1>{t("dashboardWelcome")} {getDisplayName(userProfile, currentUser?.email)}</h1>
-          <p>{t("dashboardIntro")}</p>
+          <p className="eyebrow">{t("navSectionSettings")}</p>
+          <h1>{t("navEditionSettings")}</h1>
+          <p>{t("dashboardActiveEditionSubtitle")}</p>
         </div>
       </section>
 
-      {activeRole === "admin" ? (
-        <section className="panel-grid panel-grid--2">
-          <Panel title={t("dashboardActiveEditionTitle")} subtitle={t("dashboardActiveEditionSubtitle")}>
-            <form className="profile-form" onSubmit={handleEditionSwitch}>
-              <AuthEditionField
-                activeEditionLabel={activeEditionLabel}
-                editionDraft={editionDraft}
-                editionLoading={editionLoading}
-                editionOptions={availableEditionOptions}
-                onEditionDraftChange={setEditionDraft}
-                preprogramOpeningDraft={preprogramOpeningDraft}
-                onPreprogramOpeningDraftChange={setPreprogramOpeningDraft}
-                t={t}
-              />
-              <div className="dashboard-action-grid">
-                <button className="button button--primary" disabled={editionLoading} type="submit">
-                  {t("dashboardSwitchEdition")}
-                </button>
-              </div>
-              {editionSaveStatus ? <p className="panel-note">{editionSaveStatus}</p> : null}
-            </form>
-          </Panel>
-          <Panel title={t("dashboardSwitchEffectTitle")} subtitle={t("dashboardSwitchEffectSubtitle")}>
-            <ul className="compact-list">
-              <li>{t("dashboardSwitchEffectAccounts")}</li>
-              <li>{t("dashboardSwitchEffectRoles")}</li>
-              <li>{t("dashboardSwitchEffectVolunteerModule")}</li>
-              <li>{t("dashboardSwitchEffectPreprogram")}</li>
-              <li>{t("dashboardSwitchEffectClosedEdition")}</li>
-              <li>{t("dashboardSwitchEffectArchivedData")}</li>
-            </ul>
-          </Panel>
-        </section>
-      ) : null}
-
-      <article className="info-card install-app-card">
-        <h3>{t("dashboardInstallTitle")}</h3>
-        <p>{t("dashboardInstallIntro")}</p>
-        <section className="install-app-grid" aria-label={t("dashboardInstallInstructionsAria")}>
-          <article className="install-app-step">
-            <strong className="install-app-step__title">
-              <span className="install-app-step__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" focusable="false">
-                  <path d="M15.2 3.6c.7-.8 1.2-1.8 1.1-2.9-1 .1-2.1.7-2.8 1.5-.6.7-1.2 1.8-1 2.8 1.1.1 2-.5 2.7-1.4Z" />
-                  <path d="M17.4 12.7c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.7.8-3.5.8s-1.9-.8-3.1-.8c-1.6 0-3 .9-3.8 2.3-1.6 2.7-.4 6.8 1.1 8.9.7 1 1.6 2.2 2.8 2.1 1.1 0 1.6-.7 3-.7 1.4 0 1.9.7 3 .7 1.2 0 2-.9 2.7-1.9.8-1.2 1.2-2.3 1.2-2.4-.1-.1-2-.8-2-3.7Z" />
-                </svg>
-              </span>
-              {t("dashboardInstallOnIphone")}
-            </strong>
-            <p>{t("dashboardInstallIphoneSteps")}</p>
-          </article>
-          <article className="install-app-step">
-            <strong className="install-app-step__title">
-              <span className="install-app-step__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" focusable="false">
-                  <path d="M7.1 8.1h9.8c.6 0 1 .5 1 1v6.8c0 .6-.4 1-1 1h-.7v2.3c0 .5-.4.9-.9.9s-.9-.4-.9-.9v-2.3h-4.8v2.3c0 .5-.4.9-.9.9s-.9-.4-.9-.9v-2.3h-.7c-.6 0-1-.4-1-1V9.1c0-.5.4-1 1-1Z" />
-                  <path d="M8.7 6.8a3.4 3.4 0 0 1 6.6 0Z" />
-                  <path d="M9.2 4.2 8 2.7m8 1.5 1.2-1.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  <circle cx="10" cy="11.1" r=".7" />
-                  <circle cx="14" cy="11.1" r=".7" />
-                </svg>
-              </span>
-              {t("dashboardInstallOnAndroid")}
-            </strong>
-            <p>{t("dashboardInstallAndroidSteps")}</p>
-          </article>
-        </section>
-        <p className="install-app-note">{t("dashboardInstallNote")}</p>
-      </article>
-
-      {renderRoleSummary()}
-
-      {volunteerApplication ? (
-        <section className="panel-grid panel-grid--2">
-          <Panel
-            title={t("navMyVolunteerFile")}
-            subtitle={t("dashboardVolunteerFileSubtitle")}
-            actions={<NavLink className="button button--primary button-link" to="/app/mon-dossier-benevole">{t("dashboardOpenMyFile")}</NavLink>}
-          >
-            <ul className="compact-list">
-              <li>{t("assignmentsStatusLabel")}: {formatVolunteerApplicationStatus(volunteerApplication.status, t)}</li>
-              <li>{t("statedPreferences")}: {Array.isArray(volunteerApplication.missionPreferences) && volunteerApplication.missionPreferences.length ? volunteerApplication.missionPreferences.join(", ") : t("dashboardToComplete")}</li>
-              <li>{t("dashboardAvailabilityLabel")}: {Array.isArray(volunteerApplication.availability) && volunteerApplication.availability.length ? volunteerApplication.availability.join(", ") : t("dashboardToComplete")}</li>
-            </ul>
-          </Panel>
-          <article className="info-card">
-            <h3>{t("dashboardWhatYouCanDoTitle")}</h3>
-            <p>{t("dashboardWhatYouCanDoBody")}</p>
-          </article>
-        </section>
-      ) : null}
-
-      {shouldPromptParentToVolunteer ? (
-        <section className="panel-grid panel-grid--2">
-          <Panel
-            title={t("dashboardJoinVolunteersTitle")}
-            subtitle={t("dashboardJoinVolunteersSubtitle")}
-            actions={<NavLink className="button button--primary button-link" to="/app/mon-dossier-benevole">{t("dashboardBecomeVolunteer")}</NavLink>}
-          >
-            <ul className="compact-list">
-              <li>{t("dashboardJoinVolunteersPoint1")}</li>
-              <li>{t("dashboardJoinVolunteersPoint2")}</li>
-              <li>{t("dashboardJoinVolunteersPoint3")}</li>
-            </ul>
-          </Panel>
-        </section>
-      ) : null}
+      <section className="panel-grid panel-grid--2">
+        <Panel title={t("dashboardActiveEditionTitle")} subtitle={t("dashboardActiveEditionSubtitle")}>
+          <form className="profile-form" onSubmit={handleEditionSwitch}>
+            <AuthEditionField
+              activeEditionLabel={activeEditionLabel}
+              editionDraft={editionDraft}
+              editionLoading={editionLoading}
+              editionOptions={availableEditionOptions}
+              onEditionDraftChange={setEditionDraft}
+              preprogramOpeningDraft={preprogramOpeningDraft}
+              onPreprogramOpeningDraftChange={setPreprogramOpeningDraft}
+              t={t}
+            />
+            <div className="dashboard-action-grid">
+              <button className="button button--primary" disabled={editionLoading} type="submit">
+                {t("dashboardSwitchEdition")}
+              </button>
+            </div>
+            {editionSaveStatus ? <p className="panel-note">{editionSaveStatus}</p> : null}
+          </form>
+        </Panel>
+        <Panel title={t("dashboardSwitchEffectTitle")} subtitle={t("dashboardSwitchEffectSubtitle")}>
+          <ul className="compact-list">
+            <li>{t("dashboardSwitchEffectAccounts")}</li>
+            <li>{t("dashboardSwitchEffectRoles")}</li>
+            <li>{t("dashboardSwitchEffectVolunteerModule")}</li>
+            <li>{t("dashboardSwitchEffectPreprogram")}</li>
+            <li>{t("dashboardSwitchEffectClosedEdition")}</li>
+            <li>{t("dashboardSwitchEffectArchivedData")}</li>
+          </ul>
+        </Panel>
+      </section>
     </div>
   );
 }
@@ -1219,4 +1235,4 @@ function formatDateTimeLocalValue(value) {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
-export { AppShell, DashboardHome };
+export { AppShell, DashboardHome, EditionSettingsPage };

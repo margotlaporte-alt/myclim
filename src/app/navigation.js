@@ -77,6 +77,7 @@ function buildNavigationFromRoles(roles) {
       ]),
       makeSection("navSectionSettings", "Réglages", [
         makeLink("/app/roles", "navRolesAccess", "Rôles & accès", "shield"),
+        makeLink("/app/edition-meeting", "navEditionSettings", "Édition du meeting", "calendar"),
         makeLink("/app/invitations", "navInvitations", "Invitations", "spark"),
         makeLink("/app/profil", "navMyProfile", "Mon profil", "profile"),
       ]),

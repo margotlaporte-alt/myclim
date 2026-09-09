@@ -5,7 +5,7 @@ import { LanguageSwitch } from "./language";
 import { useLanguage } from "./language-context";
 import { PHONE_COUNTRY_OPTIONS, buildPhoneValue, parsePhoneValue } from "./utils";
 
-function AuthLayout({ title, subtitle, children, sideCard, headerContent }) {
+function AuthLayout({ title, subtitle, children, sideCard, headerContent, languages }) {
   const { t } = useLanguage();
 
   return (
@@ -24,7 +24,7 @@ function AuthLayout({ title, subtitle, children, sideCard, headerContent }) {
           </div>
           <div className="auth-header-actions">
             {headerContent ? <div className="auth-header-extra">{headerContent}</div> : null}
-            <LanguageSwitch />
+            <LanguageSwitch languages={languages} />
             <NavLink className="auth-header-link" to="/">
               {t("returnHome")}
             </NavLink>

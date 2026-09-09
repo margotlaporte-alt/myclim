@@ -213,7 +213,12 @@ function VolunteerAccessPage() {
   );
 
   return (
-    <AuthLayout title={t("volunteerPageTitle")} subtitle={t("volunteerPageSubtitle")} headerContent={loginHeader}>
+    <AuthLayout
+      title={t("volunteerPageTitle")}
+      subtitle={t("volunteerPageSubtitle")}
+      headerContent={loginHeader}
+      languages={["en", "fr", "de"]}
+    >
       <div className="stacked-entry">
         <section className="entry-card">
           <div className="entry-card__header"><div><p className="eyebrow">{t("volunteerApplyEyebrow")}</p><h2>{t("volunteerApplyTitle")}</h2></div></div>

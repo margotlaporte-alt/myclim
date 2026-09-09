@@ -30,7 +30,11 @@ import { SiteNewsListPage, SiteNewsArticlePage } from "./site/site-news";
 import { SitePreProgramme } from "./site/site-preprogramme";
 import { VolunteersPage as VolunteersPageScreen } from "./app/volunteers-page";
 import { AccreditationsPage as AccreditationsPageScreen } from "./app/accreditations-page";
-import { AppShell as AppShellScreen, DashboardHome as DashboardHomeScreen } from "./app/app-shell-layout";
+import {
+  AppShell as AppShellScreen,
+  DashboardHome as DashboardHomeScreen,
+  EditionSettingsPage as EditionSettingsPageScreen,
+} from "./app/app-shell-layout";
 import { PresencePage as PresencePageScreen, RoleManagementPage as RoleManagementPageScreen, TeamsPage as TeamsPageScreen } from "./app/admin-operations-pages";
 import { BudgetTrackingPage as BudgetTrackingPageScreen } from "./app/budget-tracking-page";
 import { MyAssignmentsPage as MyAssignmentsPageScreen, MyDocumentsPage as MyDocumentsPageScreen } from "./app/volunteer-space-pages";
@@ -192,6 +196,10 @@ function AppShell() {
 
 function DashboardHome() {
   return <DashboardHomeScreen Panel={Panel} />;
+}
+
+function EditionSettingsPage() {
+  return <EditionSettingsPageScreen Panel={Panel} />;
 }
 
 function Panel({ title, subtitle, children, actions }) {
@@ -469,6 +477,7 @@ export default function App() {
               <Route index element={<DashboardHome />} />
               <Route element={<RequireRouteAccess allowedRoles={["admin"]} />}>
                 <Route path="roles" element={<RoleManagementPage />} />
+                <Route path="edition-meeting" element={<EditionSettingsPage />} />
                 <Route path="invitations" element={<InvitationAdminPage />} />
                 <Route path="postes" element={<TeamsPage />} />
               </Route>
