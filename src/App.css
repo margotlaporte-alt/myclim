@@ -3644,6 +3644,35 @@ tr.row--warning > td {
   color: #12313c;
 }
 
+.panel-tab-switch {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.panel-tab {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #7c8f98;
+  border-radius: 999px;
+  padding: 0.32rem 0.7rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 160ms ease;
+}
+
+.panel-tab:hover {
+  color: #1d5c88;
+}
+
+.panel-tab--active {
+  background: #eef5f9;
+  border-color: #d6e4e9;
+  color: #12313c;
+}
+
 .support-slot-list {
   display: flex;
   flex-wrap: wrap;
@@ -3914,6 +3943,32 @@ tr.row--warning > td {
   box-shadow: 0 12px 28px rgba(26, 74, 161, 0.12);
 }
 
+.role-chip-grid--compact {
+  gap: 6px;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+}
+
+.role-chip--compact {
+  padding: 7px 10px;
+  gap: 1px;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.role-chip--compact strong {
+  font-size: 0.82rem;
+  line-height: 1.25;
+}
+
+.role-chip--compact span {
+  font-size: 0.7rem;
+  line-height: 1.2;
+}
+
+.role-chip--compact.role-chip--active {
+  box-shadow: none;
+}
+
 .admin-preview {
   display: grid;
   gap: 14px;
@@ -3957,6 +4012,31 @@ tr.row--warning > td {
 
 .team-summary-pill span {
   color: #5f727b;
+}
+
+.team-stats-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #e4ecf1;
+}
+
+.team-stats-inline > div {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.team-stats-inline strong {
+  font-size: 1.15rem;
+  color: #102a35;
+}
+
+.team-stats-inline span {
+  color: #5f727b;
+  font-size: 0.85rem;
 }
 
 .team-candidate-list {

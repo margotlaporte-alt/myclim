@@ -824,6 +824,7 @@ function TeamsPage(props) {
   const [roles, setRoles] = useState(defaultTeamRoles);
   const [selectedRoleId, setSelectedRoleId] = useState(defaultTeamRoles[0]?.id ?? "");
   const [activeTeamTab, setActiveTeamTab] = useState("configuration");
+  const [teamDetailTab, setTeamDetailTab] = useState("settings");
   const [memberSearch, setMemberSearch] = useState("");
   const [teamAssignments, setTeamAssignments] = useState(defaultTeamAssignments);
   const [supportTasks, setSupportTasks] = useState(() => normalizeTeamConfigurationPayload({}).supportTasks);
@@ -1332,58 +1333,26 @@ function TeamsPage(props) {
               <p className="status-note">Chargement des équipes...</p>
             ) : null}
             {teamsStatus ? <p className="status-note">{teamsStatus}</p> : null}
-            <div className="admin-toolbar">
-              <div className="team-toolbar-main">
-                <label className="field">
-                  <span>Équipe</span>
-                  <select value={selectedRoleId} onChange={(event) => setSelectedRoleId(event.target.value)}>
-                    {roles.map((role) => (
-                      <option key={role.id} value={role.id}>
-                        {role.roleName}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <button className="button button--primary" type="button" onClick={addRole}>
-                  Ajouter une équipe
-                </button>
-              </div>
-
-              <div className="team-selection-summary" aria-live="polite">
-                <div className="team-summary-pill">
-                  <strong>{selectedRole.neededCount}</strong>
-                  <span>Personnes attendues</span>
-                </div>
-                <div className="team-summary-pill">
-                  <strong>{selectedRole.expectedLeadCount}</strong>
-                  <span>Chefs attendus</span>
-                </div>
-                <div className="team-summary-pill">
-                  <strong>{selectedRoleMembers.length}</strong>
-                  <span>Déjà affectées</span>
-                </div>
-                <div className="team-summary-pill">
-                  <strong>{Math.max(selectedRole.neededCount - selectedRoleMembers.length, 0)}</strong>
-                  <span>Écart à l'idéal</span>
-                </div>
-              </div>
-            </div>
-
             <Panel
               title="Équipes disponibles"
-              subtitle="Choisissez l'équipe à configurer depuis cette liste ou le menu déroulant."
+              subtitle="Sélectionne une équipe à configurer."
+              actions={
+                <button className="button button--secondary button--small" type="button" onClick={addRole}>
+                  + Ajouter une équipe
+                </button>
+              }
             >
-              <div className="role-chip-grid">
+              <div className="role-chip-grid role-chip-grid--compact">
                 {roles.map((role) => (
                   <button
                     key={role.id}
-                    className={`role-chip ${selectedRoleId === role.id ? "role-chip--active" : ""}`}
+                    className={`role-chip role-chip--compact ${selectedRoleId === role.id ? "role-chip--active" : ""}`}
                     type="button"
                     onClick={() => setSelectedRoleId(role.id)}
                   >
                     <strong>{role.roleName}</strong>
                     <span>
-                      {role.neededCount} pers. idéales • {role.expectedLeadCount} chef(s)
+                      {role.neededCount} pers. • {role.expectedLeadCount} chef(s)
                     </span>
                   </button>
                 ))}
@@ -1391,10 +1360,46 @@ function TeamsPage(props) {
             </Panel>
 
             <div className="admin-stack">
+              {teamDetailTab === "settings" ? (
               <Panel
-                title="Paramétrage des affectations"
-                subtitle="Définissez ici les volumes idéaux, les sous-rôles, les langues attendues et les horaires d'équipe."
+                title={
+                  <span className="panel-tab-switch">
+                    <button
+                      type="button"
+                      className="panel-tab panel-tab--active"
+                      onClick={() => setTeamDetailTab("settings")}
+                    >
+                      Paramétrage
+                    </button>
+                    <button
+                      type="button"
+                      className="panel-tab"
+                      onClick={() => setTeamDetailTab("composition")}
+                    >
+                      Composition actuelle ({selectedRoleMembers.length})
+                    </button>
+                  </span>
+                }
+                subtitle={`${selectedRole.roleName} — définis ici les volumes idéaux, les sous-rôles, les langues attendues et les horaires d'équipe.`}
               >
+                <div className="team-stats-inline" aria-live="polite">
+                  <div>
+                    <strong>{selectedRole.neededCount}</strong>
+                    <span>Personnes attendues</span>
+                  </div>
+                  <div>
+                    <strong>{selectedRole.expectedLeadCount}</strong>
+                    <span>Chefs attendus</span>
+                  </div>
+                  <div>
+                    <strong>{selectedRoleMembers.length}</strong>
+                    <span>Déjà affectées</span>
+                  </div>
+                  <div>
+                    <strong>{Math.max(selectedRole.neededCount - selectedRoleMembers.length, 0)}</strong>
+                    <span>Écart à l'idéal</span>
+                  </div>
+                </div>
                 <div className="field-grid">
                   <AuthFormField label="Nom du rôle">
                     <input
@@ -1553,10 +1558,27 @@ function TeamsPage(props) {
                   </div>
                 </div>
               </Panel>
-
+              ) : (
               <Panel
-                title={`Composition actuelle - ${selectedRole.roleName}`}
-                subtitle="Chefs d'équipe, bénévoles, remplaçants et sous-rôles déjà affectés à cette équipe."
+                title={
+                  <span className="panel-tab-switch">
+                    <button
+                      type="button"
+                      className="panel-tab"
+                      onClick={() => setTeamDetailTab("settings")}
+                    >
+                      Paramétrage
+                    </button>
+                    <button
+                      type="button"
+                      className="panel-tab panel-tab--active"
+                      onClick={() => setTeamDetailTab("composition")}
+                    >
+                      Composition actuelle ({selectedRoleMembers.length})
+                    </button>
+                  </span>
+                }
+                subtitle={`${selectedRole.roleName} — chefs d'équipe, bénévoles, remplaçants et sous-rôles déjà affectés.`}
               >
                 <div className="team-composition-summary">
                   <div className="team-summary-pill">
@@ -1688,6 +1710,7 @@ function TeamsPage(props) {
                   </table>
                 </div>
               </Panel>
+              )}
             </div>
           </section>
         ) : null
