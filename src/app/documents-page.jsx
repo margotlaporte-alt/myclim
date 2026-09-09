@@ -22,6 +22,7 @@ import { getActiveEditionId, recordMatchesEdition, useActiveEdition } from "./ed
 import { useBudgetInvoiceConfiguration, useTeamConfiguration } from "./config-hooks";
 import { canUserUploadBudgetInvoice } from "./budget-invoice-config";
 import { InvoiceUploadForm } from "./invoice-management";
+import { FileUpload } from "./file-upload";
 import {
   formatDateTimeForDisplay,
   getU14RaceLabel,
@@ -31,7 +32,7 @@ import { normalizePresenceRecord } from "./presence-helpers";
 import { normalizeTeamConfigurationPayload } from "./team-config";
 import { isTeamLeadAssignment } from "./common-helpers";
 import { mapVolunteerApplicationToAdminVolunteer } from "./volunteer-helpers";
-import { extractRolesFromProfile } from "./utils";
+import { extractRolesFromProfile, getDisplayName } from "./utils";
 import { useAuth } from "../context/auth-context";
 import { db } from "../services/firebase";
 
@@ -530,7 +531,11 @@ function DocumentsPage(props) {
   const invoiceConfiguration = useBudgetInvoiceConfiguration();
   const emptyDocumentForm = {
     title: "",
-    reference: "",
+    externalLink: "",
+    fileUrl: "",
+    fileName: "",
+    filePath: "",
+    mimeType: "",
     scope: "global",
     teams: [],
     selectedTeam: "",
@@ -606,13 +611,14 @@ function DocumentsPage(props) {
     event.preventDefault();
     if (!documentForm.title.trim()) return;
     if (documentForm.scope === "teams" && documentForm.teams.length === 0) return;
-    if (!documentForm.reference.trim()) {
-      setDocumentStatus("Ajoutez un lien de consultation avant d'enregistrer.");
-      return;
-    }
 
     const existingDocument = documents.find((documentItem) => documentItem.id === editingDocumentId);
-    const trimmedReference = documentForm.reference.trim();
+    const trimmedReference = documentForm.fileUrl.trim() || documentForm.externalLink.trim();
+
+    if (!trimmedReference) {
+      setDocumentStatus("Déposez un fichier ou ajoutez un lien de consultation avant d'enregistrer.");
+      return;
+    }
 
     setIsSubmittingDocument(true);
     setDocumentStatus("Enregistrement du document...");
@@ -621,9 +627,10 @@ function DocumentsPage(props) {
       const documentPayload = {
         title: documentForm.title.trim(),
         reference: trimmedReference || existingDocument?.reference || "",
-        fileName: existingDocument?.fileName || "",
-        filePath: "",
-        fileUrl: "",
+        fileName: documentForm.fileName || existingDocument?.fileName || "",
+        filePath: documentForm.filePath || existingDocument?.filePath || "",
+        fileUrl: documentForm.fileUrl || existingDocument?.fileUrl || "",
+        mimeType: documentForm.mimeType || existingDocument?.mimeType || "",
         scope: documentForm.scope,
         teams: documentForm.scope === "global" ? [] : documentForm.teams,
         visibility:
@@ -637,6 +644,8 @@ function DocumentsPage(props) {
       } else {
         await addDoc(collection(db, "documents"), {
           ...documentPayload,
+          uploadedByUid: String(currentUser?.uid || "").trim(),
+          uploadedByName: getDisplayName(userProfile, currentUser?.email),
           createdAt: serverTimestamp(),
         });
         setDocumentStatus("Document ajouté et publié.");
@@ -655,7 +664,11 @@ function DocumentsPage(props) {
     setEditingDocumentId(documentItem.id);
     setDocumentForm({
       title: documentItem.title,
-      reference: documentItem.reference,
+      externalLink: documentItem.fileUrl ? "" : documentItem.reference,
+      fileUrl: documentItem.fileUrl || "",
+      fileName: documentItem.fileName || "",
+      filePath: documentItem.filePath || "",
+      mimeType: documentItem.mimeType || "",
       scope: documentItem.scope,
       teams: documentItem.teams,
       selectedTeam: "",
@@ -944,21 +957,35 @@ function DocumentsPage(props) {
               />
             </AuthFormField>
 
-            <AuthFormField label="Lien de consultation">
-              <div className="document-source-stack">
+            <div className="document-source-stack">
+              <FileUpload
+                value={documentForm.fileUrl}
+                onChange={(url) => setDocumentForm((current) => ({ ...current, fileUrl: url }))}
+                onUploadComplete={(file) =>
+                  setDocumentForm((current) => ({
+                    ...current,
+                    fileUrl: file.url,
+                    fileName: file.fileName,
+                    filePath: file.filePath,
+                    mimeType: file.mimeType,
+                    title: current.title || file.fileName,
+                  }))
+                }
+                accept=".pdf,image/*"
+                storagePath="documents"
+                label="Fichier"
+                helperText="PDF ou image · ou colle un lien ci-dessous si le document est déjà hébergé ailleurs"
+              />
+              <AuthFormField label="Ou lien de consultation">
                 <input
-                  name="reference"
-                  required
+                  name="externalLink"
                   placeholder="Collez un lien si le document est déjà hébergé ailleurs"
-                  value={documentForm.reference}
+                  value={documentForm.externalLink}
+                  disabled={Boolean(documentForm.fileUrl)}
                   onChange={handleDocumentFormChange}
                 />
-                <small>
-                  Pour le moment, les documents sont publiés via un lien externe. Vous pourrez
-                  réactiver l'upload PDF plus tard si vous activez Firebase Storage.
-                </small>
-              </div>
-            </AuthFormField>
+              </AuthFormField>
+            </div>
 
             <div className="field">
               <span>Diffusion</span>

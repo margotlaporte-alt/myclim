@@ -3,9 +3,19 @@ import { addDoc, collection, deleteDoc, doc, serverTimestamp } from "firebase/fi
 import { buildUserIdentitySet, getDocumentUploadErrorMessage, isTeamLeadAssignment } from "./common-helpers";
 import { useTeamConfiguration } from "./config-hooks";
 import { getDocumentReferenceUrl, useDocumentsCollection } from "./documents-hooks";
+import { FileUpload } from "./file-upload";
 import { getDisplayName } from "./utils";
 import { useAuth } from "../context/auth-context";
 import { db } from "../services/firebase";
+
+const emptyTeamDocumentForm = {
+  title: "",
+  externalLink: "",
+  fileUrl: "",
+  fileName: "",
+  filePath: "",
+  mimeType: "",
+};
 
 function TeamPage(props) {
   const { AuthFormField, DataTable, Panel } = props;
@@ -13,7 +23,7 @@ function TeamPage(props) {
   const { roles, teamAssignments, loading, error } = useTeamConfiguration();
   const { documents, loading: documentsLoading, error: documentsError } = useDocumentsCollection(true);
   const [selectedRoleId, setSelectedRoleId] = useState("");
-  const [documentForm, setDocumentForm] = useState({ title: "", reference: "" });
+  const [documentForm, setDocumentForm] = useState(emptyTeamDocumentForm);
   const [isSavingDocument, setIsSavingDocument] = useState(false);
   const [documentStatus, setDocumentStatus] = useState("");
 
@@ -97,7 +107,8 @@ function TeamPage(props) {
   async function addDocument(event) {
     event.preventDefault();
     if (!selectedRole || isSavingDocument) return;
-    if (!documentForm.title.trim() || !documentForm.reference.trim()) return;
+    const reference = documentForm.fileUrl.trim() || documentForm.externalLink.trim();
+    if (!documentForm.title.trim() || !reference) return;
 
     setIsSavingDocument(true);
     setDocumentStatus("Enregistrement du document...");
@@ -106,10 +117,11 @@ function TeamPage(props) {
       await addDoc(collection(db, "documents"), {
         documentType: "document",
         title: documentForm.title.trim(),
-        reference: documentForm.reference.trim(),
-        fileName: "",
-        filePath: "",
-        fileUrl: "",
+        reference,
+        fileName: documentForm.fileName,
+        filePath: documentForm.filePath,
+        fileUrl: documentForm.fileUrl,
+        mimeType: documentForm.mimeType,
         scope: "teams",
         teams: [selectedRole.roleName],
         visibility: "Équipes ciblées",
@@ -118,7 +130,7 @@ function TeamPage(props) {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
-      setDocumentForm({ title: "", reference: "" });
+      setDocumentForm(emptyTeamDocumentForm);
       setDocumentStatus("Document ajouté et visible par ton équipe.");
     } catch (persistError) {
       console.error("Impossible d'enregistrer le document d'équipe.", persistError);
@@ -228,33 +240,56 @@ function TeamPage(props) {
 
           <Panel
             title="Documents équipe"
-            subtitle="Ajoute un document ou un lien visible par ton équipe. Les administrateurs voient aussi ces documents dans l'espace documentaire."
+            subtitle="Dépose un fichier ou colle un lien visible par ton équipe. Les administrateurs voient aussi ces documents dans l'espace documentaire."
           >
             <form className="section-stack" onSubmit={addDocument}>
-              <div className="field-grid">
-                <AuthFormField label="Titre du document">
+              <AuthFormField label="Titre du document">
+                <input
+                  name="title"
+                  required
+                  placeholder="Briefing équipe, plan d'accès, feuille de route..."
+                  value={documentForm.title}
+                  disabled={isSavingDocument}
+                  onChange={handleDocumentFormChange}
+                />
+              </AuthFormField>
+
+              <div className="document-source-stack">
+                <FileUpload
+                  value={documentForm.fileUrl}
+                  onChange={(url) => setDocumentForm((current) => ({ ...current, fileUrl: url }))}
+                  onUploadComplete={(file) =>
+                    setDocumentForm((current) => ({
+                      ...current,
+                      fileUrl: file.url,
+                      fileName: file.fileName,
+                      filePath: file.filePath,
+                      mimeType: file.mimeType,
+                      title: current.title || file.fileName,
+                    }))
+                  }
+                  accept=".pdf,image/*"
+                  storagePath={`team-documents/${selectedRole.id}`}
+                  label="Fichier"
+                  helperText="PDF ou image · ou colle un lien ci-dessous si le document est déjà hébergé ailleurs"
+                />
+                <AuthFormField label="Ou lien de consultation">
                   <input
-                    name="title"
-                    required
-                    placeholder="Briefing équipe, plan d'accès, feuille de route..."
-                    value={documentForm.title}
-                    disabled={isSavingDocument}
-                    onChange={handleDocumentFormChange}
-                  />
-                </AuthFormField>
-                <AuthFormField label="Lien de consultation">
-                  <input
-                    name="reference"
-                    required
-                    placeholder="Collez le lien du document"
-                    value={documentForm.reference}
-                    disabled={isSavingDocument}
+                    name="externalLink"
+                    placeholder="Lien vers un document déjà en ligne (Drive, site...)"
+                    value={documentForm.externalLink}
+                    disabled={isSavingDocument || Boolean(documentForm.fileUrl)}
                     onChange={handleDocumentFormChange}
                   />
                 </AuthFormField>
               </div>
+
               <div className="table-actions table-actions--inline">
-                <button className="button button--secondary" disabled={isSavingDocument} type="submit">
+                <button
+                  className="button button--secondary"
+                  disabled={isSavingDocument || !documentForm.title.trim() || !(documentForm.fileUrl.trim() || documentForm.externalLink.trim())}
+                  type="submit"
+                >
                   {isSavingDocument ? "Enregistrement..." : "Ajouter le document"}
                 </button>
               </div>
