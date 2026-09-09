@@ -37,6 +37,32 @@ service cloud.firestore {
       return isSignedIn() && "chef_equipe" in userTypes();
     }
 
+    function isBudgetManager() {
+      return isSignedIn() && "budget" in userTypes();
+    }
+
+    // Une personne non admin/gestionnaire/budget peut être autorisée
+    // individuellement (ou via son rôle) à déposer des factures, via
+    // appSettings/budgetInvoiceConfiguration (configuré par un admin).
+    function canManageInvoiceViaConfig() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/appSettings/budgetInvoiceConfiguration) &&
+        (
+          (
+            get(/databases/$(database)/documents/appSettings/budgetInvoiceConfiguration).data.allowedUploaderUserIds is list &&
+            request.auth.uid in get(/databases/$(database)/documents/appSettings/budgetInvoiceConfiguration).data.allowedUploaderUserIds
+          ) ||
+          (
+            get(/databases/$(database)/documents/appSettings/budgetInvoiceConfiguration).data.allowedUploaderRoles is list &&
+            get(/databases/$(database)/documents/appSettings/budgetInvoiceConfiguration).data.allowedUploaderRoles.hasAny(userTypes())
+          )
+        );
+    }
+
+    function canManageInvoices() {
+      return isAdminOrManager() || isBudgetManager() || canManageInvoiceViaConfig();
+    }
+
     function isWebsiteManager() {
       return isSignedIn() &&
         (
@@ -65,6 +91,20 @@ service cloud.firestore {
 
     match /appSettings/platform {
       allow read: if true;
+      allow write: if isAdminOrManager();
+    }
+
+    // Composition des équipes : lue par tous les bénévoles/chefs d'équipe pour
+    // afficher leurs affectations, missions et documents d'équipe.
+    match /appSettings/teamsConfiguration {
+      allow read:  if isSignedIn();
+      allow write: if isAdminOrManager();
+    }
+
+    // Configuration des autorisations de dépôt de facture : doit être lisible
+    // par tout utilisateur connecté pour savoir s'il est lui-même autorisé.
+    match /appSettings/budgetInvoiceConfiguration {
+      allow read:  if isSignedIn();
       allow write: if isAdminOrManager();
     }
 
@@ -134,18 +174,26 @@ service cloud.firestore {
       allow write:  if isAdminOrManager();
       // Un chef d'équipe peut publier des documents pour son équipe et retirer
       // uniquement ceux qu'il a lui-même ajoutés (pas les documents admin/globaux).
-      allow create: if isTeamLead() &&
+      allow create: if (
+        isTeamLead() &&
         request.resource.data.documentType == "document" &&
         request.resource.data.scope == "teams" &&
-        request.resource.data.uploadedByUid == request.auth.uid;
+        request.resource.data.uploadedByUid == request.auth.uid
+      ) || (
+        canManageInvoices() &&
+        request.resource.data.documentType == "invoice" &&
+        request.resource.data.uploadedByUid == request.auth.uid
+      );
+      // Le classement d'une facture (lier/délier une ligne de budget) doit rester
+      // possible pour les mêmes personnes autorisées à déposer des factures.
+      allow update: if canManageInvoices() && resource.data.documentType == "invoice";
       allow delete: if isTeamLead() && resource.data.uploadedByUid == request.auth.uid;
     }
 
-    // ── Configuration équipes ────────────────────────────────────────────────
-    // Lecture ouverte aux bénévoles (pour voir leurs affectations)
-    match /teamConfiguration/{docId} {
-      allow read:  if isSignedIn();
-      allow write: if isAdminOrManager();
+    // ── Budget ────────────────────────────────────────────────────────────────
+    // Le rôle "budget" pilote le module budget/factures sans être gestionnaire.
+    match /budgets/{document=**} {
+      allow read, write: if isAdminOrManager() || isBudgetManager();
     }
 
     // ── Site public (gestion contenu) ───────────────────────────────────────
