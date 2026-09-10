@@ -32,32 +32,32 @@ import { useAuth } from "../context/auth-context";
 import { db } from "../services/firebase";
 
 const DEFAULT_LIST_PAGE_SIZE = 10;
+const PRESS_REQUEST_TYPE_LABELS = { press: "Presse", photographer: "Photographe" };
 const ACCREDITATION_TAB_PATHS = {
-  roles: "/app/accreditations",
-  resources: "/app/accreditations/ressources-qr",
-  people: "/app/accreditations/benevoles",
+  people: "/app/accreditations",
   print: "/app/accreditations/impressions",
   tracking: "/app/accreditations/suivi",
   history: "/app/accreditations/historique",
-  judges: "/app/accreditations/juges",
-  press: "/app/accreditations/presse",
+  roles: "/app/accreditations/roles",
+  resources: "/app/accreditations/ressources-qr",
 };
 
 function getAccreditationTabFromPath(pathname, availableTabs) {
   const normalizedPath = String(pathname || "").replace(/\/+$/, "") || "/app/accreditations";
 
   if (normalizedPath.endsWith("/ressources-qr") && availableTabs.includes("resources")) return "resources";
-  if (normalizedPath.endsWith("/benevoles") && availableTabs.includes("people")) return "people";
   if (normalizedPath.endsWith("/impressions") && availableTabs.includes("print")) return "print";
   if (normalizedPath.endsWith("/suivi") && availableTabs.includes("tracking")) return "tracking";
   if (normalizedPath.endsWith("/historique") && availableTabs.includes("history")) return "history";
-  if (normalizedPath.endsWith("/juges") && availableTabs.includes("judges")) return "judges";
-  if (normalizedPath.endsWith("/presse") && availableTabs.includes("press")) return "press";
   if (normalizedPath.endsWith("/roles") && availableTabs.includes("roles")) return "roles";
-  if (normalizedPath === "/app/accreditations" && availableTabs.includes("roles")) return "roles";
+  // Legacy bookmarks/links from before the redesign (juges/presse/bénévoles
+  // were merged into "people", the new default landing tab).
+  if (normalizedPath.endsWith("/benevoles") && availableTabs.includes("people")) return "people";
+  if (normalizedPath.endsWith("/juges") && availableTabs.includes("people")) return "people";
+  if (normalizedPath.endsWith("/presse") && availableTabs.includes("people")) return "people";
   if (normalizedPath === "/app/accreditations" && availableTabs.includes("people")) return "people";
 
-  return availableTabs[0] || "print";
+  return availableTabs[0] || "people";
 }
 
 const EMPTY_QR_RESOURCE_FORM = {
@@ -130,6 +130,10 @@ function AccreditationsPage(props) {
   const [printHistoryBatchOpenById, setPrintHistoryBatchOpenById] = useState({});
   const [selectedPrintHistoryBatchId, setSelectedPrintHistoryBatchId] = useState("");
   const [judgeSearch, setJudgeSearch] = useState("");
+  const [pressRegistrations, setPressRegistrations] = useState([]);
+  const [pressLoading, setPressLoading] = useState(true);
+  const [pressError, setPressError] = useState("");
+  const [pressSearch, setPressSearch] = useState("");
   const [roleSearch, setRoleSearch] = useState("");
   const [visibleListCountByKey, setVisibleListCountByKey] = useState({});
   const [selectedQrVisualId, setSelectedQrVisualId] = useState(ACCREDITATION_BADGE_VISUALS[0]?.id ?? "volunteer");
@@ -258,6 +262,24 @@ function AccreditationsPage(props) {
       () => {
         setUsers([]);
         setUsersLoading(false);
+      },
+    );
+
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, "pressRegistrations"),
+      (snapshot) => {
+        setPressRegistrations(snapshot.docs.map((pressDoc) => ({ id: pressDoc.id, ...pressDoc.data() })));
+        setPressLoading(false);
+        setPressError("");
+      },
+      () => {
+        setPressRegistrations([]);
+        setPressLoading(false);
+        setPressError("Impossible de charger les demandes presse.");
       },
     );
 
@@ -820,6 +842,122 @@ function AccreditationsPage(props) {
     );
   }
 
+  async function updatePressPrintStatus(registration, printStatus) {
+    const patch =
+      printStatus === "Imprimé"
+        ? { printStatus, lastPrintedAt: new Date().toISOString(), destroyedAt: null }
+        : printStatus === "Non-imprimé"
+          ? { printStatus, destroyedAt: null }
+          : { printStatus };
+
+    try {
+      await updateDoc(doc(db, "pressRegistrations", registration.id), patch);
+      setAccreditationStatus("Statut d'impression presse mis à jour.");
+    } catch (error) {
+      console.error("Impossible de mettre à jour le statut d'impression presse.", error);
+      setAccreditationStatus("Impossible de mettre à jour le statut d'impression presse.");
+    }
+  }
+
+  function addPressToPrintQueue(registration) {
+    updatePressPrintStatus(registration, "Dans la file");
+  }
+
+  async function markPressBadgeDestroyed(registration) {
+    try {
+      await updateDoc(doc(db, "pressRegistrations", registration.id), { destroyedAt: new Date().toISOString() });
+      setAccreditationStatus("Badge presse marqué comme détruit.");
+    } catch (error) {
+      console.error("Impossible de marquer le badge presse comme détruit.", error);
+      setAccreditationStatus("Impossible de marquer le badge presse comme détruit.");
+    }
+  }
+
+  function getPressStorageLocation(registrationId) {
+    return badgeStorageLocations[registrationId] ?? "";
+  }
+
+  function updatePressBadgeStorageLocation(registrationId, location) {
+    const nextLocations = { ...badgeStorageLocations, [registrationId]: location };
+    persistAccreditationConfiguration(
+      buildCurrentConfiguration({ badgeStorageLocations: nextLocations }),
+      "Point de retrait presse enregistré.",
+    );
+    setStoragePickerOpenById((current) => ({ ...current, [registrationId]: false }));
+  }
+
+  function getPressTrackingStatus(registration) {
+    if (registration.destroyedAt) return "Détruit";
+    if (registration.printStatus === "Annulé" || registration.printStatus === "Imprimé à détruire") {
+      return registration.printStatus;
+    }
+    if (registration.printStatus !== "Imprimé") return "Non imprimé";
+    if (getPressStorageLocation(registration.id)) return "Rangé";
+    return "Imprimé non rangé";
+  }
+
+  async function finalizePressPrintQueue() {
+    const queuedPress = acceptedPressRegistrations.filter(
+      (registration) => registration.printStatus === "Dans la file" && !registration.destroyedAt,
+    );
+    if (!queuedPress.length) return;
+
+    const printedAt = new Date().toISOString();
+    const legendZoneLabels = sortedZones.map((zone) => formatZoneLabel(zone));
+    const pressResourceCards = await buildResourceCardsForVisual("press");
+    const badgeItems = queuedPress.map((registration) => {
+      const badgeRoleLabel = PRESS_REQUEST_TYPE_LABELS[registration.requestType] || "Presse";
+      return {
+        volunteerId: registration.id,
+        name: `${registration.firstName || ""} ${registration.lastName || ""}`.trim() || registration.media || "Presse",
+        role: badgeRoleLabel,
+        roleNames: [badgeRoleLabel],
+        zoneIds: registration.zoneIds || [],
+        zoneLabels: sortedZones
+          .filter((zone) => (registration.zoneIds || []).includes(zone.id))
+          .map((zone) => formatZoneLabel(zone)),
+        resourceCards: pressResourceCards,
+      };
+    });
+    const historyEntries = badgeItems.map((item, index) => ({
+      id: `${item.volunteerId}-press-${Date.now()}-${index}`,
+      volunteerId: item.volunteerId,
+      name: item.name,
+      roleLabel: item.role,
+      roleNames: item.roleNames,
+      zoneLabels: item.zoneLabels,
+      printedAt,
+      generatedBy: getCurrentOperatorLabel(),
+      reviewStatus: "",
+      reviewComment: "",
+    }));
+    const historyBatch = {
+      id: `press-batch-${Date.now()}`,
+      printedAt,
+      generatedBy: getCurrentOperatorLabel(),
+      items: historyEntries,
+    };
+
+    await Promise.all([
+      ...queuedPress.map((registration) =>
+        updateDoc(doc(db, "pressRegistrations", registration.id), {
+          printStatus: "Imprimé",
+          lastPrintedAt: printedAt,
+          destroyedAt: null,
+        }),
+      ),
+      persistAccreditationConfiguration(
+        buildCurrentConfiguration({
+          printHistory: [historyBatch, ...printHistory],
+        }),
+        "Historique d'impression presse enregistré.",
+      ),
+    ]);
+
+    openPrintWindow(buildBadgePrintMarkup(badgeItems, { legendZoneLabels }));
+    openPrintWindow(buildAccreditationPrintHistoryMarkup(historyEntries, formatDateTimeForDisplay));
+  }
+
   function updateBadgeStorageLocation(volunteerId, location) {
     const nextLocations = { ...badgeStorageLocations, [volunteerId]: location };
     persistAccreditationConfiguration(
@@ -1345,6 +1483,19 @@ function AccreditationsPage(props) {
   const judgeUsedLocations = [
     ...new Set(activeJudges.map((judge) => getJudgeStorageLocation(judge.id)).filter(Boolean)),
   ].sort((a, b) => a.localeCompare(b, "fr"));
+  const normalizedPressSearch = pressSearch.trim().toLowerCase();
+  const acceptedPressRegistrations = pressRegistrations.filter((registration) => {
+    if (registration.status !== "accepted") return false;
+    if (!normalizedPressSearch) return true;
+    const haystack = `${registration.firstName} ${registration.lastName} ${registration.media}`.toLowerCase();
+    return haystack.includes(normalizedPressSearch);
+  });
+  const queuedPress = acceptedPressRegistrations.filter(
+    (registration) => registration.printStatus === "Dans la file" && !registration.destroyedAt,
+  );
+  const pressUsedLocations = [
+    ...new Set(acceptedPressRegistrations.map((registration) => getPressStorageLocation(registration.id)).filter(Boolean)),
+  ].sort((a, b) => a.localeCompare(b, "fr"));
   const selectedNonNominativeZoneLabels = selectedNonNominativeTemplate
     ? sortedZones
         .filter((zone) => selectedNonNominativeTemplate.defaultZoneIds.includes(zone.id))
@@ -1388,10 +1539,12 @@ function AccreditationsPage(props) {
   const visibleTrackingVolunteers = getVisibleListItems("tracking-volunteers", trackingVolunteers);
   const visibleQueuedJudges = getVisibleListItems("queued-judges", queuedJudges);
   const visibleActiveJudges = getVisibleListItems("active-judges", activeJudges);
+  const visibleQueuedPress = getVisibleListItems("queued-press", queuedPress);
+  const visibleAcceptedPress = getVisibleListItems("accepted-press", acceptedPressRegistrations);
 
   const availableAccreditationTabs = [
+    ...(canOperatePrinting ? ["people", "print", "tracking", "history"] : []),
     ...(canManageAccreditationConfiguration ? ["roles", "resources"] : []),
-    ...(canOperatePrinting ? ["people", "print", "tracking", "history", "judges"] : []),
   ];
   const [activeAccreditationTab, setActiveAccreditationTab] = useState(() =>
     getAccreditationTabFromPath(location.pathname, availableAccreditationTabs),
@@ -1540,24 +1693,6 @@ function AccreditationsPage(props) {
         </div>
       </section>
       <div className="admin-subtabs">
-        {canManageAccreditationConfiguration ? (
-          <button
-            className={`admin-subtab ${activeAccreditationTab === "roles" ? "admin-subtab--active" : ""}`}
-            type="button"
-            onClick={() => openAccreditationTab("roles")}
-          >
-            Zones par role
-          </button>
-        ) : null}
-        {canManageAccreditationConfiguration ? (
-          <button
-            className={`admin-subtab ${activeAccreditationTab === "resources" ? "admin-subtab--active" : ""}`}
-            type="button"
-            onClick={() => openAccreditationTab("resources")}
-          >
-            Ressources QR
-          </button>
-        ) : null}
         {canOperatePrinting ? (
           <>
             <button
@@ -1565,21 +1700,21 @@ function AccreditationsPage(props) {
               type="button"
               onClick={() => openAccreditationTab("people")}
             >
-              Préparation badges
+              Personnes &amp; badges
             </button>
             <button
               className={`admin-subtab ${activeAccreditationTab === "print" ? "admin-subtab--active" : ""}`}
               type="button"
               onClick={() => openAccreditationTab("print")}
             >
-              Impressions
+              Impression
             </button>
             <button
               className={`admin-subtab ${activeAccreditationTab === "tracking" ? "admin-subtab--active" : ""}`}
               type="button"
               onClick={() => openAccreditationTab("tracking")}
             >
-              Suivi accréditation
+              Suivi &amp; retrait
             </button>
             <button
               className={`admin-subtab ${activeAccreditationTab === "history" ? "admin-subtab--active" : ""}`}
@@ -1588,21 +1723,25 @@ function AccreditationsPage(props) {
             >
               Historique
             </button>
-            <button
-              className={`admin-subtab ${activeAccreditationTab === "judges" ? "admin-subtab--active" : ""}`}
-              type="button"
-              onClick={() => openAccreditationTab("judges")}
-            >
-              Juges
-            </button>
-            <button
-              className={`admin-subtab ${activeAccreditationTab === "press" ? "admin-subtab--active" : ""}`}
-              type="button"
-              onClick={() => openAccreditationTab("press")}
-            >
-              Presse
-            </button>
           </>
+        ) : null}
+        {canManageAccreditationConfiguration ? (
+          <button
+            className={`admin-subtab ${activeAccreditationTab === "roles" ? "admin-subtab--active" : ""}`}
+            type="button"
+            onClick={() => openAccreditationTab("roles")}
+          >
+            Réglages : zones par rôle
+          </button>
+        ) : null}
+        {canManageAccreditationConfiguration ? (
+          <button
+            className={`admin-subtab ${activeAccreditationTab === "resources" ? "admin-subtab--active" : ""}`}
+            type="button"
+            onClick={() => openAccreditationTab("resources")}
+          >
+            Réglages : ressources QR
+          </button>
         ) : null}
       </div>
 
@@ -2375,6 +2514,648 @@ function AccreditationsPage(props) {
               </Panel>
             </Panel>
           ) : null}
+
+          <Panel
+            title="Juges"
+            subtitle="Roster nominatif sans compte utilisateur, géré séparément avec suivi d'impression."
+          >
+            {judgesLoading ? <p className="panel-note">Chargement des juges...</p> : null}
+            {judgesError ? <p className="panel-note">{judgesError}</p> : null}
+
+            <div className="accreditation-person-summary">
+              <div className="team-summary-pill">
+                <strong>{judges.length}</strong>
+                <span>Juge(s) dans le roster</span>
+              </div>
+              <div className="team-summary-pill">
+                <strong>{judges.filter((judge) => judge.printStatus === "Imprimé" && !judge.destroyedAt).length}</strong>
+                <span>Badge(s) imprimé(s)</span>
+              </div>
+              <div className="team-summary-pill">
+                <strong>{judges.filter((judge) => judge.printStatus === "Non-imprimé" && !judge.destroyedAt).length}</strong>
+                <span>Badge(s) à produire</span>
+              </div>
+              <div className="team-summary-pill">
+                <strong>{queuedJudges.length}</strong>
+                <span>Dans la file</span>
+              </div>
+            </div>
+
+            <div className="admin-toolbar">
+              <label className="field">
+                <span>Rechercher un juge</span>
+                <input
+                  placeholder="Nom, prénom, libellé badge..."
+                  value={judgeSearch}
+                  onChange={(event) => setJudgeSearch(event.target.value)}
+                />
+              </label>
+            </div>
+
+            {canManageJudges ? (
+              <>
+                <div className="field-grid">
+                  <AuthFormField label="Prénom">
+                    <input
+                      value={newJudgeFirstName}
+                      onChange={(event) => setNewJudgeFirstName(event.target.value)}
+                      placeholder="Ex: Marie"
+                    />
+                  </AuthFormField>
+                  <AuthFormField label="Nom">
+                    <input
+                      value={newJudgeLastName}
+                      onChange={(event) => setNewJudgeLastName(event.target.value)}
+                      placeholder="Ex: Muller"
+                    />
+                  </AuthFormField>
+                  <AuthFormField label="Libellé badge">
+                    <input
+                      value={newJudgeBadgeLabel}
+                      onChange={(event) => setNewJudgeBadgeLabel(event.target.value)}
+                      placeholder="Judge"
+                    />
+                  </AuthFormField>
+                </div>
+
+                <div className="accreditation-inline-panel">
+                  <strong>Zones du juge</strong>
+                  <div className="choice-grid choice-grid--2">
+                    {sortedZones.map((zone) => (
+                      <label key={`new-judge-zone-${zone.id}`} className="selection-card selection-card--compact">
+                        <input
+                          type="checkbox"
+                          checked={newJudgeZoneIds.includes(zone.id)}
+                          onChange={() => setNewJudgeZoneIds((current) => toggleIdInList(current, zone.id))}
+                        />
+                        <div>
+                          <strong>{formatZoneLabel(zone)}</strong>
+                          <p>Accès du badge juge</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="table-actions table-actions--inline">
+                  <button
+                    className="button button--secondary"
+                    type="button"
+                    onClick={addJudge}
+                    disabled={!newJudgeFirstName.trim() || !newJudgeLastName.trim()}
+                  >
+                    Ajouter le juge
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="accreditation-print-note">
+                Les gestionnaires ont ici une vue de suivi d'impression. L'ajout et la modification des juges restent réservés aux administrateurs.
+              </div>
+            )}
+
+            <Panel
+              title="File d'impression juges"
+              subtitle="Même logique que pour les bénévoles : mise en file, impression, puis historique du lot."
+            >
+              <div className="table-wrap">
+                <table className="data-table data-table--admin">
+                  <thead>
+                    <tr>
+                      <th>Juge</th>
+                      <th>Libellé badge</th>
+                      <th>Zones</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleQueuedJudges.map((judge) => (
+                      <tr key={`judge-queue-${judge.id}`}>
+                        <td>{`${judge.firstName} ${judge.lastName}`.trim() || "Juge sans nom"}</td>
+                        <td>{judge.badgeLabel || "Judge"}</td>
+                        <td>
+                          {sortedZones
+                            .filter((zone) => judge.assignedZones.includes(zone.id))
+                            .map((zone) => formatZoneLabel(zone))
+                            .join(", ") || "Aucune zone"}
+                        </td>
+                        <td>
+                          <button
+                            className="button button--ghost-danger button--small"
+                            type="button"
+                            onClick={() => updateJudgePrintStatus(judge, "Non-imprimé")}
+                          >
+                            Retirer
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {!queuedJudges.length ? (
+                      <tr>
+                        <td colSpan="4">Aucun juge n'est actuellement dans la file d'impression.</td>
+                      </tr>
+                    ) : null}
+                  </tbody>
+                </table>
+              </div>
+              {canShowMoreListItems("queued-judges", queuedJudges) ? (
+                <div className="list-progressive-actions">
+                  <button
+                    className="button button--secondary button--small"
+                    type="button"
+                    onClick={() => showMoreListItems("queued-judges")}
+                  >
+                    Afficher 10 de plus
+                  </button>
+                </div>
+              ) : null}
+
+              <div className="table-actions table-actions--inline">
+                <button
+                  className="button button--primary"
+                  type="button"
+                  onClick={finalizeJudgePrintQueue}
+                  disabled={!queuedJudges.length}
+                >
+                  Générer les 2 PDF ({queuedJudges.length})
+                </button>
+              </div>
+            </Panel>
+
+            <div className="table-wrap">
+              <table className="data-table data-table--admin">
+                <thead>
+                  <tr>
+                    <th>Juge</th>
+                    <th>Libellé badge</th>
+                    <th>Zones</th>
+                    <th>Statut impression</th>
+                    <th>Point de retrait</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleActiveJudges.map((judge) => {
+                    const judgeTrackingStatus = getJudgeTrackingStatus(judge);
+                    const judgeLocation = getJudgeStorageLocation(judge.id);
+                    const pickerOpen = Boolean(storagePickerOpenById[judge.id]);
+                    const canQueueJudge =
+                      judge.printStatus !== "Dans la file" &&
+                      judgeTrackingStatus !== "Imprimé à détruire";
+
+                    return (
+                    <tr key={judge.id}>
+                      <td>{`${judge.firstName} ${judge.lastName}`.trim() || "Juge sans nom"}</td>
+                      <td>
+                        {canManageJudges ? (
+                          <input
+                            value={judge.badgeLabel || "Judge"}
+                            onChange={(event) =>
+                              updateJudge(judge.id, { badgeLabel: event.target.value }, "Libellé badge juge mis à jour.")
+                            }
+                          />
+                        ) : (
+                          judge.badgeLabel || "Judge"
+                        )}
+                      </td>
+                      <td>
+                        <div className="accreditation-tag-list">
+                          {judge.assignedZones.length ? (
+                            sortedZones
+                              .filter((zone) => judge.assignedZones.includes(zone.id))
+                              .map((zone) =>
+                                canManageJudges ? (
+                                  <button
+                                    key={`${judge.id}-${zone.id}`}
+                                    className="accreditation-tag accreditation-tag--active"
+                                    type="button"
+                                    onClick={() =>
+                                      updateJudge(
+                                        judge.id,
+                                        { assignedZones: judge.assignedZones.filter((zoneId) => zoneId !== zone.id) },
+                                        "Zones juge mises à jour.",
+                                      )
+                                    }
+                                  >
+                                    {formatZoneLabel(zone)}
+                                  </button>
+                                ) : (
+                                  <span key={`${judge.id}-${zone.id}`} className="accreditation-tag accreditation-tag--active">
+                                    {formatZoneLabel(zone)}
+                                  </span>
+                                ),
+                              )
+                          ) : (
+                            <span className="panel-note">À définir</span>
+                          )}
+                        </div>
+                        {canManageJudges ? (
+                          <div className="accreditation-tag-list">
+                            {sortedZones
+                              .filter((zone) => !judge.assignedZones.includes(zone.id))
+                              .map((zone) => (
+                                <button
+                                  key={`${judge.id}-add-${zone.id}`}
+                                  className="accreditation-tag"
+                                  type="button"
+                                  onClick={() =>
+                                    updateJudge(
+                                      judge.id,
+                                      { assignedZones: [...judge.assignedZones, zone.id] },
+                                      "Zones juge mises à jour.",
+                                    )
+                                  }
+                                >
+                                  + {formatZoneLabel(zone)}
+                                </button>
+                              ))}
+                          </div>
+                        ) : null}
+                      </td>
+                      <td>
+                        <span
+                          className={
+                            judgeTrackingStatus === "Rangé" || judgeTrackingStatus === "Imprimé non rangé"
+                              ? getAccreditationStatusClass("Imprimé")
+                              : getAccreditationStatusClass(judgeTrackingStatus)
+                          }
+                        >
+                          {judgeTrackingStatus}
+                        </span>
+                      </td>
+                      <td>
+                        {judgeTrackingStatus === "Non imprimé" ? (
+                          <span className="panel-note">—</span>
+                        ) : judgeTrackingStatus === "Imprimé à détruire" ? (
+                          <span className="panel-note">Pas de retrait</span>
+                        ) : pickerOpen ? (
+                          <div className="tracking-location-picker">
+                            <select
+                              defaultValue={judgeLocation}
+                              autoFocus
+                              onChange={(event) => updateJudgeBadgeStorageLocation(judge.id, event.target.value)}
+                              onBlur={() => setStoragePickerOpenById((current) => ({ ...current, [judge.id]: false }))}
+                            >
+                              <option value="">Choisir un point de retrait...</option>
+                              {allStorageLocations.map((loc) => (
+                                <option key={`${judge.id}-${loc}`} value={loc}>{loc}</option>
+                              ))}
+                            </select>
+                          </div>
+                        ) : judgeTrackingStatus === "Imprimé non rangé" ? (
+                          <button
+                            className="button button--primary button--small"
+                            type="button"
+                            onClick={() => setStoragePickerOpenById((current) => ({ ...current, [judge.id]: true }))}
+                          >
+                            Définir le point de retrait
+                          </button>
+                        ) : (
+                          <div className="tracking-location-display">
+                            <span>{judgeLocation}</span>
+                            <button
+                              className="button button--ghost button--small"
+                              type="button"
+                              onClick={() => setStoragePickerOpenById((current) => ({ ...current, [judge.id]: true }))}
+                            >
+                              Modifier
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        {judgeTrackingStatus === "Imprimé à détruire" ? (
+                          <button
+                            className="button button--ghost-danger button--small"
+                            type="button"
+                            onClick={() => markJudgeBadgeDestroyed(judge)}
+                          >
+                            Destruction effectuée
+                          </button>
+                        ) : judge.printStatus === "Dans la file" ? (
+                          <span className="panel-note">Déjà dans la file</span>
+                        ) : canQueueJudge ? (
+                          <div className="table-actions table-actions--inline">
+                            <button
+                              className="button button--secondary button--small"
+                              type="button"
+                              onClick={() => addJudgeToPrintQueue(judge)}
+                            >
+                              Ajouter à la file
+                            </button>
+                            {canManageJudges ? (
+                              <button
+                                className="button button--ghost-danger button--small"
+                                type="button"
+                                onClick={() => removeJudge(judge.id)}
+                              >
+                                Supprimer
+                              </button>
+                            ) : null}
+                          </div>
+                        ) : canManageJudges ? (
+                          <button
+                            className="button button--ghost-danger button--small"
+                            type="button"
+                            onClick={() => removeJudge(judge.id)}
+                          >
+                            Supprimer
+                          </button>
+                        ) : (
+                          <span className="panel-note">Suivi uniquement</span>
+                        )}
+                      </td>
+                    </tr>
+                  )})}
+                  {!activeJudges.length ? (
+                    <tr>
+                      <td colSpan="6">
+                        Aucun juge enregistré pour le moment.
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+            {canShowMoreListItems("active-judges", activeJudges) ? (
+              <div className="list-progressive-actions">
+                <button
+                  className="button button--secondary button--small"
+                  type="button"
+                  onClick={() => showMoreListItems("active-judges")}
+                >
+                  Afficher 10 de plus
+                </button>
+              </div>
+            ) : null}
+
+            <div className="accreditation-print-note">
+              Les juges utilisent maintenant la meme logique operationnelle que les benevoles : ajout a la file, impression du lot, puis rangement du badge.
+            </div>
+
+            <Panel
+              title="Points de retrait utilises pour les juges"
+              subtitle="Les juges reutilisent les memes points de retrait que les autres badges."
+            >
+              {judgeUsedLocations.length ? (
+                <div className="accreditation-tag-list">
+                  {judgeUsedLocations.map((loc) => (
+                    <span key={loc} className="accreditation-tag accreditation-tag--active">{loc}</span>
+                  ))}
+                </div>
+              ) : (
+                <p className="panel-note">Aucun badge juge n'est encore rangé.</p>
+              )}
+            </Panel>
+          </Panel>
+
+          <Panel
+            title="Presse"
+            subtitle="Demandes presse acceptées uniquement. Le statut de la demande (en attente/acceptée/refusée) se gère depuis le module Presse."
+          >
+            {pressLoading ? <p className="panel-note">Chargement des accréditations presse...</p> : null}
+            {pressError ? <p className="panel-note">{pressError}</p> : null}
+
+            <div className="accreditation-person-summary">
+              <div className="team-summary-pill">
+                <strong>{acceptedPressRegistrations.length}</strong>
+                <span>Accrédité(s) presse</span>
+              </div>
+              <div className="team-summary-pill">
+                <strong>
+                  {acceptedPressRegistrations.filter((r) => r.printStatus === "Imprimé" && !r.destroyedAt).length}
+                </strong>
+                <span>Badge(s) imprimé(s)</span>
+              </div>
+              <div className="team-summary-pill">
+                <strong>{queuedPress.length}</strong>
+                <span>Dans la file</span>
+              </div>
+            </div>
+
+            <div className="admin-toolbar">
+              <label className="field">
+                <span>Rechercher un accrédité presse</span>
+                <input
+                  placeholder="Nom, prénom, média..."
+                  value={pressSearch}
+                  onChange={(event) => setPressSearch(event.target.value)}
+                />
+              </label>
+            </div>
+
+            <Panel
+              title="File d'impression presse"
+              subtitle="Même logique que pour les bénévoles et les juges : mise en file, impression, puis historique du lot."
+            >
+              <div className="table-wrap">
+                <table className="data-table data-table--admin">
+                  <thead>
+                    <tr>
+                      <th>Personne</th>
+                      <th>Type</th>
+                      <th>Zones</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleQueuedPress.map((registration) => (
+                      <tr key={`press-queue-${registration.id}`}>
+                        <td>{`${registration.firstName || ""} ${registration.lastName || ""}`.trim() || registration.media || "—"}</td>
+                        <td>{PRESS_REQUEST_TYPE_LABELS[registration.requestType] || registration.requestType}</td>
+                        <td>
+                          {sortedZones
+                            .filter((zone) => (registration.zoneIds || []).includes(zone.id))
+                            .map((zone) => formatZoneLabel(zone))
+                            .join(", ") || "Aucune zone"}
+                        </td>
+                        <td>
+                          <button
+                            className="button button--ghost-danger button--small"
+                            type="button"
+                            onClick={() => updatePressPrintStatus(registration, "Non-imprimé")}
+                          >
+                            Retirer
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {!queuedPress.length ? (
+                      <tr>
+                        <td colSpan="4">Aucun accrédité presse n'est actuellement dans la file d'impression.</td>
+                      </tr>
+                    ) : null}
+                  </tbody>
+                </table>
+              </div>
+              {canShowMoreListItems("queued-press", queuedPress) ? (
+                <div className="list-progressive-actions">
+                  <button
+                    className="button button--secondary button--small"
+                    type="button"
+                    onClick={() => showMoreListItems("queued-press")}
+                  >
+                    Afficher 10 de plus
+                  </button>
+                </div>
+              ) : null}
+
+              <div className="table-actions table-actions--inline">
+                <button
+                  className="button button--primary"
+                  type="button"
+                  onClick={finalizePressPrintQueue}
+                  disabled={!queuedPress.length}
+                >
+                  Générer les 2 PDF ({queuedPress.length})
+                </button>
+              </div>
+            </Panel>
+
+            <div className="table-wrap">
+              <table className="data-table data-table--admin">
+                <thead>
+                  <tr>
+                    <th>Personne</th>
+                    <th>Média</th>
+                    <th>Type</th>
+                    <th>Zones</th>
+                    <th>Statut impression</th>
+                    <th>Point de retrait</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleAcceptedPress.map((registration) => {
+                    const pressTrackingStatus = getPressTrackingStatus(registration);
+                    const pressLocation = getPressStorageLocation(registration.id);
+                    const pickerOpen = Boolean(storagePickerOpenById[registration.id]);
+                    const canQueuePress =
+                      registration.printStatus !== "Dans la file" && pressTrackingStatus !== "Imprimé à détruire";
+
+                    return (
+                      <tr key={registration.id}>
+                        <td>{`${registration.firstName || ""} ${registration.lastName || ""}`.trim() || "—"}</td>
+                        <td>{registration.media || "—"}</td>
+                        <td>{PRESS_REQUEST_TYPE_LABELS[registration.requestType] || registration.requestType}</td>
+                        <td>
+                          {sortedZones
+                            .filter((zone) => (registration.zoneIds || []).includes(zone.id))
+                            .map((zone) => formatZoneLabel(zone))
+                            .join(", ") || "Aucune zone"}
+                        </td>
+                        <td>
+                          <span
+                            className={
+                              pressTrackingStatus === "Rangé" || pressTrackingStatus === "Imprimé non rangé"
+                                ? getAccreditationStatusClass("Imprimé")
+                                : getAccreditationStatusClass(pressTrackingStatus)
+                            }
+                          >
+                            {pressTrackingStatus}
+                          </span>
+                        </td>
+                        <td>
+                          {pressTrackingStatus === "Non imprimé" ? (
+                            <span className="panel-note">—</span>
+                          ) : pressTrackingStatus === "Imprimé à détruire" ? (
+                            <span className="panel-note">Pas de retrait</span>
+                          ) : pickerOpen ? (
+                            <div className="tracking-location-picker">
+                              <select
+                                defaultValue={pressLocation}
+                                autoFocus
+                                onChange={(event) => updatePressBadgeStorageLocation(registration.id, event.target.value)}
+                                onBlur={() => setStoragePickerOpenById((current) => ({ ...current, [registration.id]: false }))}
+                              >
+                                <option value="">Choisir un point de retrait...</option>
+                                {allStorageLocations.map((loc) => (
+                                  <option key={`${registration.id}-${loc}`} value={loc}>{loc}</option>
+                                ))}
+                              </select>
+                            </div>
+                          ) : pressTrackingStatus === "Imprimé non rangé" ? (
+                            <button
+                              className="button button--primary button--small"
+                              type="button"
+                              onClick={() => setStoragePickerOpenById((current) => ({ ...current, [registration.id]: true }))}
+                            >
+                              Définir le point de retrait
+                            </button>
+                          ) : (
+                            <div className="tracking-location-display">
+                              <span>{pressLocation}</span>
+                              <button
+                                className="button button--ghost button--small"
+                                type="button"
+                                onClick={() => setStoragePickerOpenById((current) => ({ ...current, [registration.id]: true }))}
+                              >
+                                Modifier
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                        <td>
+                          {pressTrackingStatus === "Imprimé à détruire" ? (
+                            <button
+                              className="button button--ghost-danger button--small"
+                              type="button"
+                              onClick={() => markPressBadgeDestroyed(registration)}
+                            >
+                              Destruction effectuée
+                            </button>
+                          ) : registration.printStatus === "Dans la file" ? (
+                            <span className="panel-note">Déjà dans la file</span>
+                          ) : canQueuePress ? (
+                            <button
+                              className="button button--secondary button--small"
+                              type="button"
+                              onClick={() => addPressToPrintQueue(registration)}
+                            >
+                              Ajouter à la file
+                            </button>
+                          ) : (
+                            <span className="panel-note">Aucune impression à gérer</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {!acceptedPressRegistrations.length ? (
+                    <tr>
+                      <td colSpan="7">Aucune demande presse acceptée pour le moment.</td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+            {canShowMoreListItems("accepted-press", acceptedPressRegistrations) ? (
+              <div className="list-progressive-actions">
+                <button
+                  className="button button--secondary button--small"
+                  type="button"
+                  onClick={() => showMoreListItems("accepted-press")}
+                >
+                  Afficher 10 de plus
+                </button>
+              </div>
+            ) : null}
+
+            <Panel
+              title="Points de retrait utilisés pour la presse"
+              subtitle="La presse réutilise les mêmes points de retrait que les autres badges."
+            >
+              {pressUsedLocations.length ? (
+                <div className="accreditation-tag-list">
+                  {pressUsedLocations.map((loc) => (
+                    <span key={loc} className="accreditation-tag accreditation-tag--active">{loc}</span>
+                  ))}
+                </div>
+              ) : (
+                <p className="panel-note">Aucun badge presse n'est encore rangé.</p>
+              )}
+            </Panel>
+          </Panel>
         </section>
       ) : canOperatePrinting && activeAccreditationTab === "print" ? (
         <section className="panel-grid panel-grid--2">
@@ -2809,402 +3590,6 @@ function AccreditationsPage(props) {
                 Ajouter
               </button>
             </div>
-          </Panel>
-        </section>
-      ) : canOperatePrinting && activeAccreditationTab === "judges" ? (
-        <section className="admin-stack">
-          <Panel
-            title="Accréditations juges"
-            subtitle="Roster nominatif sans compte utilisateur, géré séparément avec suivi d'impression."
-          >
-            {judgesLoading ? <p className="panel-note">Chargement des juges...</p> : null}
-            {judgesError ? <p className="panel-note">{judgesError}</p> : null}
-
-            <div className="accreditation-person-summary">
-              <div className="team-summary-pill">
-                <strong>{judges.length}</strong>
-                <span>Juge(s) dans le roster</span>
-              </div>
-              <div className="team-summary-pill">
-                <strong>{judges.filter((judge) => judge.printStatus === "Imprimé" && !judge.destroyedAt).length}</strong>
-                <span>Badge(s) imprimé(s)</span>
-              </div>
-              <div className="team-summary-pill">
-                <strong>{judges.filter((judge) => judge.printStatus === "Non-imprimé" && !judge.destroyedAt).length}</strong>
-                <span>Badge(s) à produire</span>
-              </div>
-              <div className="team-summary-pill">
-                <strong>{queuedJudges.length}</strong>
-                <span>Dans la file</span>
-              </div>
-            </div>
-
-            <div className="admin-toolbar">
-              <label className="field">
-                <span>Rechercher un juge</span>
-                <input
-                  placeholder="Nom, prénom, libellé badge..."
-                  value={judgeSearch}
-                  onChange={(event) => setJudgeSearch(event.target.value)}
-                />
-              </label>
-            </div>
-
-            {canManageJudges ? (
-              <>
-                <div className="field-grid">
-                  <AuthFormField label="Prénom">
-                    <input
-                      value={newJudgeFirstName}
-                      onChange={(event) => setNewJudgeFirstName(event.target.value)}
-                      placeholder="Ex: Marie"
-                    />
-                  </AuthFormField>
-                  <AuthFormField label="Nom">
-                    <input
-                      value={newJudgeLastName}
-                      onChange={(event) => setNewJudgeLastName(event.target.value)}
-                      placeholder="Ex: Muller"
-                    />
-                  </AuthFormField>
-                  <AuthFormField label="Libellé badge">
-                    <input
-                      value={newJudgeBadgeLabel}
-                      onChange={(event) => setNewJudgeBadgeLabel(event.target.value)}
-                      placeholder="Judge"
-                    />
-                  </AuthFormField>
-                </div>
-
-                <div className="accreditation-inline-panel">
-                  <strong>Zones du juge</strong>
-                  <div className="choice-grid choice-grid--2">
-                    {sortedZones.map((zone) => (
-                      <label key={`new-judge-zone-${zone.id}`} className="selection-card selection-card--compact">
-                        <input
-                          type="checkbox"
-                          checked={newJudgeZoneIds.includes(zone.id)}
-                          onChange={() => setNewJudgeZoneIds((current) => toggleIdInList(current, zone.id))}
-                        />
-                        <div>
-                          <strong>{formatZoneLabel(zone)}</strong>
-                          <p>Accès du badge juge</p>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="table-actions table-actions--inline">
-                  <button
-                    className="button button--secondary"
-                    type="button"
-                    onClick={addJudge}
-                    disabled={!newJudgeFirstName.trim() || !newJudgeLastName.trim()}
-                  >
-                    Ajouter le juge
-                  </button>
-                </div>
-              </>
-            ) : (
-              <div className="accreditation-print-note">
-                Les gestionnaires ont ici une vue de suivi d'impression. L'ajout et la modification des juges restent réservés aux administrateurs.
-              </div>
-            )}
-
-            <Panel
-              title="File d'impression juges"
-              subtitle="Même logique que pour les bénévoles : mise en file, impression, puis historique du lot."
-            >
-              <div className="table-wrap">
-                <table className="data-table data-table--admin">
-                  <thead>
-                    <tr>
-                      <th>Juge</th>
-                      <th>Libellé badge</th>
-                      <th>Zones</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {visibleQueuedJudges.map((judge) => (
-                      <tr key={`judge-queue-${judge.id}`}>
-                        <td>{`${judge.firstName} ${judge.lastName}`.trim() || "Juge sans nom"}</td>
-                        <td>{judge.badgeLabel || "Judge"}</td>
-                        <td>
-                          {sortedZones
-                            .filter((zone) => judge.assignedZones.includes(zone.id))
-                            .map((zone) => formatZoneLabel(zone))
-                            .join(", ") || "Aucune zone"}
-                        </td>
-                        <td>
-                          <button
-                            className="button button--ghost-danger button--small"
-                            type="button"
-                            onClick={() => updateJudgePrintStatus(judge, "Non-imprimé")}
-                          >
-                            Retirer
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                    {!queuedJudges.length ? (
-                      <tr>
-                        <td colSpan="4">Aucun juge n'est actuellement dans la file d'impression.</td>
-                      </tr>
-                    ) : null}
-                  </tbody>
-                </table>
-              </div>
-              {canShowMoreListItems("queued-judges", queuedJudges) ? (
-                <div className="list-progressive-actions">
-                  <button
-                    className="button button--secondary button--small"
-                    type="button"
-                    onClick={() => showMoreListItems("queued-judges")}
-                  >
-                    Afficher 10 de plus
-                  </button>
-                </div>
-              ) : null}
-
-              <div className="table-actions table-actions--inline">
-                <button
-                  className="button button--primary"
-                  type="button"
-                  onClick={finalizeJudgePrintQueue}
-                  disabled={!queuedJudges.length}
-                >
-                  Générer les 2 PDF ({queuedJudges.length})
-                </button>
-              </div>
-            </Panel>
-
-            <div className="table-wrap">
-              <table className="data-table data-table--admin">
-                <thead>
-                  <tr>
-                    <th>Juge</th>
-                    <th>Libellé badge</th>
-                    <th>Zones</th>
-                    <th>Statut impression</th>
-                    <th>Point de retrait</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visibleActiveJudges.map((judge) => {
-                    const judgeTrackingStatus = getJudgeTrackingStatus(judge);
-                    const judgeLocation = getJudgeStorageLocation(judge.id);
-                    const pickerOpen = Boolean(storagePickerOpenById[judge.id]);
-                    const canQueueJudge =
-                      judge.printStatus !== "Dans la file" &&
-                      judgeTrackingStatus !== "Imprimé à détruire";
-
-                    return (
-                    <tr key={judge.id}>
-                      <td>{`${judge.firstName} ${judge.lastName}`.trim() || "Juge sans nom"}</td>
-                      <td>
-                        {canManageJudges ? (
-                          <input
-                            value={judge.badgeLabel || "Judge"}
-                            onChange={(event) =>
-                              updateJudge(judge.id, { badgeLabel: event.target.value }, "Libellé badge juge mis à jour.")
-                            }
-                          />
-                        ) : (
-                          judge.badgeLabel || "Judge"
-                        )}
-                      </td>
-                      <td>
-                        <div className="accreditation-tag-list">
-                          {judge.assignedZones.length ? (
-                            sortedZones
-                              .filter((zone) => judge.assignedZones.includes(zone.id))
-                              .map((zone) =>
-                                canManageJudges ? (
-                                  <button
-                                    key={`${judge.id}-${zone.id}`}
-                                    className="accreditation-tag accreditation-tag--active"
-                                    type="button"
-                                    onClick={() =>
-                                      updateJudge(
-                                        judge.id,
-                                        { assignedZones: judge.assignedZones.filter((zoneId) => zoneId !== zone.id) },
-                                        "Zones juge mises à jour.",
-                                      )
-                                    }
-                                  >
-                                    {formatZoneLabel(zone)}
-                                  </button>
-                                ) : (
-                                  <span key={`${judge.id}-${zone.id}`} className="accreditation-tag accreditation-tag--active">
-                                    {formatZoneLabel(zone)}
-                                  </span>
-                                ),
-                              )
-                          ) : (
-                            <span className="panel-note">À définir</span>
-                          )}
-                        </div>
-                        {canManageJudges ? (
-                          <div className="accreditation-tag-list">
-                            {sortedZones
-                              .filter((zone) => !judge.assignedZones.includes(zone.id))
-                              .map((zone) => (
-                                <button
-                                  key={`${judge.id}-add-${zone.id}`}
-                                  className="accreditation-tag"
-                                  type="button"
-                                  onClick={() =>
-                                    updateJudge(
-                                      judge.id,
-                                      { assignedZones: [...judge.assignedZones, zone.id] },
-                                      "Zones juge mises à jour.",
-                                    )
-                                  }
-                                >
-                                  + {formatZoneLabel(zone)}
-                                </button>
-                              ))}
-                          </div>
-                        ) : null}
-                      </td>
-                      <td>
-                        <span
-                          className={
-                            judgeTrackingStatus === "Rangé" || judgeTrackingStatus === "Imprimé non rangé"
-                              ? getAccreditationStatusClass("Imprimé")
-                              : getAccreditationStatusClass(judgeTrackingStatus)
-                          }
-                        >
-                          {judgeTrackingStatus}
-                        </span>
-                      </td>
-                      <td>
-                        {judgeTrackingStatus === "Non imprimé" ? (
-                          <span className="panel-note">—</span>
-                        ) : judgeTrackingStatus === "Imprimé à détruire" ? (
-                          <span className="panel-note">Pas de retrait</span>
-                        ) : pickerOpen ? (
-                          <div className="tracking-location-picker">
-                            <select
-                              defaultValue={judgeLocation}
-                              autoFocus
-                              onChange={(event) => updateJudgeBadgeStorageLocation(judge.id, event.target.value)}
-                              onBlur={() => setStoragePickerOpenById((current) => ({ ...current, [judge.id]: false }))}
-                            >
-                              <option value="">Choisir un point de retrait...</option>
-                              {allStorageLocations.map((loc) => (
-                                <option key={`${judge.id}-${loc}`} value={loc}>{loc}</option>
-                              ))}
-                            </select>
-                          </div>
-                        ) : judgeTrackingStatus === "Imprimé non rangé" ? (
-                          <button
-                            className="button button--primary button--small"
-                            type="button"
-                            onClick={() => setStoragePickerOpenById((current) => ({ ...current, [judge.id]: true }))}
-                          >
-                            Définir le point de retrait
-                          </button>
-                        ) : (
-                          <div className="tracking-location-display">
-                            <span>{judgeLocation}</span>
-                            <button
-                              className="button button--ghost button--small"
-                              type="button"
-                              onClick={() => setStoragePickerOpenById((current) => ({ ...current, [judge.id]: true }))}
-                            >
-                              Modifier
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                      <td>
-                        {judgeTrackingStatus === "Imprimé à détruire" ? (
-                          <button
-                            className="button button--ghost-danger button--small"
-                            type="button"
-                            onClick={() => markJudgeBadgeDestroyed(judge)}
-                          >
-                            Destruction effectuée
-                          </button>
-                        ) : judge.printStatus === "Dans la file" ? (
-                          <span className="panel-note">Déjà dans la file</span>
-                        ) : canQueueJudge ? (
-                          <div className="table-actions table-actions--inline">
-                            <button
-                              className="button button--secondary button--small"
-                              type="button"
-                              onClick={() => addJudgeToPrintQueue(judge)}
-                            >
-                              Ajouter à la file
-                            </button>
-                            {canManageJudges ? (
-                              <button
-                                className="button button--ghost-danger button--small"
-                                type="button"
-                                onClick={() => removeJudge(judge.id)}
-                              >
-                                Supprimer
-                              </button>
-                            ) : null}
-                          </div>
-                        ) : canManageJudges ? (
-                          <button
-                            className="button button--ghost-danger button--small"
-                            type="button"
-                            onClick={() => removeJudge(judge.id)}
-                          >
-                            Supprimer
-                          </button>
-                        ) : (
-                          <span className="panel-note">Suivi uniquement</span>
-                        )}
-                      </td>
-                    </tr>
-                  )})}
-                  {!activeJudges.length ? (
-                    <tr>
-                      <td colSpan="6">
-                        Aucun juge enregistré pour le moment.
-                      </td>
-                    </tr>
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
-            {canShowMoreListItems("active-judges", activeJudges) ? (
-              <div className="list-progressive-actions">
-                <button
-                  className="button button--secondary button--small"
-                  type="button"
-                  onClick={() => showMoreListItems("active-judges")}
-                >
-                  Afficher 10 de plus
-                </button>
-              </div>
-            ) : null}
-
-            <div className="accreditation-print-note">
-              Les juges utilisent maintenant la meme logique operationnelle que les benevoles : ajout a la file, impression du lot, puis rangement du badge.
-            </div>
-
-            <Panel
-              title="Points de retrait utilises pour les juges"
-              subtitle="Les juges reutilisent les memes points de retrait que les autres badges."
-            >
-              {judgeUsedLocations.length ? (
-                <div className="accreditation-tag-list">
-                  {judgeUsedLocations.map((loc) => (
-                    <span key={loc} className="accreditation-tag accreditation-tag--active">{loc}</span>
-                  ))}
-                </div>
-              ) : (
-                <p className="panel-note">Aucun badge juge n'est encore rangé.</p>
-              )}
-            </Panel>
           </Panel>
         </section>
       ) : null}

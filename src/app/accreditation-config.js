@@ -80,6 +80,16 @@ const ACCREDITATION_BADGE_VISUALS = [
     label: "Judge nominatif",
     description: "Badge nominatif pour les juges.",
   },
+  {
+    id: "press",
+    label: "Presse nominatif",
+    description: "Badge nominatif pour les accrédités presse (journalistes, photographes).",
+  },
+  {
+    id: "vip",
+    label: "VIP nominatif",
+    description: "Badge nominatif pour les invités VIP, mêmes zones que les autres badges mais visuel dédié.",
+  },
 ];
 const ACCREDITATION_QR_RESOURCE_SEED = [
   {
@@ -133,6 +143,8 @@ const ACCREDITATION_QR_VISUAL_ASSIGNMENT_SEED = {
   athlete: ["athlete-roadbook", "results-live", "photos-live", "emagazine-athlete"],
   coach: ["athlete-roadbook", "results-live", "photos-live", "emagazine-athlete"],
   judge: ["results-live"],
+  press: [],
+  vip: [],
 };
 
 function normalizeSubRoles(subRoles) {

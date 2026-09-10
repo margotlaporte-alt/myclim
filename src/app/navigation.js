@@ -61,8 +61,7 @@ function buildNavigationFromRoles(roles) {
         makeLink("/app/presences", "navAttendance", "Présences", "check"),
       ]),
       makeSection("navSectionAccreditations", "Accréditations", [
-        makeLink("/app/accreditations/benevoles", "navAccreditationVolunteers", "Bénévoles", "ticket"),
-        makeLink("/app/accreditations/juges", "navAccreditationJudges", "Juges", "badge"),
+        makeLink("/app/accreditations", "navAccreditationBadges", "Badges & zones", "ticket"),
         makeLink("/app/presse", "navPress", "Presse", "badge"),
         makeLink("/app/vip", "navVip", "VIP", "ticket"),
       ]),
@@ -114,8 +113,7 @@ function buildNavigationFromRoles(roles) {
         makeLink("/app/presences", "navAttendance", "Présences", "check"),
       ]),
       makeSection("navSectionAccreditations", "Accréditations", [
-        makeLink("/app/accreditations/benevoles", "navAccreditationVolunteers", "Bénévoles", "ticket"),
-        makeLink("/app/accreditations/juges", "navAccreditationJudges", "Juges", "badge"),
+        makeLink("/app/accreditations", "navAccreditationBadges", "Badges & zones", "ticket"),
         makeLink("/app/presse", "navPress", "Presse", "badge"),
         makeLink("/app/vip", "navVip", "VIP", "ticket"),
       ]),
