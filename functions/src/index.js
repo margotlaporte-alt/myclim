@@ -325,6 +325,49 @@ L'équipe CMCM Luxembourg Indoor Meeting`,
   },
 );
 
+function buildVipPortalUid(portalId) {
+  return `vip-portal-${portalId}`;
+}
+
+async function ensureVipPortalUser(uid, portalId) {
+  try {
+    await auth.createUser({ uid });
+  } catch (error) {
+    if (error?.code !== "auth/uid-already-exists") {
+      throw error;
+    }
+  }
+
+  await auth.setCustomUserClaims(uid, { vipPortalId: portalId });
+}
+
+export const verifyVipPortalAccess = onCall({ region: REGION }, async (request) => {
+  const portalId = String(request.data?.portalId || "").trim();
+  const password = String(request.data?.password || "");
+
+  if (!portalId) {
+    throw new HttpsError("invalid-argument", "Identifiant de portail manquant.");
+  }
+
+  const portalSnapshot = await db.collection("vipPartnerPortals").doc(portalId).get();
+  if (!portalSnapshot.exists) {
+    throw new HttpsError("not-found", "Ce portail partenaire n'existe pas.");
+  }
+
+  const secretSnapshot = await db.collection("vipPartnerPortalSecrets").doc(portalId).get();
+  const storedPassword = String(secretSnapshot.exists ? secretSnapshot.data()?.accessPassword || "" : "").trim();
+
+  if (storedPassword && password !== storedPassword) {
+    throw new HttpsError("permission-denied", "Mot de passe incorrect.");
+  }
+
+  const uid = buildVipPortalUid(portalId);
+  await ensureVipPortalUser(uid, portalId);
+  const token = await auth.createCustomToken(uid, { vipPortalId: portalId });
+
+  return { token };
+});
+
 export const deletePlatformUser = onCall({ region: REGION }, async (request) => {
   const { requesterUid } = await assertAdminRequester(request);
   const targetUserId = String(request.data?.userId || "").trim();

@@ -41,6 +41,25 @@ service cloud.firestore {
       return isSignedIn() && "budget" in userTypes();
     }
 
+    // Bénévole/chef d'équipe affecté à l'équipe "Guides VIP" : peut lire les
+    // inscriptions VIP (pas les modifier) pour retrouver ses invités à guider,
+    // filtré côté client par tour (coque/coulisses) via son sous-rôle.
+    // Le profil (users/{uid}) stocke l'équipe sous assignedTeams (liste) et/ou
+    // assignedRole (rôle principal) — voir syncVolunteerAssignmentToUserProfile()
+    // dans App.jsx. Une affectation encore provisoire (mail pas envoyé) reste
+    // visible, juste marquée comme telle côté UI (cf. MyAssignmentsPage) — pas
+    // de blocage d'accès ici.
+    function isVipTourGuide() {
+      return isSignedIn() &&
+        (
+          currentUserDoc().data.assignedRole == "Guides VIP" ||
+          (
+            currentUserDoc().data.assignedTeams is list &&
+            "Guides VIP" in currentUserDoc().data.assignedTeams
+          )
+        );
+    }
+
     // Une personne non admin/gestionnaire/budget peut être autorisée
     // individuellement (ou via son rôle) à déposer des factures, via
     // appSettings/budgetInvoiceConfiguration (configuré par un admin).
@@ -133,7 +152,8 @@ service cloud.firestore {
 
     match /vipPublicRegistrations/{registrationId} {
       allow create: if true;
-      allow read, update, delete: if isAdminOrManager();
+      allow read: if isAdminOrManager() || isVipTourGuide();
+      allow update, delete: if isAdminOrManager();
     }
 
     match /vipInvitations/{invitationId} {
@@ -155,16 +175,31 @@ service cloud.firestore {
     }
 
     match /vipAdminRegistrations/{registrationId} {
-      allow read, write: if isAdminOrManager();
+      allow read: if isAdminOrManager() || isVipTourGuide();
+      allow write: if isAdminOrManager();
     }
 
+    // Doc public : jamais de mot de passe en clair ici (seulement organisation,
+    // contact et l'indicateur "hasPassword"). Le mot de passe réel vit dans
+    // vipPartnerPortalSecrets, jamais lu par le client, seulement par la
+    // Cloud Function verifyVipPortalAccess (SDK admin, contourne ces règles).
     match /vipPartnerPortals/{portalId} {
       allow read: if true;
       allow write: if isAdminOrManager();
     }
 
+    match /vipPartnerPortalSecrets/{portalId} {
+      allow read, write: if isAdminOrManager();
+    }
+
+    // Accès réservé aux admins/gestionnaires, ou à la session obtenue via
+    // verifyVipPortalAccess après vérification du mot de passe côté serveur
+    // (custom claim vipPortalId posé sur le compte technique du portail).
     match /vipPartnerPortals/{portalId}/entries/{entryId} {
-      allow read, create, update, delete: if true;
+      allow read: if isAdminOrManager() || isVipTourGuide() ||
+        (isSignedIn() && request.auth.token.vipPortalId == portalId);
+      allow create, update, delete: if isAdminOrManager() ||
+        (isSignedIn() && request.auth.token.vipPortalId == portalId);
     }
 
     // ── Documents partagés ──────────────────────────────────────────────────

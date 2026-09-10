@@ -185,6 +185,11 @@ function TeamPage(props) {
 
           <section className="panel-grid panel-grid--2">
             <Panel title="Mon affectation" subtitle="Ce que je pilote personnellement sur cette équipe.">
+              {!userProfile?.teamEmailSent ? (
+                <p className="status-pill status-pill--pending">
+                  Affectation provisoire, susceptible d'être modifiée
+                </p>
+              ) : null}
               <dl className="detail-list">
                 <div>
                   <dt>Fonction</dt>

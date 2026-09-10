@@ -342,6 +342,22 @@
   color: #0f3d6d;
 }
 
+/* Variant for use on light/white backgrounds (e.g. the sidebar footer), where the
+   default translucent-white style (meant for dark hero gradients) is illegible. */
+.language-switch--on-light {
+  background: rgba(23, 50, 74, 0.06);
+  border-color: rgba(23, 50, 74, 0.12);
+}
+
+.language-switch--on-light .language-switch__button {
+  color: #45607a;
+}
+
+.language-switch--on-light .language-switch__button--active {
+  background: #17324a;
+  color: #ffffff;
+}
+
 .auth-page-body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 280px;
@@ -687,6 +703,61 @@
 
 .vip-admin-stat-card strong {
   font-size: 1.4rem;
+  color: #17304e;
+}
+
+.vip-explainer-list {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+  counter-reset: vip-explainer;
+}
+
+.vip-explainer-list li {
+  position: relative;
+  padding: 14px 16px 14px 46px;
+  border-radius: 14px;
+  background: rgba(247, 250, 255, 0.7);
+  border: 1px solid #e4ecf6;
+  counter-increment: vip-explainer;
+}
+
+.vip-explainer-list li::before {
+  content: counter(vip-explainer);
+  position: absolute;
+  left: 14px;
+  top: 14px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #17304e;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vip-explainer-list strong {
+  color: #17304e;
+}
+
+.vip-explainer-list p {
+  margin: 6px 0 0;
+  color: #45607a;
+  line-height: 1.5;
+}
+
+.vip-guide-tour-group + .vip-guide-tour-group {
+  margin-top: 20px;
+}
+
+.vip-guide-tour-group__title {
+  margin: 0 0 8px;
+  font-size: 1rem;
   color: #17304e;
 }
 
@@ -1912,6 +1983,12 @@ textarea {
 .status-pill--warn {
   background: #eef4ff;
   color: #426487;
+}
+
+.status-pill--pending {
+  background: rgba(245, 158, 11, 0.16);
+  color: #92610a;
+  border: 1px solid rgba(245, 158, 11, 0.28);
 }
 
 .status-pill--ok {

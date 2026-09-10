@@ -1,4 +1,6 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { collection, collectionGroup, onSnapshot } from "firebase/firestore";
+import { db } from "../services/firebase";
 import { buildUserIdentitySet, getAssignedTeamNames } from "./common-helpers";
 import { useBudgetInvoiceConfiguration, useTeamConfiguration } from "./config-hooks";
 import { getDocumentReferenceUrl, useDocumentsCollection } from "./documents-hooks";
@@ -7,8 +9,11 @@ import { canUserUploadBudgetInvoice } from "./budget-invoice-config";
 import { formatInvoiceStatusLabel, getInvoiceDocumentUrl, InvoiceUploadForm } from "./invoice-management";
 import { buildParticipationCertificateMarkup, getRoundedParticipationHours, normalizePresenceRecord } from "./presence-helpers";
 import { extractRolesFromProfile, normalizeRole } from "./utils";
+import { buildVipFullName, getVipTourChoiceLabel, VIP_TOUR_OPTIONS } from "./vip-helpers";
 import { useLanguage } from "./language-context";
 import { useAuth } from "../context/auth-context";
+
+const VIP_TOUR_GUIDE_TEAM_NAME = "Guides VIP";
 
 function MyAssignmentsPage(props) {
   const { DataTable, Panel } = props;
@@ -21,6 +26,42 @@ function MyAssignmentsPage(props) {
     [buildUserIdentitySet, currentUser, userProfile],
   );
   const assignedTeamNames = useMemo(() => getAssignedTeamNames(userProfile), [getAssignedTeamNames, userProfile]);
+  const isVipTourGuide = assignedTeamNames.includes(VIP_TOUR_GUIDE_TEAM_NAME);
+  const isAssignmentProvisional = !userProfile?.teamEmailSent;
+  const [vipTourRegistrations, setVipTourRegistrations] = useState([]);
+
+  useEffect(() => {
+    if (!isVipTourGuide) {
+      setVipTourRegistrations([]);
+      return undefined;
+    }
+
+    const bySource = { public: [], partner: [], admin: [] };
+    function recomputeVipTourRegistrations() {
+      setVipTourRegistrations([...bySource.public, ...bySource.partner, ...bySource.admin]);
+    }
+
+    const unsubscribePublic = onSnapshot(collection(db, "vipPublicRegistrations"), (snapshot) => {
+      bySource.public = snapshot.docs.map((registrationDoc) => ({ id: registrationDoc.id, ...registrationDoc.data() }));
+      recomputeVipTourRegistrations();
+    });
+    const unsubscribePartner = onSnapshot(collectionGroup(db, "entries"), (snapshot) => {
+      bySource.partner = snapshot.docs
+        .filter((entryDoc) => entryDoc.ref.path.startsWith("vipPartnerPortals/"))
+        .map((entryDoc) => ({ id: entryDoc.id, ...entryDoc.data() }));
+      recomputeVipTourRegistrations();
+    });
+    const unsubscribeAdmin = onSnapshot(collection(db, "vipAdminRegistrations"), (snapshot) => {
+      bySource.admin = snapshot.docs.map((registrationDoc) => ({ id: registrationDoc.id, ...registrationDoc.data() }));
+      recomputeVipTourRegistrations();
+    });
+
+    return () => {
+      unsubscribePublic();
+      unsubscribePartner();
+      unsubscribeAdmin();
+    };
+  }, [isVipTourGuide]);
   const myAssignments = useMemo(
     () =>
       teamAssignments.filter((member) =>
@@ -72,6 +113,18 @@ function MyAssignmentsPage(props) {
           )
           .sort((left, right) => right.createdAtMs - left.createdAtMs);
 
+        const isVipTourGuideAssignment =
+          (selectedRole?.roleName || assignment.assignedRole) === VIP_TOUR_GUIDE_TEAM_NAME;
+        const vipTourGroups = isVipTourGuideAssignment
+          ? VIP_TOUR_OPTIONS.filter((option) => option.value !== "none").map((option) => ({
+              tourValue: option.value,
+              tourLabel: getVipTourChoiceLabel(option.value),
+              guests: vipTourRegistrations.filter(
+                (registration) => String(registration.vipTourChoice || "").trim().toLowerCase() === option.value,
+              ),
+            }))
+          : [];
+
         return {
           key: assignment.assignmentEntryId || `${assignment.id || "assignment"}-${assignment.assignedRoleId || index}`,
           assignment,
@@ -79,9 +132,11 @@ function MyAssignmentsPage(props) {
           leader,
           teamRows,
           roleDocuments,
+          isVipTourGuideAssignment,
+          vipTourGroups,
         };
       }),
-    [availableAssignments, documents, roles, teamAssignments],
+    [availableAssignments, documents, roles, teamAssignments, vipTourRegistrations],
   );
 
   return (
@@ -111,12 +166,15 @@ function MyAssignmentsPage(props) {
 
       {assignmentDetails.length ? (
         <>
-          {assignmentDetails.map(({ key, assignment, selectedRole, leader, teamRows, roleDocuments }) => (
+          {assignmentDetails.map(({ key, assignment, selectedRole, leader, teamRows, roleDocuments, isVipTourGuideAssignment, vipTourGroups }) => (
             <section key={key} className="assignment-group">
               <div className="assignment-group__header">
                 <p className="assignment-group__eyebrow">{t("assignmentsMissionEyebrow")}</p>
                 <h2>{selectedRole?.roleName || assignment.assignedRole || t("assignmentsMissionFallbackTitle")}</h2>
                 <p>{t("assignmentsMissionIntro")}</p>
+                {isAssignmentProvisional ? (
+                  <span className="status-pill status-pill--pending">{t("assignmentsProvisionalBadge")}</span>
+                ) : null}
               </div>
               <section className="panel-grid panel-grid--2">
                 <Panel
@@ -175,6 +233,35 @@ function MyAssignmentsPage(props) {
                   rows={teamRows.length ? teamRows : [{ name: t("assignmentsTeamUnavailable"), role: "-", contact: "-" }]}
                 />
               </Panel>
+
+              {isVipTourGuideAssignment ? (
+                <Panel title={t("vipGuidePanelTitle")} subtitle={t("vipGuidePanelSubtitleAll")}>
+                  {vipTourGroups.map((group) => (
+                    <div key={group.tourValue} className="vip-guide-tour-group">
+                      <h3 className="vip-guide-tour-group__title">
+                        {group.tourLabel} ({group.guests.length})
+                      </h3>
+                      {group.guests.length ? (
+                        <DataTable
+                          columns={[
+                            { key: "name", label: t("vipGuideColumnName") },
+                            { key: "organization", label: t("vipFieldOrganization") },
+                            { key: "guest", label: t("vipGuideColumnCompanion") },
+                          ]}
+                          rows={group.guests.map((registration) => ({
+                            name: buildVipFullName(registration) || "—",
+                            organization: registration.organization || "—",
+                            guest:
+                              `${registration.guestFirstName || ""} ${registration.guestLastName || ""}`.trim() || "—",
+                          }))}
+                        />
+                      ) : (
+                        <p className="panel-note">{t("vipGuideEmpty")}</p>
+                      )}
+                    </div>
+                  ))}
+                </Panel>
+              ) : null}
 
               <Panel title={t("assignmentsDocumentsPanelTitle")} subtitle={t("assignmentsDocumentsPanelSubtitle")}>
                 {roleDocuments.length ? (

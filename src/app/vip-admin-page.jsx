@@ -12,10 +12,12 @@ import {
 import { db } from "../services/firebase";
 import { recordMatchesEdition, useActiveEdition } from "./edition";
 import { AuthFormField, PhoneInput } from "./form-components";
+import { useLanguage } from "./language-context";
 import vipImport2027 from "./vip-import-2027.json";
 import {
   VIP_INVITATION_CATEGORY_SUGGESTIONS,
   VIP_PICKUP_POINT_OPTIONS,
+  VIP_TOUR_OPTIONS,
   buildVipFullName,
   buildVipPortalId,
   buildVipRegistrationPayload,
@@ -88,36 +90,36 @@ function getRegistrationDocumentRef(registration) {
   return doc(db, "vipAdminRegistrations", registration.id);
 }
 
-function formatMailStatus(status) {
+function formatMailStatus(status, t) {
   switch (String(status || "").trim().toLowerCase()) {
     case "sent":
-      return "Envoyé";
+      return t("vipMailStatusSent");
     default:
-      return "Non envoyé";
+      return t("vipMailStatusNotSent");
   }
 }
 
-function formatBadgeStatus(status) {
+function formatBadgeStatus(status, t) {
   switch (String(status || "").trim().toLowerCase()) {
     case "en_file":
-      return "En file";
+      return t("vipBadgeQueued");
     case "imprime":
-      return "Imprimé";
+      return t("vipBadgePrinted");
     default:
-      return "Non imprimé";
+      return t("vipBadgeNotPrinted");
   }
 }
 
-function formatRegistrationSource(sourceType) {
+function formatRegistrationSource(sourceType, t) {
   switch (String(sourceType || "").trim()) {
     case "public_form":
-      return "Formulaire public";
+      return t("vipSourcePublicForm");
     case "partner_portal":
-      return "Portail partenaire";
+      return t("vipSourcePartnerPortal");
     case "forced_from_invitation":
-      return "Inscription forcée";
+      return t("vipSourceForced");
     case "admin_manual":
-      return "Ajout admin";
+      return t("vipSourceAdminManual");
     default:
       return "VIP";
   }
@@ -191,9 +193,11 @@ function canOpenVipPartnerPortalLocally() {
 }
 
 function VipAdminPage({ Panel, loadMailQueueModule }) {
+  const { t } = useLanguage();
   const { activeEditionId, activeEditionLabel, loading: editionLoading } = useActiveEdition(true);
   const [activeVipTab, setActiveVipTab] = useState("invitations");
   const [partnerPortals, setPartnerPortals] = useState([]);
+  const [partnerPortalSecrets, setPartnerPortalSecrets] = useState({});
   const [invitations, setInvitations] = useState([]);
   const [publicRegistrations, setPublicRegistrations] = useState([]);
   const [partnerRegistrations, setPartnerRegistrations] = useState([]);
@@ -210,6 +214,7 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
   const [registrationSearch, setRegistrationSearch] = useState("");
   const [registrationSourceFilter, setRegistrationSourceFilter] = useState("tous");
   const [registrationBadgeFilter, setRegistrationBadgeFilter] = useState("tous");
+  const [registrationTourFilter, setRegistrationTourFilter] = useState("tous");
   const [selectedInvitationIds, setSelectedInvitationIds] = useState(() => new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -240,7 +245,7 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
     let loadedCount = 0;
     function markLoaded() {
       loadedCount += 1;
-      if (loadedCount >= 5) {
+      if (loadedCount >= 6) {
         setLoading(false);
       }
     }
@@ -254,7 +259,24 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
       (snapshotError) => {
         console.error("Unable to load VIP partner portals", snapshotError);
         setPartnerPortals([]);
-        setError("Impossible de charger les portails partenaires VIP.");
+        setError(t("vipErrorLoadPortals"));
+        markLoaded();
+      },
+    );
+
+    const unsubPartnerPortalSecrets = onSnapshot(
+      collection(db, "vipPartnerPortalSecrets"),
+      (snapshot) => {
+        const nextSecrets = {};
+        snapshot.docs.forEach((secretDoc) => {
+          nextSecrets[secretDoc.id] = secretDoc.data()?.accessPassword || "";
+        });
+        setPartnerPortalSecrets(nextSecrets);
+        markLoaded();
+      },
+      (snapshotError) => {
+        console.error("Unable to load VIP partner portal secrets", snapshotError);
+        setPartnerPortalSecrets({});
         markLoaded();
       },
     );
@@ -268,7 +290,7 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
       (snapshotError) => {
         console.error("Unable to load VIP invitations", snapshotError);
         setInvitations([]);
-        setError("Impossible de charger les invitations VIP.");
+        setError(t("vipErrorLoadInvitations"));
         markLoaded();
       },
     );
@@ -286,7 +308,7 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
       (snapshotError) => {
         console.error("Unable to load VIP public registrations", snapshotError);
         setPublicRegistrations([]);
-        setError("Impossible de charger les inscriptions VIP publiques.");
+        setError(t("vipErrorLoadPublicRegistrations"));
         markLoaded();
       },
     );
@@ -305,7 +327,7 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
       (snapshotError) => {
         console.error("Unable to load VIP partner registrations", snapshotError);
         setPartnerRegistrations([]);
-        setError("Impossible de charger les listes VIP partenaires.");
+        setError(t("vipErrorLoadPartnerRegistrations"));
         markLoaded();
       },
     );
@@ -323,13 +345,14 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
       (snapshotError) => {
         console.error("Unable to load VIP admin registrations", snapshotError);
         setAdminRegistrations([]);
-        setError("Impossible de charger les inscriptions VIP ajoutées côté admin.");
+        setError(t("vipErrorLoadAdminRegistrations"));
         markLoaded();
       },
     );
 
     return () => {
       unsubPartnerPortals();
+      unsubPartnerPortalSecrets();
       unsubInvitations();
       unsubPublic();
       unsubPartner();
@@ -388,12 +411,12 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
 
       setStatusMessage(
         createdCount > 0
-          ? `${createdCount} invitation(s) importée(s) dans la base globale depuis vos deux fichiers Excel.`
-          : "La base issue de vos fichiers Excel est déjà présente dans l'espace invitations.",
+          ? t("vipImportedCount").replace("{count}", createdCount)
+          : t("vipImportAlreadyPresent"),
       );
     } catch (importError) {
       console.error("VIP import failed", importError);
-      setError("Impossible d'importer la base d'invitations.");
+      setError(t("vipErrorImport"));
     }
   }
 
@@ -423,12 +446,12 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
         invitationMailStatus: "not_sent",
         createdAt: serverTimestamp(),
       });
-      setStatusMessage("Invitation VIP ajoutée.");
+      setStatusMessage(t("vipInvitationAdded"));
 
       setInvitationForm(createEmptyVipInvitationData());
     } catch (submissionError) {
       console.error("VIP invitation save failed", submissionError);
-      setError("Impossible d'enregistrer cette invitation VIP.");
+      setError(t("vipErrorSaveInvitation"));
     }
   }
 
@@ -454,12 +477,12 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
 
     try {
       await updateDoc(doc(db, "vipInvitations", editingInvitationId), payload);
-      setStatusMessage("Invitation VIP mise à jour.");
+      setStatusMessage(t("vipInvitationUpdated"));
       setEditingInvitationId("");
       setEditingInvitationForm(createEmptyVipInvitationData());
     } catch (submissionError) {
       console.error("VIP invitation update failed", submissionError);
-      setError("Impossible d'enregistrer cette invitation VIP.");
+      setError(t("vipErrorSaveInvitation"));
     }
   }
 
@@ -491,7 +514,7 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
       contactName: portal.contactName || "",
       contactPhone: portal.contactPhone || "",
       contactEmail: portal.contactEmail || "",
-      accessPassword: portal.accessPassword || "",
+      accessPassword: partnerPortalSecrets[portal.id] || "",
       notes: portal.notes || "",
     });
   }
@@ -508,23 +531,26 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
 
     const resolvedPortalId = buildVipPortalId(partnerPortalForm.portalId || partnerPortalForm.organizationName);
     if (!resolvedPortalId) {
-      setError("Merci de renseigner une organisation ou un identifiant de portail.");
+      setError(t("vipErrorMissingPortalId"));
       return;
     }
+
+    const resolvedDocId = editingPartnerPortalId || resolvedPortalId;
+    const trimmedPassword = String(partnerPortalForm.accessPassword || "").trim();
 
     const payload = {
       organizationName: partnerPortalForm.organizationName,
       contactName: partnerPortalForm.contactName,
       contactPhone: partnerPortalForm.contactPhone,
       contactEmail: String(partnerPortalForm.contactEmail || "").trim().toLowerCase(),
-      accessPassword: partnerPortalForm.accessPassword,
+      hasPassword: Boolean(trimmedPassword),
       notes: partnerPortalForm.notes,
       updatedAt: serverTimestamp(),
     };
 
     try {
       await setDoc(
-        doc(db, "vipPartnerPortals", editingPartnerPortalId || resolvedPortalId),
+        doc(db, "vipPartnerPortals", resolvedDocId),
         {
           ...payload,
           createdAt: editingPartnerPortalId ? partnerPortals.find((portal) => portal.id === editingPartnerPortalId)?.createdAt || serverTimestamp() : serverTimestamp(),
@@ -532,12 +558,18 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
         { merge: true },
       );
 
-      setStatusMessage(editingPartnerPortalId ? "Portail partenaire mis à jour." : "Portail partenaire créé.");
+      await setDoc(
+        doc(db, "vipPartnerPortalSecrets", resolvedDocId),
+        { accessPassword: trimmedPassword, updatedAt: serverTimestamp() },
+        { merge: true },
+      );
+
+      setStatusMessage(editingPartnerPortalId ? t("vipPortalUpdated") : t("vipPortalCreated"));
       setPartnerPortalForm(createEmptyVipPartnerPortalData());
       setEditingPartnerPortalId("");
     } catch (submissionError) {
       console.error("VIP partner portal save failed", submissionError);
-      setError("Impossible d'enregistrer ce portail partenaire.");
+      setError(t("vipErrorSavePortal"));
     }
   }
 
@@ -546,7 +578,7 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
     setStatusMessage("");
 
     if (!String(invitation.email || "").trim()) {
-      setError("Impossible d'envoyer une invitation sans adresse e-mail.");
+      setError(t("vipErrorSendNoEmail"));
       return;
     }
 
@@ -569,10 +601,10 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
         invitationSentAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
-      setStatusMessage(`Invitation envoyée à ${invitation.email}.`);
+      setStatusMessage(t("vipInvitationSentTo").replace("{email}", invitation.email));
     } catch (mailError) {
       console.error("VIP invitation mail failed", mailError);
-      setError(mailError?.message || "Impossible d'envoyer l'invitation VIP.");
+      setError(mailError?.message || t("vipErrorSendInvitation"));
     }
   }
 
@@ -604,7 +636,7 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
     const invitationsWithEmail = selectedInvitations.filter((invitation) => String(invitation.email || "").trim());
 
     if (!invitationsWithEmail.length) {
-      setError("Aucune invitation sélectionnée avec une adresse e-mail exploitable.");
+      setError(t("vipErrorNoSelectionEmail"));
       return;
     }
 
@@ -632,11 +664,11 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
         });
       }
 
-      setStatusMessage(`${invitationsWithEmail.length} invitation(s) envoyée(s).`);
+      setStatusMessage(t("vipInvitationsSentCount").replace("{count}", invitationsWithEmail.length));
       setSelectedInvitationIds(new Set());
     } catch (mailError) {
       console.error("VIP bulk invitation mail failed", mailError);
-      setError(mailError?.message || "Impossible d'envoyer les invitations sélectionnées.");
+      setError(mailError?.message || t("vipErrorSendSelected"));
     }
   }
 
@@ -671,10 +703,10 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
         });
       }
 
-      setStatusMessage("Inscription forcée enregistrée côté admin.");
+      setStatusMessage(t("vipForcedRegistrationSaved"));
     } catch (registrationError) {
       console.error("Force VIP registration failed", registrationError);
-      setError("Impossible de forcer cette inscription VIP.");
+      setError(t("vipErrorForceRegistration"));
     }
   }
 
@@ -689,10 +721,10 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
         archivedReason: nextArchived ? "Archivage manuel" : "",
         updatedAt: serverTimestamp(),
       });
-      setStatusMessage(nextArchived ? "Invitation archivée." : "Invitation réactivée.");
+      setStatusMessage(nextArchived ? t("vipInvitationArchived") : t("vipInvitationReactivated"));
     } catch (archiveError) {
       console.error("VIP invitation archive failed", archiveError);
-      setError("Impossible de modifier l'état d'archive de cette invitation.");
+      setError(t("vipErrorToggleArchive"));
     }
   }
 
@@ -715,10 +747,10 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
         }),
       );
       setRegistrationForm(createEmptyVipAdminRegistrationData());
-      setStatusMessage("Inscrit VIP ajouté côté admin.");
+      setStatusMessage(t("vipRegistrantAdded"));
     } catch (submissionError) {
       console.error("VIP admin manual registration failed", submissionError);
-      setError("Impossible d'ajouter cet inscrit VIP.");
+      setError(t("vipErrorAddRegistrant"));
     }
   }
 
@@ -733,7 +765,7 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
       });
     } catch (updateError) {
       console.error("VIP registration update failed", updateError);
-      setError("Impossible de mettre à jour cet inscrit VIP.");
+      setError(t("vipErrorUpdateRegistrant"));
     }
   }
 
@@ -794,10 +826,11 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
 
         if (registrationSourceFilter !== "tous" && registration.sourceType !== registrationSourceFilter) return false;
         if (registrationBadgeFilter !== "tous" && (registration.badgePrintStatus || "non_imprime") !== registrationBadgeFilter) return false;
+        if (registrationTourFilter !== "tous" && (registration.vipTourChoice || "none") !== registrationTourFilter) return false;
 
         return true;
       }),
-    [registrationBadgeFilter, registrationRows, registrationSearch, registrationSourceFilter],
+    [registrationBadgeFilter, registrationRows, registrationSearch, registrationSourceFilter, registrationTourFilter],
   );
 
   const selectedFilteredInvitationCount = useMemo(
@@ -823,80 +856,102 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
   return (
     <div className="stacked-entry">
       <Panel
-        title="VIP"
-        subtitle={`Invitations, inscriptions et suivi accréditations VIP pour ${activeEditionLabel}.`}
+        title={t("vipAdminTitle")}
+        subtitle={t("vipAdminSubtitle").replace("{edition}", activeEditionLabel)}
       >
         <div className="vip-admin-stats">
           <article className="vip-admin-stat-card">
             <strong>{invitationRows.length}</strong>
-            <span>Invitation(s) VIP</span>
+            <span>{t("vipAdminStatInvitations")}</span>
           </article>
           <article className="vip-admin-stat-card">
             <strong>{registrationRows.length}</strong>
-            <span>Inscription(s) VIP</span>
+            <span>{t("vipAdminStatRegistrations")}</span>
           </article>
           <article className="vip-admin-stat-card">
             <strong>{registrationRows.filter((row) => row.badgePrintStatus === "en_file").length}</strong>
-            <span>Accréditations en file</span>
+            <span>{t("vipAdminStatQueued")}</span>
           </article>
           <article className="vip-admin-stat-card">
             <strong>{registrationRows.filter((row) => row.badgePrintStatus === "imprime").length}</strong>
-            <span>Accréditations imprimées</span>
+            <span>{t("vipAdminStatPrinted")}</span>
           </article>
         </div>
-        {editionLoading || loading ? <p>Chargement du module VIP...</p> : null}
+        {editionLoading || loading ? <p>{t("vipAdminLoading")}</p> : null}
         {error ? <p className="form-error">{error}</p> : null}
         {statusMessage ? <p className="panel-note panel-note--success">{statusMessage}</p> : null}
         <p className="panel-note">
-          Base d'import préparée depuis <strong>{vipImport2027.metadata.recordCount}</strong> invités dédoublonnés,
-          sans accompagnants, à partir de vos deux fichiers 2026. La fiche invitation reste globale, et seul
-          l'indicateur annuel suit l'édition active.
+          {t("vipAdminImportNotePrefix")} <strong>{vipImport2027.metadata.recordCount}</strong>{" "}
+          {t("vipAdminImportNoteSuffix")}
         </p>
       </Panel>
-      <div className="admin-subtabs" role="tablist" aria-label="Navigation du module VIP">
+
+      <Panel title={t("vipExplainerTitle")} subtitle={t("vipExplainerSubtitle")}>
+        <ol className="vip-explainer-list">
+          <li>
+            <strong>{t("vipExplainerStep1Title")}</strong> {t("vipExplainerStep1Tab")}
+            <p>{t("vipExplainerStep1Body")}</p>
+          </li>
+          <li>
+            <strong>{t("vipExplainerStep2Title")}</strong> {t("vipExplainerStep2Tab")}
+            <p>{t("vipExplainerStep2Body")}</p>
+          </li>
+          <li>
+            <strong>{t("vipExplainerStep3Title")}</strong> {t("vipExplainerStep3Tab")}
+            <p>{t("vipExplainerStep3Body")}</p>
+          </li>
+          <li>
+            <strong>{t("vipExplainerStep4Title")}</strong> {t("vipExplainerStep4Tab")}
+            <p>{t("vipExplainerStep4Body")}</p>
+          </li>
+        </ol>
+        <p className="panel-note">
+          {t("vipExplainerFooterPrefix")} <strong>{t("vipExplainerFooterHighlight")}</strong>{" "}
+          {t("vipExplainerFooterSuffix")}
+        </p>
+      </Panel>
+
+      <div className="admin-subtabs" role="tablist" aria-label={t("vipTabNavAriaLabel")}>
         <button
           className={`admin-subtab ${activeVipTab === "invitations" ? "admin-subtab--active" : ""}`}
           type="button"
           onClick={() => setActiveVipTab("invitations")}
         >
-          Invitations
+          {t("vipTabInvitations")}
         </button>
         <button
           className={`admin-subtab ${activeVipTab === "registrations" ? "admin-subtab--active" : ""}`}
           type="button"
           onClick={() => setActiveVipTab("registrations")}
         >
-          Inscrits VIP
+          {t("vipTabRegistrations")}
         </button>
         <button
           className={`admin-subtab ${activeVipTab === "partner-portals" ? "admin-subtab--active" : ""}`}
           type="button"
           onClick={() => setActiveVipTab("partner-portals")}
         >
-          Portails partenaires
+          {t("vipTabPartnerPortals")}
         </button>
       </div>
 
       {activeVipTab === "invitations" ? (
         <>
-          <Panel
-            title="Ajouter une invitation"
-            subtitle="La fiche contact est globale. Seul « invité cette année » dépend de l'édition active."
-          >
+          <Panel title={t("vipAddInvitationTitle")} subtitle={t("vipAddInvitationSubtitle")}>
             <form className="auth-form auth-form--compact vip-admin-form vip-admin-form--inline" onSubmit={handleInvitationSubmit}>
-              <AuthFormField label="Prénom" required>
+              <AuthFormField label={t("vipFieldFirstName")} required>
                 <input name="firstName" required value={invitationForm.firstName} onChange={handleInvitationChange} />
               </AuthFormField>
-              <AuthFormField label="Nom" required>
+              <AuthFormField label={t("vipFieldLastName")} required>
                 <input name="lastName" required value={invitationForm.lastName} onChange={handleInvitationChange} />
               </AuthFormField>
-              <AuthFormField label="E-mail">
+              <AuthFormField label={t("vipFieldEmail")}>
                 <input name="email" type="email" value={invitationForm.email} onChange={handleInvitationChange} />
               </AuthFormField>
-              <AuthFormField label="Organisation">
+              <AuthFormField label={t("vipFieldOrganization")}>
                 <input name="organization" value={invitationForm.organization} onChange={handleInvitationChange} />
               </AuthFormField>
-              <AuthFormField label="Catégorie" required hint="Texte libre possible, avec suggestions.">
+              <AuthFormField label={t("vipFieldCategory")} required hint={t("vipFieldCategoryHint")}>
                 <input
                   list="vip-invitation-category-suggestions"
                   name="category"
@@ -905,31 +960,31 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
                   onChange={handleInvitationChange}
                 />
               </AuthFormField>
-              <AuthFormField label="Langue du mail" required>
+              <AuthFormField label={t("vipFieldMailLanguage")} required>
                 <select
                   name="invitationMailLanguage"
                   value={invitationForm.invitationMailLanguage}
                   onChange={handleInvitationChange}
                 >
-                  <option value="fr">Français</option>
-                  <option value="en">English</option>
+                  <option value="fr">{t("vipLangFrench")}</option>
+                  <option value="en">{t("vipLangEnglish")}</option>
                 </select>
               </AuthFormField>
-              <AuthFormField label="Intitulé mail" hint='Ex.: "Cher Comité directeur" si aucun prénom/nom.'>
+              <AuthFormField label={t("vipFieldMailGreeting")} hint={t("vipFieldMailGreetingHint")}>
                 <input
                   name="mailGreetingLabel"
-                  placeholder="Cher Comité directeur"
+                  placeholder={t("vipMailGreetingPlaceholder")}
                   value={invitationForm.mailGreetingLabel}
                   onChange={handleInvitationChange}
                 />
               </AuthFormField>
-              <AuthFormField label="Invité cette année" required>
+              <AuthFormField label={t("vipFieldInvitedThisEdition")} required>
                 <select name="invitedThisEdition" value={invitationForm.invitedThisEdition} onChange={handleInvitationChange}>
-                  <option value="oui">Oui</option>
-                  <option value="non">Non</option>
+                  <option value="oui">{t("vipYes")}</option>
+                  <option value="non">{t("vipNo")}</option>
                 </select>
               </AuthFormField>
-              <AuthFormField className="vip-admin-form__wide" label="Remarques">
+              <AuthFormField className="vip-admin-form__wide" label={t("vipFieldNotes")}>
                 <input name="notes" value={invitationForm.notes} onChange={handleInvitationChange} />
               </AuthFormField>
               <datalist id="vip-invitation-category-suggestions">
@@ -939,32 +994,29 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
               </datalist>
               <div className="panel-actions vip-admin-form__actions">
                 <button className="button button--primary" type="submit">
-                  Ajouter à la liste d'invitation
+                  {t("vipAddToInvitationList")}
                 </button>
               </div>
             </form>
           </Panel>
 
-          <Panel
-            title="Liste d'invitation"
-            subtitle="Base globale des invités VIP, avec archivage et indicateur propre à l'édition active."
-          >
+          <Panel title={t("vipInvitationListTitle")} subtitle={t("vipInvitationListSubtitle")}>
             <div className="vip-admin-filters">
               <input
                 type="search"
-                placeholder="Rechercher un nom, une organisation, un e-mail..."
+                placeholder={t("vipSearchPlaceholder")}
                 value={invitationSearch}
                 onChange={(event) => setInvitationSearch(event.target.value)}
               />
               <select value={invitationArchiveFilter} onChange={(event) => setInvitationArchiveFilter(event.target.value)}>
-                <option value="actifs">Actifs</option>
-                <option value="archives">Archivés</option>
-                <option value="tous">Tous</option>
+                <option value="actifs">{t("vipFilterActive")}</option>
+                <option value="archives">{t("vipFilterArchived")}</option>
+                <option value="tous">{t("vipFilterAll")}</option>
               </select>
               <select value={invitationMailFilter} onChange={(event) => setInvitationMailFilter(event.target.value)}>
-                <option value="tous">Tous les mails</option>
-                <option value="non_envoyes">Non envoyés</option>
-                <option value="envoyes">Envoyés</option>
+                <option value="tous">{t("vipFilterAllMails")}</option>
+                <option value="non_envoyes">{t("vipFilterMailsNotSent")}</option>
+                <option value="envoyes">{t("vipFilterMailsSent")}</option>
               </select>
             </div>
             <div className="vip-admin-bulkbar">
@@ -976,26 +1028,26 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
                     event.target.checked ? handleSelectAllFilteredInvitations() : handleClearInvitationSelection()
                   }
                 />
-                <span>Tout cocher</span>
+                <span>{t("vipSelectAll")}</span>
               </label>
-              <span className="panel-note">{selectedFilteredInvitationCount} sélectionné(s)</span>
+              <span className="panel-note">{t("vipSelectedCount").replace("{count}", selectedFilteredInvitationCount)}</span>
               <button className="button button--secondary" type="button" onClick={handleClearInvitationSelection}>
-                Tout décocher
+                {t("vipClearSelection")}
               </button>
               <button className="button button--primary" type="button" onClick={handleSendSelectedInvitations}>
-                Envoyer le mail aux sélectionnés
+                {t("vipSendToSelected")}
               </button>
             </div>
             <div className="table-wrap">
               <table className="data-table data-table--vip data-table--vip-invitations">
                 <thead>
                   <tr>
-                    <th className="vip-table-checkbox-col">Sel.</th>
-                    <th>Invité</th>
-                    <th>Contact</th>
-                    <th>Statut</th>
-                    <th>Matching</th>
-                    <th>Actions</th>
+                    <th className="vip-table-checkbox-col">{t("vipColSel")}</th>
+                    <th>{t("vipColGuest")}</th>
+                    <th>{t("vipColContact")}</th>
+                    <th>{t("vipColStatus")}</th>
+                    <th>{t("vipColMatching")}</th>
+                    <th>{t("vipColActions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1028,7 +1080,7 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
                         <td>
                           <div className="table-stack table-stack--tight">
                             <label className="vip-table-inline-select">
-                              <span className="vip-table-label">Cette année</span>
+                              <span className="vip-table-label">{t("vipThisYear")}</span>
                               <select
                                 value={invitation.invitedThisEdition || "non"}
                                 onChange={(event) =>
@@ -1038,27 +1090,31 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
                                   )
                                 }
                               >
-                                <option value="oui">Oui</option>
-                                <option value="non">Non</option>
+                                <option value="oui">{t("vipYes")}</option>
+                                <option value="non">{t("vipNo")}</option>
                               </select>
                             </label>
-                            <span className="vip-table-muted">{invitation.archived ? "Archivé" : "Actif"}</span>
-                            <span className="vip-table-muted">{formatMailStatus(invitation.invitationMailStatus)}</span>
+                            <span className="vip-table-muted">{invitation.archived ? t("vipArchived") : t("vipActive")}</span>
+                            <span className="vip-table-muted">{formatMailStatus(invitation.invitationMailStatus, t)}</span>
                           </div>
                         </td>
                         <td>
-                          <span>{invitation.matchedRegistration ? formatRegistrationSource(invitation.matchedRegistration.sourceType) : "À rapprocher"}</span>
+                          <span>
+                            {invitation.matchedRegistration
+                              ? formatRegistrationSource(invitation.matchedRegistration.sourceType, t)
+                              : t("vipToMatch")}
+                          </span>
                         </td>
                         <td>
                           <div className="vip-admin-actions vip-admin-actions--compact">
                             <button className="button button--secondary" type="button" onClick={() => startEditingInvitation(invitation)}>
-                              Modifier
+                              {t("vipEdit")}
                             </button>
                             <button className="button button--secondary" type="button" onClick={() => handleForceRegistration(invitation)}>
-                              Forcer
+                              {t("vipForce")}
                             </button>
                             <button className="button button--secondary" type="button" onClick={() => handleToggleArchiveInvitation(invitation)}>
-                              {invitation.archived ? "Réactiver" : "Archiver"}
+                              {invitation.archived ? t("vipReactivate") : t("vipArchive")}
                             </button>
                           </div>
                         </td>
@@ -1067,12 +1123,12 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
                         <tr className="vip-inline-editor-row">
                           <td colSpan="6">
                             <form className="vip-inline-editor" onSubmit={handleEditingInvitationSubmit}>
-                              <input name="firstName" required placeholder="Prénom" value={editingInvitationForm.firstName} onChange={handleEditingInvitationChange} />
-                              <input name="lastName" required placeholder="Nom" value={editingInvitationForm.lastName} onChange={handleEditingInvitationChange} />
-                              <input name="email" type="email" placeholder="E-mail" value={editingInvitationForm.email} onChange={handleEditingInvitationChange} />
+                              <input name="firstName" required placeholder={t("vipFieldFirstName")} value={editingInvitationForm.firstName} onChange={handleEditingInvitationChange} />
+                              <input name="lastName" required placeholder={t("vipFieldLastName")} value={editingInvitationForm.lastName} onChange={handleEditingInvitationChange} />
+                              <input name="email" type="email" placeholder={t("vipFieldEmail")} value={editingInvitationForm.email} onChange={handleEditingInvitationChange} />
                               <input
                                 name="organization"
-                                placeholder="Organisation"
+                                placeholder={t("vipFieldOrganization")}
                                 value={editingInvitationForm.organization}
                                 onChange={handleEditingInvitationChange}
                               />
@@ -1080,7 +1136,7 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
                                 list="vip-invitation-category-suggestions"
                                 name="category"
                                 required
-                                placeholder="Catégorie"
+                                placeholder={t("vipFieldCategory")}
                                 value={editingInvitationForm.category}
                                 onChange={handleEditingInvitationChange}
                               />
@@ -1089,12 +1145,12 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
                                 value={editingInvitationForm.invitationMailLanguage}
                                 onChange={handleEditingInvitationChange}
                               >
-                                <option value="fr">Français</option>
-                                <option value="en">English</option>
+                                <option value="fr">{t("vipLangFrench")}</option>
+                                <option value="en">{t("vipLangEnglish")}</option>
                               </select>
                               <input
                                 name="mailGreetingLabel"
-                                placeholder="Intitulé mail"
+                                placeholder={t("vipFieldMailGreeting")}
                                 value={editingInvitationForm.mailGreetingLabel}
                                 onChange={handleEditingInvitationChange}
                               />
@@ -1103,16 +1159,16 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
                                 value={editingInvitationForm.invitedThisEdition}
                                 onChange={handleEditingInvitationChange}
                               >
-                                <option value="oui">Invité cette année: oui</option>
-                                <option value="non">Invité cette année: non</option>
+                                <option value="oui">{t("vipInvitedThisEditionYes")}</option>
+                                <option value="non">{t("vipInvitedThisEditionNo")}</option>
                               </select>
-                              <input name="notes" placeholder="Remarques" value={editingInvitationForm.notes} onChange={handleEditingInvitationChange} />
+                              <input name="notes" placeholder={t("vipFieldNotes")} value={editingInvitationForm.notes} onChange={handleEditingInvitationChange} />
                               <div className="vip-inline-editor__actions">
                                 <button className="button button--primary" type="submit">
-                                  Enregistrer
+                                  {t("vipSave")}
                                 </button>
                                 <button className="button button--secondary" type="button" onClick={cancelEditingInvitation}>
-                                  Annuler
+                                  {t("vipCancel")}
                                 </button>
                               </div>
                             </form>
@@ -1123,7 +1179,7 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
                   ))}
                   {filteredInvitationRows.length === 0 ? (
                     <tr>
-                      <td colSpan="6">Aucune invitation VIP enregistrée.</td>
+                      <td colSpan="6">{t("vipNoInvitations")}</td>
                     </tr>
                   ) : null}
                 </tbody>
@@ -1133,78 +1189,90 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
         </>
       ) : activeVipTab === "registrations" ? (
         <>
-          <Panel
-            title="Ajouter un inscrit VIP"
-            subtitle="Ajout manuel côté admin, ou préparation d'une inscription hors formulaire."
-          >
+          <Panel title={t("vipAddRegistrantTitle")} subtitle={t("vipAddRegistrantSubtitle")}>
             <form className="auth-form auth-form--compact vip-admin-form vip-admin-form--inline" onSubmit={handleRegistrationSubmit}>
-              <AuthFormField label="Prénom" required>
+              <AuthFormField label={t("vipFieldFirstName")} required>
                 <input name="firstName" required value={registrationForm.firstName} onChange={handleRegistrationChange} />
               </AuthFormField>
-              <AuthFormField label="Nom" required>
+              <AuthFormField label={t("vipFieldLastName")} required>
                 <input name="lastName" required value={registrationForm.lastName} onChange={handleRegistrationChange} />
               </AuthFormField>
-              <AuthFormField label="Organisation" required>
+              <AuthFormField label={t("vipFieldOrganization")} required>
                 <input name="organization" required value={registrationForm.organization} onChange={handleRegistrationChange} />
               </AuthFormField>
-              <AuthFormField label="E-mail">
+              <AuthFormField label={t("vipFieldEmail")}>
                 <input name="email" type="email" value={registrationForm.email} onChange={handleRegistrationChange} />
               </AuthFormField>
-              <AuthFormField className="vip-admin-form__phone" label="Téléphone">
+              <AuthFormField className="vip-admin-form__phone" label={t("vipFieldPhone")}>
                 <PhoneInput name="phone" value={registrationForm.phone} onChange={handleRegistrationChange} />
               </AuthFormField>
-              <AuthFormField label="Point de retrait" required>
+              <AuthFormField label={t("vipFieldPickupPoint")} required>
                 <select name="pickupPoint" value={registrationForm.pickupPoint} onChange={handleRegistrationChange}>
                   {VIP_PICKUP_POINT_OPTIONS.map((option) => (
                     <option key={option} value={option}>{option}</option>
                   ))}
                 </select>
               </AuthFormField>
-              <AuthFormField className="vip-admin-form__wide" label="Remarques">
+              <AuthFormField className="vip-admin-form__wide" label={t("vipFieldNotes")}>
                 <input name="notes" value={registrationForm.notes} onChange={handleRegistrationChange} />
               </AuthFormField>
               <div className="panel-actions vip-admin-form__actions">
                 <button className="button button--primary" type="submit">
-                  Ajouter à la liste des inscrits
+                  {t("vipAddToRegistrantList")}
                 </button>
               </div>
             </form>
           </Panel>
 
-          <Panel
-            title="Liste des inscrits"
-            subtitle="Retours du formulaire public, listes partenaires et ajouts admin avec suivi impression et point de retrait."
-          >
+          <Panel title={t("vipRegistrantListTitle")} subtitle={t("vipRegistrantListSubtitle")}>
             <div className="vip-admin-filters">
               <input
                 type="search"
-                placeholder="Rechercher un nom, une organisation, un e-mail..."
+                placeholder={t("vipSearchPlaceholder")}
                 value={registrationSearch}
                 onChange={(event) => setRegistrationSearch(event.target.value)}
               />
               <select value={registrationSourceFilter} onChange={(event) => setRegistrationSourceFilter(event.target.value)}>
-                <option value="tous">Toutes les sources</option>
-                <option value="public_form">Formulaire public</option>
-                <option value="partner_portal">Portail partenaire</option>
-                <option value="forced_from_invitation">Inscription forcée</option>
-                <option value="admin_manual">Ajout admin</option>
+                <option value="tous">{t("vipFilterAllSources")}</option>
+                <option value="public_form">{t("vipSourcePublicForm")}</option>
+                <option value="partner_portal">{t("vipSourcePartnerPortal")}</option>
+                <option value="forced_from_invitation">{t("vipSourceForced")}</option>
+                <option value="admin_manual">{t("vipSourceAdminManual")}</option>
               </select>
               <select value={registrationBadgeFilter} onChange={(event) => setRegistrationBadgeFilter(event.target.value)}>
-                <option value="tous">Toutes les accréditations</option>
-                <option value="non_imprime">Non imprimé</option>
-                <option value="en_file">En file</option>
-                <option value="imprime">Imprimé</option>
+                <option value="tous">{t("vipFilterAllAccreditations")}</option>
+                <option value="non_imprime">{t("vipBadgeNotPrinted")}</option>
+                <option value="en_file">{t("vipBadgeQueued")}</option>
+                <option value="imprime">{t("vipBadgePrinted")}</option>
               </select>
+              <select value={registrationTourFilter} onChange={(event) => setRegistrationTourFilter(event.target.value)}>
+                <option value="tous">{t("vipFilterAllTours")}</option>
+                {VIP_TOUR_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {getVipTourChoiceLabel(option.value)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="vip-admin-stats">
+              {VIP_TOUR_OPTIONS.map((option) => (
+                <article key={option.value} className="vip-admin-stat-card">
+                  <strong>
+                    {registrationRows.filter((row) => (row.vipTourChoice || "none") === option.value).length}
+                  </strong>
+                  <span>{getVipTourChoiceLabel(option.value)}</span>
+                </article>
+              ))}
             </div>
             <div className="table-wrap">
               <table className="data-table data-table--vip">
                 <thead>
                   <tr>
-                    <th>Inscrit</th>
-                    <th>Source / Matching</th>
-                    <th>Tour VIP</th>
-                    <th>Accréditation</th>
-                    <th>Retrait</th>
+                    <th>{t("vipColRegistrant")}</th>
+                    <th>{t("vipColSourceMatching")}</th>
+                    <th>{t("vipColVipTour")}</th>
+                    <th>{t("vipColAccreditation")}</th>
+                    <th>{t("vipColPickup")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1219,11 +1287,11 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
                       </td>
                       <td>
                         <div className="table-stack table-stack--tight">
-                          <span>{formatRegistrationSource(registration.sourceType)}</span>
+                          <span>{formatRegistrationSource(registration.sourceType, t)}</span>
                           <span className="vip-table-muted">
                             {registration.matchedInvitation
                               ? `${buildVipFullName(registration.matchedInvitation)} (${registration.matchedInvitation.category || "VIP"})`
-                              : "Aucun match"}
+                              : t("vipNoMatch")}
                           </span>
                         </div>
                       </td>
@@ -1236,11 +1304,11 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
                               handleRegistrationFieldUpdate(registration, { badgePrintStatus: event.target.value })
                             }
                           >
-                            <option value="non_imprime">Non imprimé</option>
-                            <option value="en_file">En file</option>
-                            <option value="imprime">Imprimé</option>
+                            <option value="non_imprime">{t("vipBadgeNotPrinted")}</option>
+                            <option value="en_file">{t("vipBadgeQueued")}</option>
+                            <option value="imprime">{t("vipBadgePrinted")}</option>
                           </select>
-                          <span className="panel-note">{formatBadgeStatus(registration.badgePrintStatus)}</span>
+                          <span className="panel-note">{formatBadgeStatus(registration.badgePrintStatus, t)}</span>
                         </div>
                       </td>
                       <td>
@@ -1259,7 +1327,7 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
                   ))}
                   {filteredRegistrationRows.length === 0 ? (
                     <tr>
-                      <td colSpan="5">Aucune inscription VIP reçue pour cette édition.</td>
+                      <td colSpan="5">{t("vipNoRegistrations")}</td>
                     </tr>
                   ) : null}
                 </tbody>
@@ -1270,63 +1338,60 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
       ) : (
         <>
           <Panel
-            title={editingPartnerPortalId ? "Modifier un portail partenaire" : "Créer un portail partenaire"}
-            subtitle="Un lien dédié par organisation, avec contact et mot de passe optionnel."
+            title={editingPartnerPortalId ? t("vipEditPortalTitle") : t("vipCreatePortalTitle")}
+            subtitle={t("vipCreatePortalSubtitle")}
           >
             <form className="auth-form auth-form--compact vip-admin-form vip-admin-form--inline" onSubmit={handlePartnerPortalSubmit}>
-              <AuthFormField label="Organisation" required>
+              <AuthFormField label={t("vipFieldOrganization")} required>
                 <input name="organizationName" required value={partnerPortalForm.organizationName} onChange={handlePartnerPortalChange} />
               </AuthFormField>
-              <AuthFormField label="Slug / URL" hint="Laissez vide pour le générer depuis l'organisation.">
+              <AuthFormField label={t("vipFieldSlugUrl")} hint={t("vipFieldSlugUrlHint")}>
                 <input
                   name="portalId"
                   disabled={Boolean(editingPartnerPortalId)}
-                  placeholder="ex: cmcm-partenaires"
+                  placeholder={t("vipSlugPlaceholder")}
                   value={partnerPortalForm.portalId}
                   onChange={handlePartnerPortalChange}
                 />
               </AuthFormField>
-              <AuthFormField label="Contact" required>
+              <AuthFormField label={t("vipFieldContact")} required>
                 <input name="contactName" required value={partnerPortalForm.contactName} onChange={handlePartnerPortalChange} />
               </AuthFormField>
-              <AuthFormField label="E-mail contact">
+              <AuthFormField label={t("vipFieldContactEmail")}>
                 <input name="contactEmail" type="email" value={partnerPortalForm.contactEmail} onChange={handlePartnerPortalChange} />
               </AuthFormField>
-              <AuthFormField className="vip-admin-form__phone" label="Téléphone contact">
+              <AuthFormField className="vip-admin-form__phone" label={t("vipFieldContactPhone")}>
                 <PhoneInput name="contactPhone" value={partnerPortalForm.contactPhone} onChange={handlePartnerPortalChange} />
               </AuthFormField>
-              <AuthFormField label="Mot de passe" hint="Optionnel. Restera simple, comme un code d'accès.">
+              <AuthFormField label={t("vipFieldPassword")} hint={t("vipFieldPasswordHint")}>
                 <input name="accessPassword" type="text" value={partnerPortalForm.accessPassword} onChange={handlePartnerPortalChange} />
               </AuthFormField>
-              <AuthFormField className="vip-admin-form__wide" label="Remarques">
+              <AuthFormField className="vip-admin-form__wide" label={t("vipFieldNotes")}>
                 <input name="notes" value={partnerPortalForm.notes} onChange={handlePartnerPortalChange} />
               </AuthFormField>
               <div className="panel-actions vip-admin-form__actions">
                 <button className="button button--primary" type="submit">
-                  {editingPartnerPortalId ? "Enregistrer le portail" : "Créer le portail"}
+                  {editingPartnerPortalId ? t("vipSavePortal") : t("vipCreatePortal")}
                 </button>
                 {editingPartnerPortalId ? (
                   <button className="button button--secondary" type="button" onClick={cancelEditingPartnerPortal}>
-                    Annuler
+                    {t("vipCancel")}
                   </button>
                 ) : null}
               </div>
             </form>
           </Panel>
 
-          <Panel
-            title="Liste des portails partenaires"
-            subtitle="Coordonnées, accès et lien direct vers chaque page de gestion partenaire."
-          >
+          <Panel title={t("vipPortalListTitle")} subtitle={t("vipPortalListSubtitle")}>
             <div className="table-wrap">
               <table className="data-table data-table--vip">
                 <thead>
                   <tr>
-                    <th>Organisation</th>
-                    <th>Contact</th>
-                    <th>Accès</th>
-                    <th>URL</th>
-                    <th>Actions</th>
+                    <th>{t("vipColOrganization")}</th>
+                    <th>{t("vipColContact")}</th>
+                    <th>{t("vipColAccess")}</th>
+                    <th>{t("vipColUrl")}</th>
+                    <th>{t("vipColActions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1347,7 +1412,7 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
                       </td>
                       <td>
                         <div className="table-stack table-stack--tight">
-                          <span>{portal.accessPassword ? "Protégé par mot de passe" : "Lien seul"}</span>
+                          <span>{portal.hasPassword ? t("vipPasswordProtected") : t("vipLinkOnlyNoPassword")}</span>
                           <span className="vip-table-muted">{portal.notes || "—"}</span>
                         </div>
                       </td>
@@ -1356,11 +1421,11 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
                           <span>{portal.portalUrl}</span>
                           {portal.portalPreviewUrl ? (
                             <a href={portal.portalPreviewUrl} target="_blank" rel="noreferrer">
-                              Ouvrir l'aperçu local
+                              {t("vipOpenLocalPreview")}
                             </a>
                           ) : (
                             <a href={portal.portalUrl} target="_blank" rel="noreferrer">
-                              Ouvrir le lien public
+                              {t("vipOpenPublicLink")}
                             </a>
                           )}
                         </div>
@@ -1368,7 +1433,7 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
                       <td>
                         <div className="vip-admin-actions vip-admin-actions--compact">
                           <button className="button button--secondary" type="button" onClick={() => startEditingPartnerPortal(portal)}>
-                            Modifier
+                            {t("vipEdit")}
                           </button>
                         </div>
                       </td>
@@ -1376,7 +1441,7 @@ function VipAdminPage({ Panel, loadMailQueueModule }) {
                   ))}
                   {partnerPortalRows.length === 0 ? (
                     <tr>
-                      <td colSpan="5">Aucun portail partenaire configuré.</td>
+                      <td colSpan="5">{t("vipNoPortals")}</td>
                     </tr>
                   ) : null}
                 </tbody>

@@ -7,8 +7,10 @@ import {
   onSnapshot,
   serverTimestamp,
 } from "firebase/firestore";
+import { signInWithCustomToken } from "firebase/auth";
+import { httpsCallable } from "firebase/functions";
 import { NavLink, useParams } from "react-router-dom";
-import { db } from "../services/firebase";
+import { auth, db, functions } from "../services/firebase";
 import { getActiveEditionId } from "./edition";
 import { AuthFormField, AuthLayout, PhoneInput } from "./form-components";
 import { useLanguage } from "./language-context";
@@ -463,6 +465,10 @@ function VipAccessPage({ loadMailQueueModule }) {
   );
 }
 
+function getVipPortalUid(portalId) {
+  return `vip-portal-${portalId}`;
+}
+
 function VipPartnerPortalPage() {
   const { language } = useLanguage();
   const copy = VIP_COPY[language] || VIP_COPY.en;
@@ -470,6 +476,7 @@ function VipPartnerPortalPage() {
   const fallbackPortalLabel = useMemo(() => getVipPartnerPortalLabel(portalId), [portalId]);
   const [formData, setFormData] = useState(() => createEmptyVipFormData({ organization: fallbackPortalLabel }));
   const [portalMeta, setPortalMeta] = useState(null);
+  const [portalMetaLoading, setPortalMetaLoading] = useState(true);
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -477,23 +484,35 @@ function VipPartnerPortalPage() {
   const [successMessage, setSuccessMessage] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
   const [accessGranted, setAccessGranted] = useState(false);
+  const [verifyingAccess, setVerifyingAccess] = useState(false);
 
   const portalLabel = String(portalMeta?.organizationName || "").trim() || fallbackPortalLabel;
+  const requiresPassword = Boolean(portalMeta?.hasPassword);
 
   useEffect(() => {
     setFormData(createEmptyVipFormData({ organization: portalLabel }));
   }, [portalLabel]);
 
   useEffect(() => {
-    const sessionKey = `vip-portal-access:${portalId}`;
-    setAccessGranted(typeof window !== "undefined" && window.sessionStorage.getItem(sessionKey) === "granted");
+    if (!portalId) return undefined;
+
+    // Any already-authenticated session (a real platform login, or this browser's
+    // pseudo-session for this or another portal) is treated as already resolved:
+    // we never call signInWithCustomToken here, since that would silently replace
+    // a real login. Firestore rules are the actual gatekeeper (admins pass via
+    // isAdminOrManager(), everyone else via the matching vipPortalId claim) -- a
+    // mismatch simply surfaces as a permission error from the entries listener below.
+    const unsubscribeAuth = auth.onAuthStateChanged((user) => {
+      setAccessGranted(Boolean(user));
+    });
+
+    return unsubscribeAuth;
   }, [portalId]);
 
   useEffect(() => {
     if (!portalId) {
-      setEntries([]);
       setPortalMeta(null);
-      setLoading(false);
+      setPortalMetaLoading(false);
       return undefined;
     }
 
@@ -501,13 +520,69 @@ function VipPartnerPortalPage() {
       doc(db, "vipPartnerPortals", portalId),
       (snapshot) => {
         setPortalMeta(snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null);
+        setPortalMetaLoading(false);
       },
       (snapshotError) => {
         console.error("VIP partner portal meta load failed", snapshotError);
         setPortalMeta(null);
+        setPortalMetaLoading(false);
       },
     );
 
+    return unsubscribeMeta;
+  }, [portalId]);
+
+  async function requestPortalAccess(password) {
+    setError("");
+    setVerifyingAccess(true);
+
+    try {
+      const verifyPortalAccess = httpsCallable(functions, "verifyVipPortalAccess");
+      const response = await verifyPortalAccess({ portalId, password });
+      const token = response?.data?.token;
+      if (!token) throw new Error("missing-token");
+
+      await signInWithCustomToken(auth, token);
+      return true;
+    } catch (accessError) {
+      console.error("VIP portal access verification failed", accessError);
+
+      if (accessError?.code === "functions/permission-denied") {
+        setError(copy.partnerPasswordError);
+      } else {
+        setError(
+          language === "fr"
+            ? "Le service de vérification est momentanément indisponible. Merci de réessayer dans un instant."
+            : language === "de"
+              ? "Der Überprüfungsdienst ist derzeit nicht verfügbar. Bitte versuchen Sie es gleich noch einmal."
+              : "The verification service is temporarily unavailable. Please try again in a moment.",
+        );
+      }
+
+      return false;
+    } finally {
+      setVerifyingAccess(false);
+    }
+  }
+
+  useEffect(() => {
+    if (portalMetaLoading || !portalId || accessGranted || requiresPassword) return;
+    // Never mint/sign in a portal session if this browser already has any Firebase
+    // session (real login or another portal's pseudo-session) -- see the comment
+    // on the auth-state effect above.
+    if (auth.currentUser) return;
+    requestPortalAccess("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [portalMetaLoading, portalId, accessGranted, requiresPassword]);
+
+  useEffect(() => {
+    if (!accessGranted || !portalId) {
+      setEntries([]);
+      setLoading(accessGranted === false && requiresPassword);
+      return undefined;
+    }
+
+    setLoading(true);
     const unsubscribe = onSnapshot(
       collection(db, "vipPartnerPortals", portalId, "entries"),
       (snapshot) => {
@@ -530,11 +605,8 @@ function VipPartnerPortalPage() {
       },
     );
 
-    return () => {
-      unsubscribeMeta();
-      unsubscribe();
-    };
-  }, [portalId]);
+    return unsubscribe;
+  }, [accessGranted, portalId, requiresPassword]);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -580,23 +652,13 @@ function VipPartnerPortalPage() {
     }
   }
 
-  function handlePasswordSubmit(event) {
+  async function handlePasswordSubmit(event) {
     event.preventDefault();
-
-    if (String(portalMeta?.accessPassword || "").trim() && passwordInput !== String(portalMeta.accessPassword)) {
-      setError(copy.partnerPasswordError);
-      return;
+    const granted = await requestPortalAccess(passwordInput);
+    if (granted) {
+      setPasswordInput("");
     }
-
-    const sessionKey = `vip-portal-access:${portalId}`;
-    if (typeof window !== "undefined") {
-      window.sessionStorage.setItem(sessionKey, "granted");
-    }
-    setAccessGranted(true);
-    setError("");
   }
-
-  const requiresPassword = Boolean(String(portalMeta?.accessPassword || "").trim());
 
   return (
     <AuthLayout
@@ -640,14 +702,30 @@ function VipPartnerPortalPage() {
                 />
               </AuthFormField>
               {error ? <p className="form-error">{error}</p> : null}
-              <button className="button button--primary" type="submit">
-                {copy.partnerPasswordAction}
+              <button className="button button--primary" disabled={verifyingAccess} type="submit">
+                {verifyingAccess ? copy.adding : copy.partnerPasswordAction}
               </button>
             </form>
           </section>
         ) : null}
 
-        {!requiresPassword || accessGranted ? (
+        {!requiresPassword && !accessGranted && !portalMetaLoading ? (
+          <section className="entry-card">
+            {error ? (
+              <p className="form-error">{error}</p>
+            ) : (
+              <p>
+                {language === "fr"
+                  ? "Vérification de l'accès en cours..."
+                  : language === "de"
+                    ? "Zugriff wird überprüft..."
+                    : "Checking access..."}
+              </p>
+            )}
+          </section>
+        ) : null}
+
+        {accessGranted ? (
         <section className="entry-card">
           <div className="entry-card__header">
             <div>
@@ -667,7 +745,7 @@ function VipPartnerPortalPage() {
         </section>
         ) : null}
 
-        {!requiresPassword || accessGranted ? (
+        {accessGranted ? (
         <section className="entry-card">
           <div className="entry-card__header">
             <div>

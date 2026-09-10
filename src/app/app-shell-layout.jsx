@@ -322,7 +322,7 @@ function AppShell(props) {
             <span className="status-pill status-pill--accent">
               {formatRoleLabel(roles.includes("admin") ? viewAsRole : primaryRole, t)}
             </span>
-            <LanguageSwitch />
+            <LanguageSwitch variant="on-light" />
             <button className="button button--secondary sidebar-footer__logout" onClick={handleLogout} type="button">
               {t("shellLogout")}
             </button>
